@@ -4,27 +4,44 @@
  * Dark-first tokens. Values are a neutral placeholder set — align them with the
  * cockpit's theme tokens (`packages/web/src/` in the Cezar repo) when the real
  * palette is lifted across.
+ *
+ * `@theme inline` on purpose: Tailwind v4 hoists a bare `@theme` block out of
+ * any at-rule wrapping it, so a `@theme` nested in `@media (prefers-color-
+ * scheme: light)` does not become conditional — it lands in `:root` and
+ * overwrites the dark values for everyone. `inline` makes the utilities emit
+ * `var(--surface)` rather than a copy of its value, which moves the switch to
+ * the plain custom properties below, where a media query does work.
+ *
+ * `light-dark()` would be the tidier spelling, but it needs Safari 17.5 and the
+ * phones this targets start at iOS 16.4.
  */
-@theme {
-  --color-surface: #0b1117;
-  --color-surface-raised: #151c24;
-  --color-border: #232c36;
-  --color-text: #e6edf3;
-  --color-text-muted: #8b98a5;
-  --color-accent: #4b93e8;
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
 }
 
 :root {
   color-scheme: dark light;
+
+  --surface: #0b1117;
+  --surface-raised: #151c24;
+  --border: #232c36;
+  --text: #e6edf3;
+  --text-muted: #8b98a5;
+  --accent: #4b93e8;
 }
 
 @media (prefers-color-scheme: light) {
-  @theme {
-    --color-surface: #ffffff;
-    --color-surface-raised: #f4f6f8;
-    --color-border: #d9dee3;
-    --color-text: #131a20;
-    --color-text-muted: #5b6771;
+  :root {
+    --surface: #ffffff;
+    --surface-raised: #f4f6f8;
+    --border: #d9dee3;
+    --text: #131a20;
+    --text-muted: #5b6771;
   }
 }
 
