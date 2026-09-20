@@ -33,7 +33,7 @@ scripts/                  # deploy, contract sync, icon generation
 ## Commands
 
 ```bash
-npm install
+npm install          # automatic on a fresh clone, see below
 npm run dev          # PWA on :5173 under /m/, proxying /api to Cezar
 npm run build        # shared -> sidecar -> pwa
 npm run typecheck
@@ -46,6 +46,10 @@ npm run sync:contract <sha>
 ```
 
 `npm run test:e2e` needs WebKit once: `npx playwright install webkit`.
+
+A `SessionStart` hook (`.claude/settings.json` → `scripts/ensure-deps.sh`) installs
+`node_modules` the first time Claude Code opens a fresh clone, and reports what it
+deliberately does not download. Running `npm install` by hand does the same thing.
 
 ## Developing against the live Cezar
 
