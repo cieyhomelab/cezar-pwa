@@ -80,10 +80,10 @@ stays reachable in every one of those states.
       outcomes, the access-link table, the history strip, the four gate states, and the
       connect screen's validation and secret handling.
 - [x] **Typecheck and lint** — `npm run typecheck`, `npm run lint` clean.
-- [x] **E2E in WebKit at iPhone dimensions** — 16 passing (`npm run test:e2e`), 6 new: the
+- [x] **E2E in WebKit at iPhone dimensions** — 17 passing (`npm run test:e2e`), 7 new: the
       refusal, the authorized pass-through, the unlock navigation (asserting the secret is
-      gone from the URL afterwards), the foreign-host refusal, the re-check, and the
-      unreachable case.
+      gone from the URL afterwards), the foreign-host refusal, the re-check, the
+      unreachable case, and the service worker letting the unlock through to the network.
 - [x] **Both themes at 390×844** — `evidence/`.
 - [x] **Docs** — `docs/REQUIREMENTS.md` R-AUTH-2/3 (+3a) and § 9 Q1; `docs/CEZAR_API.md`
       § 1a; roadmap Baseline, S-02 and Open Question 1.
@@ -91,6 +91,21 @@ stays reachable in every one of those states.
       answer: whether the gateway consumes `?key=` at `/m/`. One paste settles it. If it
       does, FR-005 is closed as written; if it does not, the fallback is what ships and
       FR-005 reads "re-open by hand", with the app already doing the returning.
+
+### Caught in self-review: the worker was eating the unlock
+
+The first version of this change would have made unlocking impossible on exactly the
+device it is for. The service worker's navigation fallback answers *any* in-scope
+navigation from the precache, so `/m/?key=…` never reached nginx — the gateway cannot set a
+cookie for a request it does not see, and the app would have reported "the gateway did not
+accept the link" no matter how the gateway was configured. Worse, the fallback path made
+the symptom look exactly like the open perimeter question, so it would have been read as
+the answer to Q1.
+
+`?key=` is now on the navigation route's denylist (Workbox tests those patterns against
+pathname + search), and `test/e2e/connect.spec.ts` asserts it: a plain navigation is served
+by the worker, the unlock navigation is not. Verified in both directions — reverting the
+denylist entry makes that test fail.
 
 ### Incidental fix
 

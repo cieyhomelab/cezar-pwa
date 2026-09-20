@@ -100,6 +100,25 @@ test.describe('Connect to Cezar', () => {
     await expect(page.getByText('Szkielet aplikacji działa.', { exact: false })).toBeVisible()
   })
 
+  test('the service worker lets the unlock navigation through to the gateway', async ({
+    page,
+  }) => {
+    // The one way this feature can fail silently: the worker's navigation
+    // fallback answers /m/?key=… from the precache, the gateway never sees the
+    // key, and no configuration of the gateway could ever make unlocking work.
+    await refuseSession(page)
+    await page.goto('.')
+    await page.evaluate(() => navigator.serviceWorker.ready)
+
+    // A plain navigation is now served by the worker — which is what makes the
+    // assertion below meaningful rather than vacuous.
+    const controlled = await page.goto('.')
+    expect(controlled?.fromServiceWorker()).toBe(true)
+
+    const unlock = await page.goto('?key=probe')
+    expect(unlock?.fromServiceWorker()).toBe(false)
+  })
+
   test('an unreachable Cezar is not reported as a lapsed session', async ({ page }) => {
     await page.route('**/api/v1/health', (route) => route.abort('connectionfailed'))
     await page.goto('.')

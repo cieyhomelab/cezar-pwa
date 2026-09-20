@@ -21,7 +21,13 @@ cleanupOutdatedCaches()
 // notification tap on a cold app yields a white screen.
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('/m/index.html'), {
-    denylist: [/^\/api\//, /^\/m\/push\//],
+    // `?key=` is the unlock navigation (S-02). It MUST reach the network: the
+    // gateway can only issue the session cookie for a request it actually
+    // sees, and answering this one from the precache would make unlocking
+    // silently impossible — the app would come back with the key unconsumed
+    // every time, no matter how the gateway is configured. Denylist patterns
+    // are tested against pathname + search, so this matches.
+    denylist: [/^\/api\//, /^\/m\/push\//, /[?&]key=/],
   }),
 )
 
