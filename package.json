@@ -1,0 +1,19 @@
+{
+  "name": "cezar-pwa",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @cezar-pwa/pwa",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "oxlint": "^1.81.0"
+  }
+}
