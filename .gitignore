@@ -29,6 +29,10 @@ dist-ssr
 .env.local
 .env.*.local
 
+# cezar cockpit runtime state: launch-key (a secret, CLAUDE.md rule 6),
+# session transcripts, and task worktrees (~330 MB of nested checkouts)
+/.ai/
+
 # Playwright
 /test-results/
 /playwright-report/
