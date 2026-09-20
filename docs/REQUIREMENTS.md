@@ -97,7 +97,8 @@ Priorytety: **P0** = MVP, **P1** = zaraz po MVP, **P2** = później.
 - **F-PWA-1** Manifest: `name` „Cezar”, `short_name` „Cezar”, `start_url` `/m/`, `scope` `/m/`, `display` `standalone`, `theme_color`/`background_color` z ciemnego motywu, ikony 192/512 + maskable 512.
 - **F-PWA-2** iOS: `apple-touch-icon` 180×180, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style` = `black-translucent`, `viewport-fit=cover`, obsługa `env(safe-area-inset-*)`.
 - **F-PWA-3** SW precache'uje tylko shell (`/m/**`). **Nigdy** nie cache'uje `/api/**` ani strumieni SSE (network-only, bez `respondWith`).
-- **F-PWA-4** Ostatni snapshot listy zadań trzymany w IndexedDB; offline → pokazujemy snapshot z datą i banner „offline”.
+- **F-PWA-4** ~~Ostatni snapshot listy zadań trzymany w IndexedDB; offline → pokazujemy snapshot z datą i banner „offline”.~~
+  **Zmienione przez PRD (FR-002).** Runda sokratejska odrzuciła trwały snapshot: „telefon prawie zawsze jest online, a dane sprzed godziny mylą bardziej niż ich brak”. Zostaje sam banner „offline” — bez IndexedDB, bez snapshotu. Patrz `context/foundation/prd.md` § FR-002 oraz Non-Goals.
 - **F-PWA-5** Aktualizacja SW: „Nowa wersja — odśwież” zamiast cichego `skipWaiting` w trakcie użycia.
 
 ### 4.7 Ustawienia — P0/P1
