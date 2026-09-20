@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { AuthGate } from './features/auth/AuthGate.tsx'
 import { pl } from './i18n/pl.ts'
 import { InstallHint } from './pwa/InstallHint.tsx'
 import { OfflineBanner } from './pwa/OfflineBanner.tsx'
@@ -7,9 +8,11 @@ import { useOnlineStatus } from './pwa/useOnlineStatus.ts'
 import { useStandalone } from './pwa/useStandalone.ts'
 
 /**
- * M0 shell: the frame the later milestones fill in. It renders the app chrome,
- * the safe-area layout and the three installation-slice affordances (S-01:
- * install, offline, update) — nothing that talks to Cezar yet.
+ * The frame the later milestones fill in: app chrome, the safe-area layout and
+ * the three installation-slice affordances (S-01: install, offline, update),
+ * wrapped around the session gate (S-02). The chrome stays outside the gate on
+ * purpose — the update prompt and the offline banner must still reach an
+ * operator whose session has lapsed.
  *
  * The browser-facing state lives in the hooks; everything below is wiring.
  */
@@ -38,8 +41,13 @@ export default function App() {
 
       <InstallHint standalone={standalone} />
 
-      <main className="flex flex-1 items-center justify-center px-6 text-center">
-        <p className="text-text-muted">{pl.shell.empty}</p>
+      <main className="flex flex-1 flex-col">
+        {/* S-02: nothing past this point renders without a session. */}
+        <AuthGate>
+          <div className="flex flex-1 items-center justify-center px-6 text-center">
+            <p className="text-text-muted">{pl.shell.empty}</p>
+          </div>
+        </AuthGate>
       </main>
 
       <footer className="border-t border-border px-4 py-3">
