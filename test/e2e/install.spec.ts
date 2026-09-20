@@ -36,6 +36,25 @@ test.describe('Install to the home screen', () => {
     ).toHaveAttribute('content', 'yes')
   })
 
+  test('orders theme-color so the per-scheme tags are not shadowed', async ({ page }) => {
+    await page.goto('.')
+    const metas = await page
+      .locator('meta[name="theme-color"]')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => ({
+          media: node.getAttribute('media'),
+          content: node.getAttribute('content'),
+        })),
+      )
+
+    // The browser takes the first theme-color whose media matches, and an
+    // absent media matches everything — so the bare fallback must come last.
+    expect(metas.length).toBeGreaterThan(1)
+    expect(metas.findIndex((meta) => meta.media === null)).toBe(metas.length - 1)
+    expect(metas.find((meta) => meta.media?.includes('light'))?.content).toBe('#ffffff')
+    expect(metas.find((meta) => meta.media?.includes('dark'))?.content).toBe('#0b1117')
+  })
+
   test('tells the operator how to install, since iOS offers no prompt', async ({ page }) => {
     await page.goto('.')
     // A Playwright page is a browser tab, never standalone, so the hint shows.

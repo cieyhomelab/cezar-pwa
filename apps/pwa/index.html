@@ -8,11 +8,13 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <!-- Split by scheme so the status bar matches the theme actually rendered
-         (index.css switches on prefers-color-scheme). The unqualified tag stays
-         as the fallback for browsers that ignore the media attribute. -->
-    <meta name="theme-color" content="#0b1117" />
+         (index.css switches on prefers-color-scheme). Order matters: the browser
+         takes the FIRST theme-color whose media matches, and an absent media
+         always matches — so the unqualified fallback has to come last or it
+         wins outright and the two above it are dead. -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1117" />
+    <meta name="theme-color" content="#0b1117" />
     <meta name="description" content="Podgląd i sterowanie agentami Cezara" />
 
     <!-- iOS ignores the web app manifest and reads these instead (F-PWA-2).
