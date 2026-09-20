@@ -69,7 +69,28 @@ Without VPS access, run a local mock instead: `CEZ_DRY_RUN=1 npx cezar-cli` with
 
 ## Deploying
 
-1. `npm run deploy` — builds and rsyncs `apps/pwa/dist` to `/var/www/cezar-mobile`.
-2. Include `deploy/nginx/cezar-mobile.conf` in the vhost **before** `location /`,
+Merging to `main` ships the shell: `.github/workflows/deploy.yml` runs the CI
+gates on that commit and then rsyncs the build to the VPS. It runs the same
+`scripts/deploy.sh` a human runs, so there is one deploy path rather than two.
+
+It needs three repository secrets. Until all three exist the job stays green and
+posts a warning instead of shipping:
+
+| Secret | Value |
+| --- | --- |
+| `DEPLOY_HOST` | `user@cezar.ciey.studio` |
+| `DEPLOY_SSH_KEY` | Private key whose public half is in the VPS user's `authorized_keys` |
+| `DEPLOY_KNOWN_HOSTS` | Output of `ssh-keyscan cezar.ciey.studio` — the host key is pinned, never blindly accepted |
+
+Optional repository **variable** `DEPLOY_PATH` overrides the
+`/var/www/cezar-mobile` default.
+
+Before the first real deploy, run the workflow manually from the Actions tab
+with **dry run** checked: it connects, diffs and writes nothing. `DEPLOY_DRY_RUN=1
+npm run deploy` does the same locally.
+
+Two steps remain manual and one-off:
+
+1. Include `deploy/nginx/cezar-mobile.conf` in the vhost **before** `location /`,
    and reload nginx.
-3. For push (M4), install `deploy/systemd/cezar-push.service` as a user unit.
+2. For push (M4), install `deploy/systemd/cezar-push.service` as a user unit.

@@ -1,0 +1,103 @@
+name: Deploy
+
+# Merging to main ships the shell. The gates in ci.yml run first, on this exact
+# commit — a red build never reaches the VPS.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Connect and diff, but write nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Queue deploys, never cancel one: interrupting rsync mid-write would leave the
+# shell half-updated.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: rsync to VPS
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://cezar.ciey.studio/m/
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      # Fail loudly on a half-configured deploy, but stay green (with a warning)
+      # when it has never been configured at all — merging a feature should not
+      # turn main red just because the VPS secrets are not in place yet.
+      - name: Check credentials
+        id: creds
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          # Explicit ifs, not `[[ ... ]] && arr+=()`: steps run under bash -e,
+          # where a bare short-circuit as the final command would exit non-zero.
+          missing=()
+          if [[ -z "$HOST" ]]; then missing+=(DEPLOY_HOST); fi
+          if [[ -z "$KEY" ]]; then missing+=(DEPLOY_SSH_KEY); fi
+          if [[ -z "$KNOWN_HOSTS" ]]; then missing+=(DEPLOY_KNOWN_HOSTS); fi
+
+          if [[ ${#missing[@]} -eq 3 ]]; then
+            echo "::warning title=Deploy skipped::No deploy secrets are set, so nothing was shipped. Add DEPLOY_HOST, DEPLOY_SSH_KEY and DEPLOY_KNOWN_HOSTS to enable this job."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error title=Deploy misconfigured::Missing secret(s): ${missing[*]}"
+            exit 1
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        if: steps.creds.outputs.configured == 'true'
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          # Pinned host key: StrictHostKeyChecking=no would accept whatever
+          # answers, which on a deploy path is a machine-in-the-middle away from
+          # shipping our shell to someone else's box.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Install dependencies
+        if: steps.creds.outputs.configured == 'true'
+        run: npm ci
+
+      # Same script a human runs locally, so there is one deploy path, not two.
+      - name: Deploy
+        if: steps.creds.outputs.configured == 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: |
+          # $HOME must be expanded by the shell here: rsync execs RSYNC_RSH
+          # directly, so a ~ in it would be passed to ssh as a literal path.
+          export RSYNC_RSH="ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes -o BatchMode=yes"
+          npm run deploy

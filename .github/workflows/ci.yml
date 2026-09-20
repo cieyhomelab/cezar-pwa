@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  # Called by deploy.yml so main runs these exact gates before shipping,
+  # without duplicating them here.
+  workflow_call:
 
 # Nothing here writes to the repo or deploys.
 permissions:
