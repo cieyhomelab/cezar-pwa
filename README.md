@@ -78,12 +78,27 @@ posts a warning instead of shipping:
 
 | Secret | Value |
 | --- | --- |
-| `DEPLOY_HOST` | `user@cezar.ciey.studio` |
-| `DEPLOY_SSH_KEY` | Private key whose public half is in the VPS user's `authorized_keys` |
+| `DEPLOY_HOST` | `ubuntu@cezar.ciey.studio` — Cezar and the shell live on the same box |
+| `DEPLOY_SSH_KEY` | Private half of a dedicated passphrase-less ed25519 pair; the public half sits in the VPS user's `authorized_keys` |
 | `DEPLOY_KNOWN_HOSTS` | Output of `ssh-keyscan cezar.ciey.studio` — the host key is pinned, never blindly accepted |
 
-Optional repository **variable** `DEPLOY_PATH` overrides the
-`/var/www/cezar-mobile` default.
+The deploy key is not a login. Its `authorized_keys` entry pins it to a forced
+command, so a leaked secret writes files and nothing else — no shell, no reading
+back, no reaching Cezar:
+
+```
+command="/usr/bin/rrsync -wo /var/www",restrict ssh-ed25519 AAAA… github-actions-deploy
+```
+
+Regenerate it on the VPS with `ssh-keygen -t ed25519 -N '' -f ~/.ssh/cezar_pwa_deploy`,
+append that line, and push the private half with `gh secret set DEPLOY_SSH_KEY < ~/.ssh/cezar_pwa_deploy`.
+
+Because rrsync anchors every client path inside its restricted directory, CI
+sets the repository **variable** `DEPLOY_PATH` to `/cezar-mobile` — relative to
+`/var/www`, it lands on `/var/www/cezar-mobile`. Passing the absolute path there
+would sync into `/var/www/var/www/cezar-mobile` instead. A human deploying with
+their own (unrestricted) key leaves `DEPLOY_PATH` unset and gets the
+`/var/www/cezar-mobile` default; do not copy the CI value into `.env.local`.
 
 Before the first real deploy, run the workflow manually from the Actions tab
 with **dry run** checked: it connects, diffs and writes nothing. `DEPLOY_DRY_RUN=1
@@ -94,7 +109,7 @@ Two steps remain manual and one-off, both run **on the VPS**:
 1. Wire up nginx:
 
    ```bash
-   sudo deploy/nginx/install.sh /etc/nginx/sites-available/cezar.ciey.studio
+   sudo deploy/nginx/install.sh /etc/nginx/sites-available/cezar-cezar-ciey-studio
    ```
 
    It backs the vhost up, adds the `include`, and only reloads if `nginx -t`
