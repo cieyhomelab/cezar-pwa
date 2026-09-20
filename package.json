@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "npm run dev -w @cezar-pwa/pwa",
     "build": "npm run build -w @cezar-pwa/shared && npm run build -w @cezar-pwa/push-sidecar && npm run build -w @cezar-pwa/pwa",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "test": "vitest run",
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "oxlint": "^1.81.0",
+    "typescript": "~7.0.2",
     "vitest": "^4.1.11"
   }
 }

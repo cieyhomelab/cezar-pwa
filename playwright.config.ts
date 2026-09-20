@@ -8,7 +8,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  // On CI, annotate the PR inline AND leave an HTML report behind for the
+  // failure artifact (it embeds the retry traces).
+  reporter: process.env.CI
+    ? [['github'], ['html', { open: 'never' }]]
+    : 'list',
   use: {
     // The PWA is always served under /m/ (nginx alias in production, Vite base
     // in dev), so every relative navigation has to resolve inside that scope.

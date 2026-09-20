@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nothing here writes to the repo or deploys.
+permissions:
+  contents: read
+
+# A new push supersedes the run in flight for the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Node 24 is the LTS line that satisfies every engines range in the tree
+  # (vite ^20.19 || >=22.12, vitest ^20 || ^22 || >=24). Development happens on
+  # 25.x, so CI is the check that nothing drifted past LTS.
+  NODE_VERSION: '24'
+
+jobs:
+  verify:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # ci, not install: it installs exactly what the lockfile pins and fails
+      # if the two have drifted apart.
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm test
+
+      - run: npm run build
+
+  e2e:
+    name: e2e (webkit-iphone)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # Mobile Safari is the primary target, so WebKit is the only browser
+      # worth installing. --with-deps pulls the system libraries it needs on
+      # a bare runner.
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+
+      # The Playwright config builds the app and serves it with `vite preview`
+      # on its own — the suite deliberately runs against a production build,
+      # because the manifest link and the service worker only exist there.
+      - run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
