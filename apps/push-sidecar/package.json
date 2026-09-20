@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "typecheck": "tsc --noEmit",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@cezar-pwa/shared": "*",
     "@hono/node-server": "^2.1.1",
     "hono": "^4.13.8"
   },

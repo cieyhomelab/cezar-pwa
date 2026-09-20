@@ -1,122 +1,61 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useRegisterSW } from 'virtual:pwa-register/react'
+import { pl } from './i18n/pl.ts'
 
-function App() {
-  const [count, setCount] = useState(0)
+/**
+ * M0 shell: the frame the later milestones fill in. It renders the app chrome,
+ * the safe-area layout and the service-worker update prompt — nothing that
+ * talks to Cezar yet.
+ */
+export default function App() {
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW()
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <div className="flex min-h-full flex-col bg-surface text-text">
+      <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-3 backdrop-blur">
+        <h1 className="text-lg font-semibold">{pl.app.name}</h1>
+        <p className="text-sm text-text-muted">{pl.app.tagline}</p>
+      </header>
+
+      {needRefresh && (
+        // F-PWA-5: never swap the worker under the user's hands.
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised px-4 py-2"
         >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <span className="text-sm">{pl.update.available}</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="touch-target rounded px-3 text-sm text-text-muted"
+              onClick={() => setNeedRefresh(false)}
+            >
+              {pl.update.dismiss}
+            </button>
+            <button
+              type="button"
+              className="touch-target rounded bg-accent px-3 text-sm font-medium text-white"
+              onClick={() => void updateServiceWorker(true)}
+            >
+              {pl.update.action}
+            </button>
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <main className="flex flex-1 items-center justify-center px-6 text-center">
+        <p className="text-text-muted">{pl.shell.empty}</p>
+      </main>
+
+      <footer className="border-t border-border px-4 py-3">
+        {/* Same-origin link to the full cockpit — the PWA is deliberately a
+            subset of it (REQUIREMENTS §1). */}
+        <a className="touch-target inline-flex items-center text-sm text-accent" href="/">
+          {pl.shell.openCockpit}
+        </a>
+      </footer>
+    </div>
   )
 }
-
-export default App
