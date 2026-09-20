@@ -35,6 +35,10 @@ export default defineConfig(({ mode }) => {
         registerType: 'prompt',
         injectRegister: null,
         manifest: {
+          // A stable install identity: without `id` the browser keys the
+          // installed app on `start_url`, so changing where the app opens
+          // would register as a different app (F-PWA-1).
+          id: '/m/',
           name: 'Cezar',
           short_name: 'Cezar',
           description: 'Podgląd i sterowanie agentami Cezara',

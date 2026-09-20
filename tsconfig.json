@@ -2,7 +2,11 @@
   "compilerOptions": {
     "noEmit": true,
     "target": "es2023",
-    "lib": ["ES2023"],
+    // DOM is here for `test/e2e`: the bodies of `page.evaluate` callbacks are
+    // typechecked in this project but execute inside the browser, so they need
+    // `navigator`, `caches` and friends. The configs covered here run on Node
+    // and simply do not reference them.
+    "lib": ["ES2023", "DOM"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "moduleDetection": "force",

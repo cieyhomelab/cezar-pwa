@@ -1,16 +1,25 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { pl } from './i18n/pl.ts'
+import { InstallHint } from './pwa/InstallHint.tsx'
+import { OfflineBanner } from './pwa/OfflineBanner.tsx'
+import { UpdatePrompt } from './pwa/UpdatePrompt.tsx'
+import { useOnlineStatus } from './pwa/useOnlineStatus.ts'
+import { useStandalone } from './pwa/useStandalone.ts'
 
 /**
  * M0 shell: the frame the later milestones fill in. It renders the app chrome,
- * the safe-area layout and the service-worker update prompt — nothing that
- * talks to Cezar yet.
+ * the safe-area layout and the three installation-slice affordances (S-01:
+ * install, offline, update) — nothing that talks to Cezar yet.
+ *
+ * The browser-facing state lives in the hooks; everything below is wiring.
  */
 export default function App() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW()
+  const online = useOnlineStatus()
+  const standalone = useStandalone()
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-text">
@@ -19,31 +28,15 @@ export default function App() {
         <p className="text-sm text-text-muted">{pl.app.tagline}</p>
       </header>
 
-      {needRefresh && (
-        // F-PWA-5: never swap the worker under the user's hands.
-        <div
-          role="status"
-          className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised px-4 py-2"
-        >
-          <span className="text-sm">{pl.update.available}</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="touch-target rounded px-3 text-sm text-text-muted"
-              onClick={() => setNeedRefresh(false)}
-            >
-              {pl.update.dismiss}
-            </button>
-            <button
-              type="button"
-              className="touch-target rounded bg-accent px-3 text-sm font-medium text-white"
-              onClick={() => void updateServiceWorker(true)}
-            >
-              {pl.update.action}
-            </button>
-          </div>
-        </div>
-      )}
+      <OfflineBanner online={online} />
+
+      <UpdatePrompt
+        needRefresh={needRefresh}
+        onDismiss={() => setNeedRefresh(false)}
+        onUpdate={() => void updateServiceWorker(true)}
+      />
+
+      <InstallHint standalone={standalone} />
 
       <main className="flex flex-1 items-center justify-center px-6 text-center">
         <p className="text-text-muted">{pl.shell.empty}</p>
