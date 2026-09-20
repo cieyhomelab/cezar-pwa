@@ -60,6 +60,11 @@ export default defineConfig(({ mode }) => {
           // Shell only. Nothing under /api/** is precacheable by construction —
           // it is not a build output (CLAUDE.md rule 4).
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+          // The SW is registered as `classic` (devOptions are off), so it never
+          // needed an ESM bundle. The plugin's ESM path also hardcodes Rollup's
+          // deprecated `output.inlineDynamicImports`, which Vite 8 warns about
+          // and we cannot override; `iife` skips that branch entirely.
+          rollupFormat: 'iife',
         },
         devOptions: { enabled: false, type: 'module' },
       }),
