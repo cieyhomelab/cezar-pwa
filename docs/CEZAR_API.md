@@ -42,6 +42,13 @@ Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx 
 - Dwie pułapki: `$uri` jest zdekodowane (`/p/x/run%20one?key=…` → `Location: …/run one`, nagłówek ze spacją), i nie da się przenieść stanu trzymanego w query paramach.
 - PWA i tak nie może zbudować takiego linku — zawierałby sekret, a ten nigdy nie trafia do naszego storage (guardrail PRD).
 
+**Jak korzysta z tego PWA (S-02, wdrożone 2026-09-20)**
+
+- Sonda sesji: `GET /api/v1/health` przez `apps/pwa/src/api/http.ts`. `401/403` **albo** odpowiedź nie-JSON → `AuthRequiredError` → ekran „Połącz z Cezarem”. Błąd sieci/timeout → `NetworkError` → osobny ekran „nie mogę się połączyć”; te dwa stany nigdy się nie mieszają.
+- Ponowna sonda przy każdym `visibilitychange → visible` — ciasteczka nie da się odczytać, więc jedyną odpowiedzią na „czy sesja jeszcze żyje” jest zapytanie, a iOS zamraża aplikację na godziny.
+- Odblokowanie: wklejony link → zostaje sam `key` → **ścieżka podmieniona na `/m/`** → `location.replace`. Ścieżka jest jedynym nośnikiem celu powrotu (`return 302 https://$host$uri`), więc to jedyny kształt, jaki może zadziałać. Sekret nie trafia nigdzie poza ten jeden request; jeśli wrócimy z niezużytym `key` w URL-u, jest natychmiast usuwany z wpisu historii.
+- **Niewiadoma:** czy guard `?key=` obejmuje `/m/` (blok `server`), czy nie (`location /`). Z klienta nie widać; aplikacja radzi sobie w obu przypadkach — patrz `docs/REQUIREMENTS.md` §9 Q1.
+
 **Konsekwencje dla wdrożenia — do `deploy/nginx/`**
 
 - **`location /m/` musi stać POZA guardem `?key=`.** Zainstalowana PWA ma na iOS osobne ciasteczka od Safari, więc start z ikony leci bez ciasteczka. Jeśli powłoka jest za bramą, użytkownik dostaje 148-bajtowy 403 HTML **pod adresem app shella** i nie ma czego wyrenderować — ekran „Połącz z Cezarem" nigdy się nie pokaże. Chronione zostaje wyłącznie `/api/**`.

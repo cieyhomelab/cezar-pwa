@@ -13,6 +13,35 @@ export const pl = {
     empty: 'Szkielet aplikacji działa. Lista zadań pojawi się w kolejnym etapie.',
     openCockpit: 'Otwórz w pełnym cockpicie',
   },
+  auth: {
+    /** The first probe, before anything is known. */
+    checking: 'Sprawdzam połączenie z Cezarem…',
+    title: 'Połącz z Cezarem',
+    /** Says plainly that this is not a login — there is no account to log into. */
+    intro:
+      'Aplikacja nie ma własnego logowania. Dostępu udziela brama przed Cezarem, a zainstalowana aplikacja ma własne ciasteczka — dlatego trzeba ją odblokować osobno.',
+    linkLabel: 'Wklej link dostępowy',
+    linkPlaceholder: 'https://cezar.ciey.studio/…?key=…',
+    submit: 'Połącz',
+    /** Reassurance that pasting a secret here is safe. R-AUTH-5. */
+    privacy: 'Link nie jest nigdzie zapisywany — służy tylko do przejścia przez bramę.',
+    /** The fallback when the gateway ignores the key at the app's own path. */
+    unlockFailed:
+      'Brama nie przyjęła linku pod adresem aplikacji. Otwórz link w Safari, a potem wróć tutaj — aplikacja sama sprawdzi połączenie.',
+    manual: 'Możesz też otworzyć link w Safari i wrócić do aplikacji.',
+    recheck: 'Sprawdź ponownie',
+    rechecking: 'Sprawdzam…',
+    errors: {
+      empty: 'Wklej link dostępowy.',
+      notAUrl: 'To nie wygląda na adres. Skopiuj cały link, razem z „https://”.',
+      foreignOrigin: 'Ten link prowadzi pod inny adres niż ta aplikacja.',
+      missingKey: 'W linku brakuje parametru „key”. Skopiuj cały link z wiadomości.',
+    },
+    unreachable: {
+      title: 'Nie mogę połączyć się z Cezarem',
+      body: 'Nie ma odpowiedzi z serwera. To nie znaczy, że dostęp wygasł — sprawdź sieć i spróbuj ponownie.',
+    },
+  },
   install: {
     title: 'Dodaj Cezara do ekranu początkowego',
     /** iOS has no install prompt — the operator does it from the Share sheet. */

@@ -45,7 +45,7 @@ attention rule → a readable phone screen.
 | F-01 | `serve-shell-at-perimeter` | (foundation) the built shell is served at `/m/`, outside the gate | —             | Access Control §Perimeter facts, FR-001      | ready    |
 | F-02 | `vendor-cezar-contract`    | (foundation) contract pinned to the running Cezar version        | —             | Guardrails, Business Logic                   | ready    |
 | S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | proposed |
-| S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | blocked  |
+| S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | implemented |
 | S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | proposed |
 | S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | proposed |
 | S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | proposed |
@@ -82,7 +82,10 @@ do NOT re-scaffold them.
   `packages/shared/src/attention.ts`. This is the product's central rule and it is done.
 - **Contract:** partial — `packages/cezar-contract/` exists as a slot; `src/` is empty
   until `npm run sync:contract <sha>` runs.
-- **Auth:** absent — no "Connect to Cezar" screen.
+- **Auth:** ~~absent — no "Connect to Cezar" screen.~~ **present as of 2026-09-20** —
+  `apps/pwa/src/api/http.ts` (refusal detection), `apps/pwa/src/domain/access-link.ts` and
+  `apps/pwa/src/features/auth/` (the gate, the screen, the unlock). S-03 renders inside the
+  gate rather than adding one.
 - **Notifications:** partial — the service worker carries `push` and `notificationclick`
   handlers; the sidecar is still a placeholder that serves "Hello Hono!".
 - **Deploy / infra:** ~~present but **not applied** — CI, deploy-on-merge, an nginx snippet
@@ -185,7 +188,16 @@ do NOT re-scaffold them.
   this slice before the question is answered would produce a plan for one of two different
   products. Detecting the refusal (FR-004) is unaffected and could be split out if the
   question stays open.
-- **Status:** blocked
+- **Status:** ~~blocked~~ implemented 2026-09-20 (`context/changes/connect-to-cezar/`)
+- **Note (2026-09-20):** the blocker dissolved rather than being answered. Open Roadmap
+  Question 1 asked whether the perimeter admits a return path; the answer is that it admits
+  one *in the path* — the guard's `return 302 https://$host$uri` keeps the path and drops
+  the query — so the app rewrites the pasted link's path to `/m/` and the return target
+  needs no perimeter change. Whether the guard is reached at `/m/` at all is still unknown
+  from the client (see § Open Roadmap Questions 1), so the slice ships **both** shapes: the
+  one-paste unlock, and — when the gateway ignores the key — a stripped URL plus "open it in
+  Safari and come back", which the visibility re-probe completes with nothing pressed. The
+  question is now a verification step on the device, not a fork in the design.
 
 ### S-03: The task list
 
@@ -381,13 +393,16 @@ do NOT re-scaffold them.
 
 ## Open Roadmap Questions
 
-1. **Can the perimeter return the operator to the installed app after authorizing?**
-   FR-005 promises landing back on the task list, but the recorded perimeter facts say the
-   access link discards everything but the path, and the product cannot build such a link
-   without embedding the secret. Either the perimeter gains a return path, or FR-005 is
-   rewritten to "the operator re-opens the icon by hand". — Owner: operator.
-   Block: S-02. *(New — surfaced by this roadmap; the PRD records Q1 as resolved, but this
-   consequence of the resolution is not.)*
+1. ~~**Can the perimeter return the operator to the installed app after authorizing?**~~
+   **ANSWERED 2026-09-20 by building it.** The return destination *is* the path: the guard
+   redirects to `https://$host$uri`, so an access link whose path is `/m/` returns to the
+   app, and the product can build that link without ever holding a secret of its own — it
+   re-paths the one the operator pastes. FR-005 stands as written and needs no perimeter
+   change. **What is left is narrower and blocks nothing:** whether the `?key=` guard is
+   reached at `/m/` (it depends on whether it sits in `server` or in `location /`, which is
+   not visible from the client and not readable through the write-only deploy key). The app
+   handles both and detects which it is in; the operator can settle it in one paste on the
+   device. — Owner: operator. Block: nothing.
 2. **Who owns the perimeter's configuration?** If Cezar's own installer generated it, a
    reinstall could overwrite what this product adds; if it is externally managed, it will
    not. — Owner: operator. Block: roadmap-wide — it decides whether F-01 must be
