@@ -89,8 +89,21 @@ Before the first real deploy, run the workflow manually from the Actions tab
 with **dry run** checked: it connects, diffs and writes nothing. `DEPLOY_DRY_RUN=1
 npm run deploy` does the same locally.
 
-Two steps remain manual and one-off:
+Two steps remain manual and one-off, both run **on the VPS**:
 
-1. Include `deploy/nginx/cezar-mobile.conf` in the vhost **before** `location /`,
-   and reload nginx.
-2. For push (M4), install `deploy/systemd/cezar-push.service` as a user unit.
+1. Wire up nginx:
+
+   ```bash
+   sudo deploy/nginx/install.sh /etc/nginx/sites-available/cezar.ciey.studio
+   ```
+
+   It backs the vhost up, adds the `include`, and only reloads if `nginx -t`
+   passes — a config that fails the test is rolled back before nginx sees it.
+   The command prints its own rollback line. Re-running only refreshes the
+   snippet. If the file holds more than one `location /` block it refuses to
+   guess and tells you to add the `include` by hand.
+
+2. For push (M4), install `deploy/systemd/cezar-push.service` as a user unit,
+   and uncomment the `/m/push/` block in the snippet **after** filling in the
+   cookie check (open question Q1) — it is shipped commented out so the
+   sidecar endpoints cannot go live unauthenticated.
