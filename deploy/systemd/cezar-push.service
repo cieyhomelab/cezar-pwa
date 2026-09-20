@@ -1,0 +1,33 @@
+# User unit: install to ~/.config/systemd/user/cezar-push.service, then
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now cezar-push
+#   loginctl enable-linger $USER   # so it survives logout
+[Unit]
+Description=cezar-push — Web Push sidecar for Cezar Mobile
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/cezar-push
+ExecStart=/usr/bin/node %h/cezar-push/dist/index.js
+Restart=always
+RestartSec=5
+
+# Loopback only — nginx is the sole way in (A5/A6).
+Environment=HOST=127.0.0.1
+Environment=PORT=4330
+Environment=CEZAR_URL=http://127.0.0.1:4321
+# VAPID keys live in %h/.cezar-push/vapid.json (0600), never in the repo
+# (CLAUDE.md rule 6). Set the contact address here.
+Environment=VAPID_SUBJECT=mailto:CHANGE_ME@example.com
+
+# journald only; the sidecar must never log task content (§6).
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

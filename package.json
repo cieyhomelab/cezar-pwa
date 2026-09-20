@@ -9,11 +9,20 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @cezar-pwa/pwa",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @cezar-pwa/shared && npm run build -w @cezar-pwa/push-sidecar && npm run build -w @cezar-pwa/pwa",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "deploy": "scripts/deploy.sh",
+    "sync:contract": "scripts/sync-contract.sh",
+    "gen:icons": "node scripts/gen-icons.mjs"
   },
   "devDependencies": {
-    "oxlint": "^1.81.0"
+    "@playwright/test": "^1.63.0",
+    "oxlint": "^1.81.0",
+    "vitest": "^4.1.11"
   }
 }
