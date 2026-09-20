@@ -22,4 +22,14 @@ describe('App shell', () => {
     render(<App />)
     expect(screen.queryByText(pl.update.available)).not.toBeInTheDocument()
   })
+
+  it('offers the install instruction while running in a browser tab (S-01)', () => {
+    render(<App />)
+    expect(screen.getByText(pl.install.title)).toBeInTheDocument()
+  })
+
+  it('shows no offline banner while the network is up', () => {
+    render(<App />)
+    expect(screen.queryByText(pl.offline.banner)).not.toBeInTheDocument()
+  })
 })

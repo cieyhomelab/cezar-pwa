@@ -13,6 +13,12 @@ export const pl = {
     empty: 'Szkielet aplikacji działa. Lista zadań pojawi się w kolejnym etapie.',
     openCockpit: 'Otwórz w pełnym cockpicie',
   },
+  install: {
+    title: 'Dodaj Cezara do ekranu początkowego',
+    /** iOS has no install prompt — the operator does it from the Share sheet. */
+    ios: 'Naciśnij „Udostępnij”, a następnie „Dodaj do ekranu początkowego”.',
+    dismiss: 'Nie teraz',
+  },
   update: {
     available: 'Nowa wersja aplikacji',
     action: 'Odśwież',
