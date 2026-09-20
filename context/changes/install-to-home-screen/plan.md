@@ -58,7 +58,10 @@ production build.
 - **Not removing the `idb-keyval` and `virtua` dependencies.** Roadmap Open Question 5
   flags them, but the owner is the operator and the call is outside this slice.
 - **No icon badge** (FR-042, parked behind Open Roadmap Question 3).
-- **No device verification.** Blocked on F-01; tracked as Manual in `## Progress`.
+- **No physical-device verification.** Written believing F-01 was unapplied; after the merge
+  deployed it turned out to be applied, so the live host *was* verifiable in WebKit and that
+  is recorded in `## Progress`. What remains genuinely out of reach here is a real iPhone —
+  the Share sheet, a home-screen launcher, Airplane Mode.
 
 ## Implementation Approach
 
@@ -288,7 +291,22 @@ only place the service worker and the generated manifest exist.
 
 ### Manual Testing Steps
 
-All blocked on F-01 reaching the live host. Listed under Manual above.
+**Correction (2026-09-20, after merge).** This plan was written against the roadmap's
+baseline claim that F-01 had not been applied and `/m/` still answered 403. That was stale,
+and it was not re-checked before the claim was repeated on PR #10. Measured against the live
+host after the deploy:
+
+```
+GET https://cezar.ciey.studio/m/   (no cookies) -> 200
+GET https://cezar.ciey.studio/     (no cookies) -> 403
+```
+
+The shell is served outside the gate and the cockpit is not — which is exactly what F-01
+requires, so **F-01 is applied**. The roadmap's Baseline section still says otherwise and
+should be corrected the next time it is touched.
+
+That unblocks everything except what genuinely needs a physical phone. See Manual above,
+now split by what was verified against the live host and what still needs the device.
 
 ## References
 
@@ -298,8 +316,20 @@ All blocked on F-01 reaching the live host. Listed under Manual above.
 
 ## Progress
 
-Manual items are all blocked on F-01 reaching the live host (`/m/` still answers 403), and
-stay open until the operator can run them on the phone.
+**Manual status, corrected after the merge deployed.** F-01 turns out to be applied — the
+live host serves `/m/` at 200 without a session while the cockpit stays 403 (see § Manual
+Testing Steps). So the Manual items are not all blocked; they split in two:
+
+- **Verified against the live host** in WebKit at iPhone 14 dimensions
+  (`https://cezar.ciey.studio/m/`, both schemes): body background resolves to
+  `rgb(11, 17, 23)` dark and `rgb(255, 255, 255)` light, the install hint renders, the
+  service worker registers at scope `https://cezar.ciey.studio/m/`, and the offline banner
+  appears under `setOffline`. Screenshots of the live host came out **byte-identical** to
+  `evidence/shell-dark.png` and `evidence/shell-light.png` (md5 `5700dadb…` / `52471a9f…`),
+  so production renders pixel-for-pixel what the local build does — which is why no
+  separate `live-*.png` is committed.
+- **Still needs a physical iPhone** — anything involving the real Share sheet, a real
+  home-screen launcher, or Airplane Mode. A desktop WebKit build is not a substitute.
 
 ### Phase 1: Offline state
 
@@ -311,7 +341,8 @@ stay open until the operator can run them on the phone.
 
 #### Manual
 
-- [ ] 1.4 Banner legible on a real iPhone in Airplane Mode, both themes
+- [x] 1.4 Banner legible in both themes — live host, WebKit @ iPhone 14
+- [ ] 1.4b Same check on a physical iPhone in Airplane Mode
 
 ### Phase 2: Install affordance
 
@@ -323,8 +354,9 @@ stay open until the operator can run them on the phone.
 
 #### Manual
 
-- [ ] 2.4 Add to Home Screen produces a correct launcher
-- [ ] 2.5 Launching from the icon is full-screen and hides the hint
+- [x] 2.4a Install hint renders on the live host in both themes (WebKit @ iPhone 14)
+- [ ] 2.4 Add to Home Screen produces a correct launcher — physical iPhone only
+- [ ] 2.5 Launching from the icon is full-screen and hides the hint — physical iPhone only
 
 ### Phase 3: Deliberate update
 
@@ -335,7 +367,8 @@ stay open until the operator can run them on the phone.
 
 #### Manual
 
-- [ ] 3.3 A second build raises the prompt and does not reload until tapped
+- [ ] 3.3 A second build raises the prompt and does not reload until tapped — needs a
+      follow-up deploy against an already-open client
 
 ### Phase 4: Offline proof and doc correction
 
@@ -346,8 +379,9 @@ stay open until the operator can run them on the phone.
 
 #### Manual
 
-- [ ] 4.3 Cold launch in Airplane Mode renders the shell — the case the harness cannot
-      drive; see the note under Phase 4
+- [x] 4.3a Service worker registers on the live origin at scope `/m/` (WebKit)
+- [ ] 4.3 Cold launch in Airplane Mode renders the shell — physical iPhone only; the
+      harness cannot drive it, see the note under Phase 4
 - [x] 4.4 F-PWA-4 no longer reads as a live instruction
 
 ### Phase 5: The dark theme does not exist (found in flight)
@@ -360,3 +394,5 @@ stay open until the operator can run them on the phone.
 #### Manual
 
 - [x] 5.3 Screenshots at 390×844 differ between schemes and both are legible
+- [x] 5.4 Confirmed on the deployed host: body background is `rgb(11, 17, 23)` under dark
+      and `rgb(255, 255, 255)` under light

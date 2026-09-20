@@ -85,9 +85,14 @@ do NOT re-scaffold them.
 - **Auth:** absent — no "Connect to Cezar" screen.
 - **Notifications:** partial — the service worker carries `push` and `notificationclick`
   handlers; the sidecar is still a placeholder that serves "Hello Hono!".
-- **Deploy / infra:** present but **not applied** — CI, deploy-on-merge, an nginx snippet
+- **Deploy / infra:** ~~present but **not applied** — CI, deploy-on-merge, an nginx snippet
   with a guarded installer, and a systemd unit all exist in the repo. None of it has
-  touched the live host: `/m/` currently answers 403 from the gate.
+  touched the live host: `/m/` currently answers 403 from the gate.~~
+  **Out of date as of 2026-09-20 20:22.** Measured against the running gateway with no
+  cookies: `GET /m/` → **200**, `GET /` (cockpit) → **403**. The shell is served outside
+  the gate and the cockpit is not, which is F-01's requirement — so **F-01 is applied** and
+  deploy-on-merge is live (it shipped S-01 via PR #10). The systemd unit for the push
+  sidecar is a separate question and was not checked.
 - **Observability:** absent, and deliberately so — the PRD forbids telemetry and
   third-party services.
 
@@ -153,6 +158,13 @@ do NOT re-scaffold them.
   this slice is mostly verification on the real device — which is the point: it is the
   first moment anything is confirmed on the actual phone rather than in a headless browser.
 - **Status:** proposed
+- **Note (2026-09-20):** implemented and deployed via PR #10
+  (`context/changes/install-to-home-screen/`). The offline state and the install hint were
+  the real gaps; the update prompt only needed tests. Left as `proposed` rather than moved
+  to Done because the outcome's own premise — confirmation on an actual phone — has not
+  happened: the Share sheet, a real home-screen launcher and Airplane Mode all still need
+  the device. Everything reachable from WebKit against the live host is verified and
+  recorded in that change's `plan.md` § Progress. Archive it once the device pass is done.
 
 ### S-02: Connect to Cezar
 

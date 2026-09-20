@@ -16,8 +16,14 @@ existed for S-01, so `plan.md` here is **derived** from the roadmap slice and th
 requirements it names rather than authored by a planning pass. Nothing in it is invented
 scope — every phase traces to a sentence in one of those two documents.
 
-Prerequisite **F-01** (`serve-shell-at-perimeter`) is in the repo but has never been applied
-to the live host: `/m/` still answers 403 from the gate. So the half of S-01 that is
-real-device verification cannot run yet. This change delivers the code and the automated
-(WebKit) verification; the device checklist stays open and is listed under Manual in
-`## Progress`.
+Merged as `5606360` on 2026-09-20 (PR #10) and deployed.
+
+**Correction.** This file first said F-01 (`serve-shell-at-perimeter`) had never been applied
+and `/m/` still answered 403 — taken from the roadmap's Baseline without re-checking, and
+repeated on the PR. Measured after the deploy, `/m/` answers **200 without a session** while
+the cockpit `/` answers 403, which is exactly what F-01 requires. F-01 is applied, and the
+roadmap's Baseline section is stale on this point.
+
+So the live host was verifiable after all, and was: see `plan.md` § Progress. What is still
+open needs a physical iPhone — the Share sheet, a real home-screen launcher, Airplane Mode —
+plus one follow-up deploy to watch the update prompt fire against an already-open client.
