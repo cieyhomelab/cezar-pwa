@@ -13,9 +13,39 @@ Pliki źródłowe prawdy (sprawdzaj je przy każdej aktualizacji Cezara):
 
 - Używamy **wyłącznie** powierzchni wersjonowanej `/api/v1/…`. Stare `/api/…` są zamrożone dla bookmarkletów — nie budujemy na nich.
 - Każda trasa projektowa istnieje w dwóch wariantach: `/api/v1/<path>` (projekt, w którym Cezar wystartował) i `/api/v1/p/:projectId/<path>`. **PWA zawsze używa wariantu z `projectId`**, bo pokazuje zadania ze wszystkich projektów.
-- Cezar **nie ma własnego uwierzytelniania** — perimeter to reverse proxy (u nas: nginx + cookie). `createCezarClient({ token })` ma opcję Bearer, ale serwer jej dziś nie wymaga.
+- Cezar **nie ma własnego uwierzytelniania** — perimeter to reverse proxy (u nas: nginx + cookie). `createCezarClient({ token })` ma opcję Bearer, ale serwer jej dziś nie wymaga. Szczegóły bramy: sekcja 1a.
 - **Guard same-origin (#426):** każdy `POST/PUT/PATCH/DELETE` z nagłówkiem `Origin` innym niż `Host` → `403`; `Sec-Fetch-Site: cross-site` → `403`. CORS jest otwarty tylko dla `GET /api/v1/health`. ⇒ **PWA musi być serwowana z tego samego originu** (`https://cezar.ciey.studio`), inaczej zapisy i odczyty nie zadziałają.
 - Błędy mają kształt `{ "error": string }` + kod HTTP (400 walidacja, 404 brak, 409 konflikt stanu).
+
+## 1a. Brama nginx — zweryfikowane na żywej instancji (2026-09-20)
+
+Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx się zmieni, ta sekcja wymaga ponownego sprawdzenia.
+
+**Ciasteczko sesji**
+
+- `Max-Age=2592000` (30 dni), `Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`.
+- **Nie jest przesuwne.** `Set-Cookie` leci **wyłącznie** na trafienie `?key=`; zwykły request z ważnym ciasteczkiem zwraca 200 bez `Set-Cookie`. Zegar tyka od kliknięcia linku, niezależnie od intensywności korzystania.
+- Wartość ciasteczka to **statyczny sekret współdzielony, identyczny z parametrem `key`**. Nie ma sesji per-użytkownik ani server-side store; odwołanie = edycja obu plików + reload nginx.
+- `HttpOnly` ⇒ **JS nigdy nie zobaczy tego ciasteczka.** PWA nie odczyta go, nie sprawdzi daty wygaśnięcia, nie odnowi. Proaktywne „zostało ci 3 dni" jest niewykonalne — jedyny sygnał to 403 w locie.
+
+**Brak sesji = goła odmowa**
+
+- `403`, `Content-Type: text/html`, 148 bajtów statycznego HTML-a. Bez `Location`, bez `WWW-Authenticate`, bez CORS, bez `Cache-Control`.
+- Identycznie dla `GET`, `POST`, XHR, SSE i deep-linków. Stale ciasteczko daje dokładnie to samo co brak ciasteczka.
+- **Nie ma przekierowania i nie ma strony logowania.** „Połącz z Cezarem" nie może być logowaniem — aplikacja za bramą nie ma żadnej autoryzacji (`http://127.0.0.1:4322/` zwraca 200 bez poświadczeń). Jedyny możliwy kształt to: wykryj 403 → pokaż ekran ponownego odblokowania.
+- Tania sonda stanu sesji: `GET /api/v1/health` — z ciasteczkiem JSON z wersją, bez ciasteczka 403.
+
+**Link odblokowujący nie przyjmuje parametru powrotu**
+
+- Guard ma kształt `if ($arg_key = "…") { add_header Set-Cookie …; return 302 https://$host$uri; }`. `$uri` to sama ścieżka — **cały query string ginie**.
+- Cel powrotu koduje się więc **w ścieżce** linku odblokowującego, nie w parametrze.
+- Dwie pułapki: `$uri` jest zdekodowane (`/p/x/run%20one?key=…` → `Location: …/run one`, nagłówek ze spacją), i nie da się przenieść stanu trzymanego w query paramach.
+- PWA i tak nie może zbudować takiego linku — zawierałby sekret, a ten nigdy nie trafia do naszego storage (guardrail PRD).
+
+**Konsekwencje dla wdrożenia — do `deploy/nginx/`**
+
+- **`location /m/` musi stać POZA guardem `?key=`.** Zainstalowana PWA ma na iOS osobne ciasteczka od Safari, więc start z ikony leci bez ciasteczka. Jeśli powłoka jest za bramą, użytkownik dostaje 148-bajtowy 403 HTML **pod adresem app shella** i nie ma czego wyrenderować — ekran „Połącz z Cezarem" nigdy się nie pokaże. Chronione zostaje wyłącznie `/api/**`.
+- **Service worker musi jawnie odrzucać `!response.ok` przed zapisem do cache'u.** Odpowiedź 403 nie ma `Cache-Control`, jest `text/html` i przychodzi pod tym samym URL-em co powłoka — SW potrafi utrwalić stronę błędu jako app shell. Poprawne 200 z cockpitu niesie `Cache-Control: no-cache`.
 
 ## 2. Odczyt — co PWA pobiera
 
@@ -78,7 +108,9 @@ Itemy (`item`): `message` (role, text, phase), `reasoning`, `tool` (name, toolKi
 Słownik jest **append-only** — nieznany `type` musi być bezpiecznie ignorowany/renderowany ogólnie, nigdy nie może wywalić UI.
 
 ### 3d. WebSocket `GET /api/v1/ws`
-Istnieje (topiki na żądanie, np. `health`), ale nie jest potrzebny w MVP. Nie używamy.
+Istnieje po stronie Cezara (topiki na żądanie, np. `health`), ale **nie przechodzi przez bramę** — zweryfikowane 2026-09-20. Vhost ustawia `proxy_set_header Connection ''` i nie przekazuje `Upgrade`, więc upgrade do WebSocketu nie przejdzie. To ograniczenie transportu, nie decyzja produktowa: **SSE jest jedyną drogą do strumienia zdarzeń.**
+
+SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId/events` zwracają `text/event-stream` przez bramę (`proxy_buffering off`, read timeout 3600 s).
 
 ## 4. Akcje (zapis) — wymagają same-origin
 
@@ -100,7 +132,7 @@ Akcja na `permission.requested`: mechanizm odpowiedzi do potwierdzenia w `packag
 ## 5. „Wymaga uwagi” — reguła powiadomień
 
 Kopia `deriveAttention()` z `packages/web/src/lib/attention.ts` (first-match-wins):
-1. oczekujące `permission.requested` → **permission** (najwyższy priorytet)
+1. oczekujące `permission.requested` → **permission** (najwyższy priorytet) — **gałąź nieosiągalna na tej instancji, patrz niżej**
 2. `failed` + `autoResumeAt` → zaplanowane, **bez** uwagi
 3. `waiting` → czeka na odpowiedź
 4. `review` → do przeglądu
@@ -108,3 +140,17 @@ Kopia `deriveAttention()` z `packages/web/src/lib/attention.ts` (first-match-win
 6. `running` + `activity: 'monitoring'` → bez uwagi
 
 Powiadamiamy przy **wejściu** zadania w stan wymagający uwagi (przejście, nie stan), tak jak `web/src/lib/notifications.ts`.
+
+### 5a. `permission.requested` jest martwym typem (zweryfikowane 2026-09-20)
+
+Gałąź 1 nigdy się nie wykona na tej instancji. Trzy warstwy dowodu:
+
+1. **Przełącznik nie jest ustawiony.** `CEZ_APPROVAL_GATE` czytany w `dist/core/claude-cli-runner.js:322` (`env.CEZ_APPROVAL_GATE === '1' ? 'acceptEdits' : 'dontAsk'`). Żywy proces ma z cezarowych zmiennych tylko `CEZ_REMOTE=1`; unit deklaruje `CEZ_REMOTE` i `PATH`. Runner startuje z `--permission-mode dontAsk`.
+2. **`dontAsk` z definicji nie generuje promptów.** Narzędzia z `--allowedTools` przechodzą, reszta jest odrzucana zamiast pytać. Odmowa ląduje jako `ToolStatus: 'declined'`, nie jako prośba o zgodę.
+3. **Samo zdarzenie nie ma emitera.** `dist/core/ui-events.d.ts:270`, `UiPermissionRequestedEvent`, z komentarzem `RESERVED — wired when auto-approve becomes optional. Types only for now.` Trafienia: 2 w `.d.ts`, 0 w runtime `.js`, 0 w całym web UI.
+
+Drugi runner nie zmienia obrazu: `codex` ma `approvalPolicy: 'never'` zaszyte na sztywno (`codex-app-server-runner.js:291`), a i tak `codex.available: false`, `defaultRunner: claude`.
+
+**Zastrzeżenie:** ustawienie `CEZ_APPROVAL_GATE=1` tej gałęzi **nie ożywi**. Zmienna przełącza wyłącznie tryb uprawnień CLI na `acceptEdits`; Cezar nadal nie ma kodu, który zamieniłby `control_request can_use_tool` w zdarzenie UI. Ożywienie tej ścieżki to zmiana w Cezarze — poza zasięgiem PWA (patrz reguła 7 w `CLAUDE.md`: zgłaszamy jako propozycję issue upstream).
+
+**Co z tym robimy w kodzie:** gałąź **zostaje** w `packages/shared/attention.ts`. Reguła 8 wymaga kopii 1:1 z Cezara, a słownik zdarzeń jest append-only — emiter może dojść w dowolnej wersji. Usunięcie gałęzi rozjechałoby nas z cockpitem dokładnie w momencie, w którym Cezar ją podłączy. Traktujemy ją jako nieosiągalną, nie jako nieistniejącą: bez testów E2E, bez UI do odpowiadania na prośbę o zgodę, z testem jednostkowym trzymającym zgodność z oryginałem.
