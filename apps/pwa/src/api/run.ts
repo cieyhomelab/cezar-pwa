@@ -1,6 +1,9 @@
 import type {
   ApiRun,
+  CancelResponse,
   ContinueResponse,
+  CreatePrResponse,
+  FinishResponse,
   MessageResponse,
   RunEvent,
   RunHistoryContext,
@@ -185,6 +188,76 @@ export async function continueRunWith(projectId: string, runId: string, text: st
 }
 
 export const WRITE_TIMEOUT_MS = 20_000
+
+/**
+ * S-08's writes (FR-025 to FR-029). Each is bodyless or takes one flag, and each refusal is a
+ * `{ error }` the screen shows verbatim (FR-032). Like the sends above, none is retried: a
+ * timed-out cancel or draft PR may already have happened.
+ */
+const write = <T>(projectId: string, runId: string, action: string, body?: unknown): Promise<T> =>
+  apiFetch<T>(`${runBase(projectId, runId)}/${action}`, {
+    method: 'POST',
+    ...(body === undefined ? {} : { body }),
+    timeoutMs: WRITE_TIMEOUT_MS,
+  })
+
+/** `POST …/cancel`. `{ cancelled: false }` is a 200 too: the run had already settled. */
+export function cancelRun(projectId: string, runId: string): Promise<CancelResponse> {
+  return write(projectId, runId, 'cancel')
+}
+
+/** `POST …/finish`: accept a review, or close a waiting session. `409 no open session` otherwise. */
+export function finishRun(projectId: string, runId: string): Promise<FinishResponse> {
+  return write(projectId, runId, 'finish')
+}
+
+/** `POST …/continue` with no body: reopen the last session on the run's own engine. */
+export function continueRun(projectId: string, runId: string): Promise<ContinueResponse> {
+  return write(projectId, runId, 'continue')
+}
+
+/**
+ * `POST …/pr` (201): push the branch and open a draft PR. The run then completes as `done` with
+ * `pullRequestUrl` set. `409` carries the forge's reason, `400` a run without a worktree.
+ */
+export function createDraftPr(projectId: string, runId: string): Promise<CreatePrResponse> {
+  return write(projectId, runId, 'pr')
+}
+
+/** `POST …/pin`: `{}` pins, `{ pinned: false }` unpins. Answers with the record. */
+export function setRunPinned(projectId: string, runId: string, pinned: boolean): Promise<ApiRun> {
+  return write(projectId, runId, 'pin', pinned ? {} : { pinned: false })
+}
+
+/** `POST …/archive`: `{}` archives, `{ archived: false }` restores. Answers with the record. */
+export function setRunArchived(projectId: string, runId: string, archived: boolean): Promise<ApiRun> {
+  return write(projectId, runId, 'archive', archived ? {} : { archived: false })
+}
+
+/**
+ * Write a pin or archive answer into the caches: that flag only, for the reason
+ * `applyReadReceipt` gives below. The list hides archived rows (FR-008), so the index row takes
+ * `archived` at once. It has no `pinned` to take.
+ */
+export function applyRunFlag(
+  queryClient: QueryClient,
+  projectId: string,
+  runId: string,
+  flag: { pinned: boolean } | { archived: boolean },
+): void {
+  queryClient.setQueryData<ApiRun>(runQueryKey(projectId, runId), (run) => (run ? { ...run, ...flag } : run))
+  if (!('archived' in flag)) return
+  queryClient.setQueryData<RunsIndexResponse>(RUNS_INDEX_QUERY_KEY, (index) =>
+    index
+      ? {
+          ...index,
+          runs: index.runs.map((run) =>
+            run.projectId === projectId && run.id === runId ? { ...run, archived: flag.archived } : run,
+          ),
+        }
+      : index,
+  )
+}
 
 /** After a write, every read of this run and the list are out of date. */
 export function invalidateRun(queryClient: QueryClient, projectId: string, runId: string): Promise<unknown> {

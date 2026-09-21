@@ -1,7 +1,7 @@
 ---
 change_id: live-status
 title: Live status updates and connection health
-status: in-progress
+status: implemented
 created: 2026-09-21
 updated: 2026-09-21
 archived_at: null

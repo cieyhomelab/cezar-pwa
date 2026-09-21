@@ -1,9 +1,9 @@
 ---
 change_id: connect-to-cezar
 title: Detect a missing session and offer re-unlocking from inside the app
-status: in-progress
+status: implemented
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-21
 archived_at: null
 ---
 

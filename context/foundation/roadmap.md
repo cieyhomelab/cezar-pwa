@@ -51,7 +51,7 @@ attention rule → a readable phone screen.
 | S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | implemented (PR #17), device pass pending |
 | S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | implemented (PR #19), device pass pending |
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | implemented (PR #18), device pass pending |
-| S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | proposed |
+| S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | implemented (PR #20), device pass pending |
 | S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | proposed |
 | S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | proposed |
 | S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | proposed |
@@ -79,13 +79,16 @@ do NOT re-scaffold them.
   providers wired in `apps/pwa/src/main.tsx`; no feature screens exist.~~ **present as of
   2026-09-21**. Screens are the install/offline/update chrome (S-01), "Połącz z Cezarem"
   (S-02), the task list (S-03) and the task screen (S-05, `apps/pwa/src/features/run/`), which
-  is live since S-06 and where the agent can be answered and messaged since S-07. The routes
+  is live since S-06, where the agent can be answered and messaged since S-07, and where the
+  task can be cancelled, finished, continued, sent to a draft PR, pinned and archived since
+  S-08. The routes
   are in `apps/pwa/src/routes.tsx`, under `basename="/m/"`.
 - **Backend / API client:** ~~absent — no `apps/pwa/src/api/`; no HTTP wrapper, no event-stream manager.~~
   **present as of 2026-09-21**. `apps/pwa/src/api/http.ts` is the single door. `runs-index.ts`
   serves the list, and `run.ts` serves the record, the newest history page, `history-context`
   and the read receipt, and since S-07 the two writes that reach the agent: `POST …/messages`
-  and `POST …/continue`. `workspace-events.ts` carries the list's live stream (S-04, PR #16),
+  and `POST …/continue`. Since S-08 it also has the task's own actions: `cancel`, `finish`,
+  a bodyless `continue`, `pr`, `pin` and `archive`. `workspace-events.ts` carries the list's live stream (S-04, PR #16),
   and `run-events.ts` carries the task's (S-06, PR #19). Both run on `live-stream.ts`, the
   shared backoff, watchdog and lifecycle.
 - **Domain rule:** present — the attention rule and its table tests live in
@@ -393,7 +396,24 @@ do NOT re-scaffold them.
 - **Risk:** The PRD kept all of these as must-have against the counter-argument that
   housekeeping can wait for a laptop; cancel, finish and continue each close the loop for
   one of the notification reasons, so they are not optional decoration.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #20 (`context/changes/act-on-a-task/`); device pass pending
+- **Note (2026-09-21):** the phone copies the cockpit's action policy (`runActionFlags` at
+  `v0.11.0`) instead of forming its own view of what a task can still do. Cancel is offered
+  while the engine owns the run (`running`, `queued`, `waiting`), behind an inline
+  confirmation. Finish is offered at `waiting` (it closes the session) and at `review` (it
+  accepts the changes). That is one endpoint with two meanings, so the phone gives it two
+  labels. Continue needs a closed run with a recorded session and sends no body, so the run
+  keeps its engine. Archive needs a run the engine has let go of, and pin needs a run that is
+  not archived. Draft PR follows the cockpit's review panel rather than its header: offered only
+  at `review` and only while no PR link is known, because a second tap would open a duplicate.
+  Two server details changed the UI. `cancel` answers `{ cancelled: false }` with a 200 for a
+  run that had already settled, and the operator is told so. The draft PR's 409 carries a
+  `git merge` fallback, which is no use on a phone, so only the reason is shown. One action
+  runs at a time, the bar also waits for an S-07 send, and nothing is retried. Delete and review
+  notes sent back stay on the laptop. Verified with 492 unit and 48 E2E tests (WebKit), in both
+  themes at 390×844. Nothing was sent to the live instance, because every one of these actions
+  stops a real agent or pushes to a real forge. Accepting a real review from the installed app
+  is the last check.
 
 ### S-09: Read the diff
 
@@ -479,7 +499,7 @@ do NOT re-scaffold them.
 | S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Implemented — PR #17; device pass pending         |
 | S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | n/a                   | Implemented — PR #19; device pass pending         |
 | S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Implemented — PR #18; device pass pending         |
-| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | yes                   | S-05 merged (PR #17)                              |
+| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | n/a                   | Implemented — PR #20; device pass pending         |
 | S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | S-05 merged (PR #17)                              |
 | S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | S-05 merged (PR #17); deep-link path exists       |
 | S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | no                    | Needs S-10                                        |
