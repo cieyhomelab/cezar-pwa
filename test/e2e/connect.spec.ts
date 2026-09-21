@@ -59,8 +59,13 @@ test.describe('Connect to Cezar', () => {
     await refuseSession(page)
     await page.goto('.')
 
-    await page.getByLabel('Wklej link dostępowy').fill('/p/demo/runs/abc?key=s3cret')
+    await page.getByLabel('Wklej link dostępowy').fill('/p/demo/runs/abc?key=s3/cr+et==')
+    const unlock = page.waitForRequest((request) => request.url().includes('key='))
     await page.getByRole('button', { name: 'Połącz' }).click()
+
+    // The key reaches the gateway byte-for-byte: nginx compares the raw query,
+    // so `/` → `%2F` or `=` → `%3D` would turn a correct key into a wrong one.
+    expect(new URL((await unlock).url()).search).toBe('?key=s3/cr+et==')
 
     // The gateway's guard is not present in front of this preview server, so
     // the navigation lands back on the shell with the key untouched — which is
@@ -69,11 +74,59 @@ test.describe('Connect to Cezar', () => {
 
     // R-AUTH-5: the secret is gone from the URL — and so from the history
     // entry — before the operator sees the screen again.
-    expect(page.url()).not.toContain('s3cret')
+    expect(page.url()).not.toContain('s3')
     expect(new URL(page.url()).pathname).toBe('/m/')
 
     // And the app says what happened rather than looping silently.
-    await expect(page.getByText('Brama nie przyjęła linku', { exact: false })).toBeVisible()
+    await expect(page.getByText('Brama nie przyjęła tego linku', { exact: false })).toBeVisible()
+  })
+
+  test.describe('with the service worker blocked', () => {
+    // Playwright's WebKit does not route requests from a worker-controlled
+    // page, and after the unlock hop the page is controlled. The worker's own
+    // part — letting /m/?key= through — has its own test below.
+    test.use({ serviceWorkers: 'block' })
+
+    test('a gateway that consumes the key lands the operator back in the app, authorized', async ({
+      page,
+    }) => {
+      // What the /m/ copy of the guard does (deploy/nginx/cezar-mobile.conf,
+      // rehearsed against real nginx): exact-match the raw key, set the cookie,
+      // 302 to the bare path.
+      let authorized = false
+      await page.route('**/api/v1/health', (route) =>
+        authorized
+          ? route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ version: '0.11.1', projects: [] }),
+            })
+          : route.fulfill({ status: 403, contentType: 'text/html', body: '403' }),
+      )
+      await page.route(/\/m\/\?key=/, (route) => {
+        const matched = new URL(route.request().url()).search === '?key=Zm9v/YmFy+cXV4=='
+        if (!matched) return route.continue()
+        authorized = true
+        // Playwright's WebKit cannot fulfill a navigation with a 3xx, so the
+        // stub makes the same hop client-side. The 302 itself is covered by the
+        // nginx rehearsal (deploy/nginx/rehearse.sh); this covers the app's side.
+        return route.fulfill({
+          status: 200,
+          contentType: 'text/html',
+          body: "<script>location.replace('/m/')</script>",
+        })
+      })
+
+      await page.goto('.')
+      // The path form: a full link would name the real host, not this preview's.
+      await page.getByLabel('Wklej link dostępowy').fill('/?key=Zm9v/YmFy+cXV4==')
+      await page.getByRole('button', { name: 'Połącz' }).click()
+
+      await expect(page.getByText('Szkielet aplikacji działa.', { exact: false })).toBeVisible()
+      expect(new URL(page.url()).pathname).toBe('/m/')
+      expect(page.url()).not.toContain('key=')
+      await expect(page.getByText('Brama nie przyjęła tego linku', { exact: false })).toBeHidden()
+    })
   })
 
   test('the connect screen refuses a link pointing at another host', async ({ page }) => {

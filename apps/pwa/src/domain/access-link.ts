@@ -81,12 +81,32 @@ export function buildUnlockUrl(
     return { ok: false, problem: 'foreign-origin' }
   }
 
-  const key = parsed.searchParams.get(ACCESS_KEY_PARAM)
+  const key = rawParam(parsed.search, ACCESS_KEY_PARAM)
   if (key === null || key === '') return { ok: false, problem: 'missing-key' }
 
+  // Spliced in raw, never through `URLSearchParams.set`: that re-encodes `/`,
+  // `=`, `~` and `!` as `%2F`, `%3D`…, while nginx's `$arg_key = "…"` compares
+  // the raw bytes of the query. A base64-style key would stop matching — which
+  // is exactly how the first version of this failed on the device.
   const unlock = new URL(options.returnPath ?? RETURN_PATH, options.origin)
-  unlock.searchParams.set(ACCESS_KEY_PARAM, key)
-  return { ok: true, url: unlock.toString() }
+  return { ok: true, url: `${unlock.origin}${unlock.pathname}?${ACCESS_KEY_PARAM}=${key}` }
+}
+
+/**
+ * The first value of `name` in a `?…` string, exactly as it appears — not
+ * percent-decoded. nginx's `$arg_<name>` is likewise the first occurrence, raw.
+ *
+ * `search` comes from `URL`, so it is already what the browser would put on the
+ * wire for the operator's own link: anything the URL parser had to escape is
+ * escaped the same way here.
+ */
+function rawParam(search: string, name: string): string | null {
+  for (const pair of search.replace(/^\?/, '').split('&')) {
+    const eq = pair.indexOf('=')
+    const pairName = eq === -1 ? pair : pair.slice(0, eq)
+    if (pairName === name) return eq === -1 ? '' : pair.slice(eq + 1)
+  }
+  return null
 }
 
 /** Whether a `?…` string carries an access key — i.e. the gateway did not consume it. */

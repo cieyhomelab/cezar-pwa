@@ -71,9 +71,32 @@ describe('ConnectScreen', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('offers the manual route when the gateway ignored the key at /m/', () => {
-    setup({ unlockFailed: true })
+  it('sends a pasted base64 key through unaltered, since nginx compares raw bytes', () => {
+    const { navigate } = setup()
+    paste(`${ORIGIN}/?key=Zm9v/YmFy+cXV4==`)
+    submit()
+    expect(navigate).toHaveBeenCalledWith(`${ORIGIN}/m/?key=Zm9v/YmFy+cXV4==`)
+  })
+
+  it('in the installed app, points at the server rather than at Safari when the key was ignored', () => {
+    // The installed app keeps its own cookies (R-AUTH-1): a session opened in
+    // Safari never reaches it, so advising that would be a dead end.
+    setup({ unlockFailed: true, standalone: true })
     expect(screen.getByText(pl.auth.unlockFailed)).toBeInTheDocument()
+    expect(screen.getByText(pl.auth.unlockFailedServer)).toBeInTheDocument()
+    expect(screen.queryByText(pl.auth.manualTab)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Safari/)).not.toBeInTheDocument()
+  })
+
+  it('in a browser tab, offers opening the link directly, once', () => {
+    setup({ unlockFailed: true, standalone: false })
+    expect(screen.getByText(pl.auth.unlockFailed)).toBeInTheDocument()
+    expect(screen.getAllByText(pl.auth.manualTab)).toHaveLength(1)
+  })
+
+  it('never offers the browser route inside the installed app', () => {
+    setup({ standalone: true })
+    expect(screen.queryByText(pl.auth.manualTab)).not.toBeInTheDocument()
   })
 
   it('keeps quiet about the gateway when nothing has been tried yet', () => {

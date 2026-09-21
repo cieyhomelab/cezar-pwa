@@ -72,6 +72,33 @@ describe('buildUnlockUrl', () => {
     expect(buildUnlockUrl(pasted, { origin: ORIGIN })).toEqual({ ok: false, problem })
   })
 
+  // nginx's `$arg_key = "…"` compares raw query bytes. Any re-encoding of the
+  // key — `/` → `%2F`, `=` → `%3D` — makes a correct key fail to match, which
+  // is what broke unlocking on the device on 2026-09-21.
+  it.each([
+    ['base64 with slash, plus and padding', 'Zm9v/YmFy+cXV4=='],
+    ['base64url', 'Zm9v_YmFy-cXV4'],
+    ['tilde and bang', 'x~y!z*'],
+    ['already percent-encoded', 'a%2Fb%2Bc'],
+    ['an embedded equals sign', 'a=b=c'],
+    ['hex', '9f86d081884c7d659a2feaa0c55ad015'],
+  ])('sends a %s key byte-for-byte as pasted', (_name, key) => {
+    const result = buildUnlockUrl(`https://cezar.ciey.studio/?key=${key}`, { origin: ORIGIN })
+    expect(result).toEqual({ ok: true, url: `https://cezar.ciey.studio/m/?key=${key}` })
+  })
+
+  it('takes the first key when a link carries two, as nginx does', () => {
+    expect(
+      buildUnlockUrl('https://cezar.ciey.studio/?key=first&key=second', { origin: ORIGIN }),
+    ).toEqual({ ok: true, url: 'https://cezar.ciey.studio/m/?key=first' })
+  })
+
+  it('does not mistake a parameter merely ending in "key" for the key', () => {
+    expect(
+      buildUnlockUrl('https://cezar.ciey.studio/?apikey=nope', { origin: ORIGIN }),
+    ).toEqual({ ok: false, problem: 'missing-key' })
+  })
+
   it('never sends the key anywhere but our own origin', () => {
     // The guardrail this whole module exists for: a paste that points elsewhere
     // must not be "helpfully" retargeted, because the retarget would carry the

@@ -4,21 +4,19 @@ import { hasAccessKey, stripAccessKey } from '../../domain/access-link.ts'
  * The browser half of unlocking: navigating with the key, and cleaning up
  * after a navigation that did not do what we hoped.
  *
- * The app cannot know in advance whether the gateway's `?key=` guard covers
- * `/m/` — the shell is served from outside the gate, and whether the unlock
- * guard sits in the `server` block (so it runs for every path) or inside
- * `location /` (so it never sees `/m/`) is not visible from the client, and not
- * readable from here (the deploy key is a write-only rsync command). So the app
- * asks, and reads the answer off the URL it lands on:
+ * Whether the unlock works depends on the server, not on this code: the
+ * gateway's `?key=` guard lives in the vhost's `location /`, which never sees
+ * `/m/`, so it needs a copy inside the `/m/` location (`deploy/nginx/`,
+ * installed by `install.sh`). The app reads the outcome off the URL it lands on:
  *
  *  - **Key gone** → the gateway consumed it, issued the cookie and redirected
- *    to the clean path. The session probe will now succeed, and FR-005 is
- *    satisfied in full: authorize from inside the app, land back in it.
- *  - **Key still there** → nothing in front of us matched it; we merely
- *    re-loaded the shell with a secret in the address bar. Strip it from the
- *    history entry at once and fall back to telling the operator to open the
- *    link in Safari and come back — which `useSession`'s visibility re-probe
- *    then picks up without them pressing anything.
+ *    to the clean path. The session probe now succeeds: FR-005 in full.
+ *  - **Key still there** → nothing in front of us matched it — the link is
+ *    wrong or incomplete, or the server has no unlock at `/m/` yet. Strip it
+ *    from the history entry at once and say so. There is no "open it in Safari
+ *    instead" for the installed app: it keeps its own cookies (R-AUTH-1), so a
+ *    session opened anywhere else never reaches it. That advice is only offered
+ *    in a browser tab, where it is true.
  *
  * Either way the key is never written anywhere: no storage, no cache, no log.
  */

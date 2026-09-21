@@ -87,10 +87,41 @@ stays reachable in every one of those states.
 - [x] **Both themes at 390×844** — `evidence/`.
 - [x] **Docs** — `docs/REQUIREMENTS.md` R-AUTH-2/3 (+3a) and § 9 Q1; `docs/CEZAR_API.md`
       § 1a; roadmap Baseline, S-02 and Open Question 1.
-- [ ] **On the device, with the real access link** — the one thing no headless browser can
-      answer: whether the gateway consumes `?key=` at `/m/`. One paste settles it. If it
-      does, FR-005 is closed as written; if it does not, the fallback is what ships and
-      FR-005 reads "re-open by hand", with the app already doing the returning.
+- [x] ~~**On the device, with the real access link**~~ — done 2026-09-21, and it **failed**:
+      both `…/m/?key=…` and `…/?key=…` ended in a refusal. See "Found on the device".
+- [x] **Fix, rehearsed against real nginx 1.28.3** (the VPS's version) —
+      `deploy/nginx/rehearse.sh`: raw key at `/m/` → 302 to `/m/` + cookie, and the session
+      opens the gate; re-encoded key and wrong key → shell, no cookie; cockpit still gated.
+      Against `main`'s snippet the same script fails on exactly the device's symptom.
+- [ ] **Run `deploy/nginx/install.sh` on the VPS**, then paste the link once on the phone.
+      Not possible from here: the deploy key is `rrsync -wo /var/www`.
+
+## Found on the device (2026-09-21)
+
+The operator pasted the real link — both the `/m/` and the `/` form — into the installed
+app and got a refusal. Three defects, each enough on its own:
+
+1. **The guard is not reached at `/m/`.** Measured without the key: `/m/` answers 200 with
+   no cookie, so the gateway's cookie check is not server-level — it sits in
+   `location /`, and the `?key=` guard beside it. `location ^~ /m/` never enters that
+   block, so `/m/?key=…` just served the shell. Reproduced on a scratch nginx shaped like
+   § 1a. Fixed at the perimeter, as the PRD said it would be: the `/m/` snippet includes
+   `/etc/nginx/snippets/cezar-mobile-unlock*.conf`, and `install.sh` copies the vhost's
+   guard into it on the host (`extract-unlock.sh` — verbatim, mode 600, never printed;
+   refuses anything ambiguous rather than guessing). The secret stays out of the repo.
+2. **The client re-encoded the key.** `URLSearchParams.set` turns `/`, `=`, `~`, `!` into
+   `%2F`, `%3D`…; nginx's `$arg_key = "…"` compares raw bytes. A base64-style key could
+   never match, guard or no guard. The key is now spliced in exactly as pasted; tests pin
+   it byte-for-byte, in Vitest and in WebKit.
+3. **The fallback could not work.** It said "open the link in Safari and come back" — but
+   the installed app keeps its own cookies (R-AUTH-1, a fact this repo already recorded),
+   so a session opened in Safari never reaches it. The earlier claim that "the app works
+   either way" was wrong: in the installed app there was no working path. The advice is
+   now shown only in a browser tab, where it is true; the installed app says instead that
+   the link is incomplete or the server lacks the `/m/` unlock.
+
+Also re-verified: the live service worker already carries the `?key=` denylist, so the
+unlock navigation does reach nginx.
 
 ### Caught in self-review: the worker was eating the unlock
 
