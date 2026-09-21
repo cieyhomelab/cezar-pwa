@@ -120,42 +120,39 @@ export async function pushFetch<T>(path: string, options: ApiFetchOptions = {}):
   return request<T>(path, options)
 }
 
+/** The perimeter's own paths (`deploy/nginx/`): nginx answers them, not Cezar or the sidecar. */
+const SESSION_PREFIX = '/m/session/'
+
+/**
+ * S-12: a bodyless POST to the perimeter, which answers with a status and nothing else — so the
+ * status is what comes back, and judging it is the caller's job.
+ *
+ * @throws {TimeoutError | NetworkError} the request never completed
+ */
+export async function perimeterPost(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<number> {
+  if (!path.startsWith(SESSION_PREFIX)) {
+    throw new Error(`perimeter path must start with ${SESSION_PREFIX}: ${path}`)
+  }
+  const response = await send(path, { method: 'POST' }, undefined, timeoutMs)
+  return response.status
+}
+
 async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
   const { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = options
 
-  const controller = new AbortController()
-  let timedOut = false
-  const timer = setTimeout(() => {
-    timedOut = true
-    controller.abort()
-  }, timeoutMs)
-  const abortFromCaller = () => controller.abort()
-  signal?.addEventListener('abort', abortFromCaller)
-
-  let response: Response
-  try {
-    response = await fetch(path, {
+  const response = await send(
+    path,
+    {
       method,
-      // The session cookie is HttpOnly and same-origin; the app never sees it
-      // and never sends a credential of its own (R-AUTH-5).
-      credentials: 'same-origin',
       headers: {
         Accept: 'application/json',
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      signal: controller.signal,
-    })
-  } catch (cause) {
-    if (timedOut) throw new TimeoutError(timeoutMs)
-    // A caller-driven abort is not a failure — let it propagate as itself so
-    // TanStack Query can tell a cancelled query from a broken network.
-    if (signal?.aborted) throw cause
-    throw new NetworkError('Nie udało się połączyć z Cezarem', { cause })
-  } finally {
-    clearTimeout(timer)
-    signal?.removeEventListener('abort', abortFromCaller)
-  }
+    },
+    signal,
+    timeoutMs,
+  )
 
   // 401 never appears on this gateway, but a different perimeter would use it
   // and it means the same thing here.
@@ -179,4 +176,43 @@ async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
   } catch {
     throw new ApiError('Odpowiedź Cezara nie jest poprawnym JSON-em', response.status)
   }
+}
+
+/** The fetch itself: same-origin, under a timeout, with the caller's cancellation merged in. */
+async function send(
+  path: string,
+  init: RequestInit,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
+  const abortFromCaller = () => controller.abort()
+  signal?.addEventListener('abort', abortFromCaller)
+
+  let response: Response
+  try {
+    response = await fetch(path, {
+      ...init,
+      // The session cookie is HttpOnly and same-origin; the app never sees it
+      // and never sends a credential of its own (R-AUTH-5).
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+  } catch (cause) {
+    if (timedOut) throw new TimeoutError(timeoutMs)
+    // A caller-driven abort is not a failure — let it propagate as itself so
+    // TanStack Query can tell a cancelled query from a broken network.
+    if (signal?.aborted) throw cause
+    throw new NetworkError('Nie udało się połączyć z Cezarem', { cause })
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', abortFromCaller)
+  }
+
+  return response
 }

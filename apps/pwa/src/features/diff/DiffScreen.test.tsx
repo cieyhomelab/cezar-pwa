@@ -158,7 +158,15 @@ describe('DiffScreen — file by file', () => {
         jsonResponse(changes([{ ...FILES[1], patch: patch(['@@ -0,0 +1,3 @@', '+hello', '… (patch truncated)']) }])),
     })
     expect(await screen.findByText(t.truncated, { exact: false })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: t.openCockpit })).toHaveAttribute('href', '/')
+    // S-12 (FR-048): the rest is in this task's Changes tab, not on the cockpit's front page.
+    expect(screen.getByRole('link', { name: t.openCockpit })).toHaveAttribute(
+      'href',
+      `/p/cezar-pwa/tasks/${RUN.id}/changes`,
+    )
+    expect(screen.getByRole('link', { name: pl.shell.openTaskInCockpitLabel })).toHaveAttribute(
+      'href',
+      `/p/cezar-pwa/tasks/${RUN.id}/changes`,
+    )
   })
 
   it('names a branch the agent repointed the worktree onto', async () => {

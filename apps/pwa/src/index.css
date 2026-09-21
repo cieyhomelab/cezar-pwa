@@ -50,8 +50,18 @@
   --diff-del: rgba(248, 81, 73, 0.18);
 }
 
+/*
+ * S-12 (FR-046): the operator can force a theme in Settings, which sets `data-theme` on <html>
+ * (`pwa/theme.ts`); without it the system decides. Light therefore applies in two cases — the
+ * system asks for it and dark was not forced, or light was forced — and CSS cannot name one set
+ * of values for both, so the block below is repeated verbatim after it. Change both together.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme='dark']) {
     --surface: #ffffff;
     --surface-raised: #f4f6f8;
     --border: #d9dee3;
@@ -65,6 +75,22 @@
     --diff-add: #e6ffec;
     --diff-del: #ffebe9;
   }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --surface: #ffffff;
+  --surface-raised: #f4f6f8;
+  --border: #d9dee3;
+  --text: #131a20;
+  --text-muted: #5b6771;
+  --success: #1a7f37;
+  --pending: #9a6700;
+  --danger: #cf222e;
+  --violet: #8250df;
+  --diff-add: #e6ffec;
+  --diff-del: #ffebe9;
 }
 
 html,

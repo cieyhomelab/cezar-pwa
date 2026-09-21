@@ -97,12 +97,15 @@ export function TranscriptView({
   transcript,
   task,
   hasOlder,
+  olderHref,
   footer,
   answering,
 }: {
   transcript: Transcript
   task: string
   hasOlder: boolean
+  /** Where the older entries are read: this task in the cockpit (FR-048). */
+  olderHref: string
   footer: TranscriptFooter
   /** S-07: how an open question is answered. Absent, every question is read-only. */
   answering?: Answering
@@ -115,7 +118,7 @@ export function TranscriptView({
     <section aria-label={pl.run.transcript.heading} className="flex flex-col gap-3 px-4 py-4">
       {hasOlder ? (
         <p className="text-center text-xs text-text-muted">
-          <a className="touch-target inline-flex items-center text-accent" href="/">
+          <a className="touch-target inline-flex items-center text-accent" href={olderHref}>
             {pl.run.transcript.older}
           </a>
         </p>

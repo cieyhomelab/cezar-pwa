@@ -19,6 +19,9 @@ export const pl = {
   },
   shell: {
     openCockpit: 'Otwórz w pełnym cockpicie',
+    /** S-12, FR-048: the task's own screen, in the cockpit. Short: it sits in the top bar. */
+    openTaskInCockpit: 'W cockpicie',
+    openTaskInCockpitLabel: 'Otwórz to zadanie w pełnym cockpicie',
   },
   auth: {
     /** The first probe, before anything is known. */
@@ -338,6 +341,40 @@ export const pl = {
     /** The footer link that opens the screen. */
     open: 'Ustawienia',
     back: 'Lista zadań',
+    /** S-12, FR-046. */
+    theme: {
+      section: 'Motyw',
+      options: { system: 'Jak w systemie', dark: 'Ciemny', light: 'Jasny' } as Record<string, string>,
+    },
+    /** S-12, FR-047. Both versions, and nothing more: the "Cezar is newer" warning is a non-goal. */
+    versions: {
+      section: 'Wersje',
+      app: 'Aplikacja',
+      /** The build's commit and when it was built. */
+      appValue: (commit: string, builtAt: string | undefined) =>
+        builtAt ? `${commit} · zbudowana ${builtAt}` : commit,
+      cezar: 'Cezar',
+      cezarUnknown: 'nieznana — brak połączenia',
+      tested: 'Sprawdzona z Cezarem',
+    },
+    /** S-12, FR-006. */
+    signOut: {
+      section: 'Wylogowanie',
+      intro:
+        'Usuwa z tego telefonu wszystko, co przechowuje aplikacja, wyłącza powiadomienia na tym urządzeniu i kończy sesję. Żeby wrócić, potrzebny będzie link dostępowy.',
+      action: 'Wyloguj',
+      confirmTitle: 'Wylogować z Cezara?',
+      confirmBody: 'Po wylogowaniu aplikacja poprosi o link dostępowy.',
+      confirm: 'Wyloguj',
+      keep: 'Anuluj',
+      working: 'Wylogowuję…',
+      /** The perimeter did not confirm: local data and notifications are done, the cookie is not. */
+      sessionKept:
+        'Dane z telefonu usunięte, ale serwer nie potwierdził zakończenia sesji — aplikacja nadal ma dostęp do Cezara. Spróbuj ponownie przy dostępie do sieci.',
+      notificationsKept:
+        'Nie udało się wyłączyć powiadomień na tym urządzeniu. Wyłącz je w Ustawieniach iOS → Powiadomienia → Cezar.',
+      retry: 'Spróbuj ponownie',
+    },
   },
   /** S-10: notifications — the settings section and the notification text itself. */
   push: {

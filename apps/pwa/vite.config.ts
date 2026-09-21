@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -9,6 +10,21 @@ const DEFAULT_CEZAR_URL = 'https://cezar.ciey.studio'
 // `.env.local` lives at the repo root (it also carries DEPLOY_HOST for
 // scripts/deploy.sh), not next to this config.
 const envDir = fileURLToPath(new URL('../..', import.meta.url))
+
+/**
+ * S-12 (FR-047): the product's version is the commit it was built from — every merge to `main`
+ * deploys, so the commit is what tells two builds apart. CI checks the repo out, so git is there;
+ * a build outside a checkout says "dev" rather than failing.
+ */
+function buildCommit(): string {
+  const fromCi = process.env.GITHUB_SHA
+  if (fromCi) return fromCi.slice(0, 7)
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8' }).trim()
+  } catch {
+    return 'dev'
+  }
+}
 
 export default defineConfig(({ mode }) => {
   // The empty prefix loads unprefixed vars too. They are used ONLY to configure
@@ -22,6 +38,11 @@ export default defineConfig(({ mode }) => {
     // is the only arrangement Cezar's #426 guard accepts (CLAUDE.md rule 1).
     base: '/m/',
     envDir,
+    // Build facts only — never `env` (see above). Read through `config/app-version.ts`.
+    define: {
+      __APP_COMMIT__: JSON.stringify(buildCommit()),
+      __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
+    },
     plugins: [
       react(),
       tailwindcss(),

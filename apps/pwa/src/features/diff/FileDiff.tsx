@@ -31,7 +31,7 @@ function Line({ line }: { line: DiffLine }) {
   )
 }
 
-function Body({ file }: { file: ChangedFile }) {
+function Body({ file, cockpitHref }: { file: ChangedFile; cockpitHref: string }) {
   const [limit, setLimit] = useState(DIFF_LINE_PAGE)
   const body = useMemo(() => fileBody(file), [file])
 
@@ -70,7 +70,7 @@ function Body({ file }: { file: ChangedFile }) {
       {body.patch.truncated && left <= 0 ? (
         <p role="note" className="px-4 py-3 font-sans text-sm text-text-muted">
           {pl.run.diff.truncated}{' '}
-          <a className="touch-target inline-flex items-center text-accent underline" href="/">
+          <a className="touch-target inline-flex items-center text-accent underline" href={cockpitHref}>
             {pl.run.diff.openCockpit}
           </a>
         </p>
@@ -84,7 +84,16 @@ function Body({ file }: { file: ChangedFile }) {
  * once opened, its patch. The patch is parsed only while open, so a long diff costs only the
  * files the operator reads.
  */
-export function FileDiff({ file, defaultOpen }: { file: ChangedFile; defaultOpen: boolean }) {
+export function FileDiff({
+  file,
+  defaultOpen,
+  cockpitHref,
+}: {
+  file: ChangedFile
+  defaultOpen: boolean
+  /** Where a patch the server cut short is read in full: the cockpit's Changes tab (FR-048). */
+  cockpitHref: string
+}) {
   const [open, setOpen] = useState(defaultOpen)
   const bodyId = useId()
   const { name, dir } = splitPath(file.path)
@@ -117,7 +126,7 @@ export function FileDiff({ file, defaultOpen }: { file: ChangedFile; defaultOpen
       </h3>
       {open ? (
         <div id={bodyId}>
-          <Body file={file} />
+          <Body file={file} cockpitHref={cockpitHref} />
         </div>
       ) : null}
     </section>

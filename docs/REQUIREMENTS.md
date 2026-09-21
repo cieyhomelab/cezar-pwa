@@ -108,6 +108,8 @@ Priorytety: **P0** = MVP, **P1** = zaraz po MVP, **P2** = później.
 ### 4.7 Ustawienia — P0/P1
 Motyw (system/ciemny/jasny), powiadomienia (P1), filtr projektów, „Wyloguj” (czyści lokalne dane + usuwa subskrypcję push), wersja PWA i wersja Cezara (`health.version`) z ostrzeżeniem, gdy Cezar jest nowszy niż przetestowana wersja.
 
+**Wdrożone w S-12 (2026-09-21), z dwiema różnicami wobec tego zdania.** Ostrzeżenia „Cezar jest nowszy” nie ma — PRD (FR-047) je wycięło; obie wersje są pokazane, obok wersja, z którą build sprawdzono. „Wyloguj” kończy też sesję: `POST /m/session/end` na bramie wygasza ciasteczko (`docs/CEZAR_API.md` § 1a). Wersja PWA to commit, z którego zbudowano aplikację. Filtr projektów jest na liście zadań (S-03), nie w Ustawieniach.
+
 ## 5. Wymagania niefunkcjonalne
 
 - **NF-1 Wydajność:** pierwszy render listy z cache < 1 s na iPhone 12+; JS shell < 200 KB gzip (bez shiki; podświetlanie składni tylko w rozwiniętym diffie, ładowane leniwie).

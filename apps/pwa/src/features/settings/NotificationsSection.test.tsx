@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithQuery } from '../../../test/query.tsx'
 import { SettingsScreen } from './SettingsScreen.tsx'
@@ -93,8 +93,10 @@ describe('Settings → Powiadomienia', () => {
     install({ standalone: false, push: false })
     render()
     expect(screen.getByRole('note')).toHaveTextContent('Najpierw dodaj Cezara do ekranu początkowego')
-    expect(screen.queryByRole('button')).toBeNull()
-    expect(calls).toEqual([])
+    // S-12's sign-out button sits below, so "no button" is this section's; and Versions asks
+    // Cezar for its version, so "no calls" is the sidecar's.
+    expect(within(section()).queryByRole('button')).toBeNull()
+    expect(calls.filter((call) => call.path.startsWith('/m/push/'))).toEqual([])
   })
 
   it('says what a notification carries — and that it carries no code or transcript (FR-043)', () => {
@@ -107,7 +109,7 @@ describe('Settings → Powiadomienia', () => {
     install({ push: false })
     render()
     expect(section()).toHaveTextContent('potrzebny iOS 16.4')
-    expect(screen.queryByRole('button')).toBeNull()
+    expect(within(section()).queryByRole('button')).toBeNull()
   })
 
   it('refused once, points at the system settings', () => {
@@ -115,7 +117,7 @@ describe('Settings → Powiadomienia', () => {
     permission = 'denied'
     render()
     expect(section()).toHaveTextContent('Ustawieniach iOS')
-    expect(screen.queryByRole('button')).toBeNull()
+    expect(within(section()).queryByRole('button')).toBeNull()
   })
 
   it('turns notifications on from a tap: prompt, subscribe with the key, register (FR-036)', async () => {

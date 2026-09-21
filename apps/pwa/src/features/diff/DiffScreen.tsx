@@ -6,6 +6,7 @@ import { HEALTH_QUERY_KEY } from '../../api/health.ts'
 import { ApiError, AuthRequiredError } from '../../api/http.ts'
 import { runQueryOptions } from '../../api/run.ts'
 import { isRunActive } from '../../domain/answer.ts'
+import { cockpitChangesPath } from '../../domain/cockpit-link.ts'
 import { openByDefault } from '../../domain/diff.ts'
 import { clockTime, runTitle } from '../../domain/run-display.ts'
 import { runPath } from '../../domain/run-header.ts'
@@ -55,6 +56,15 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
           <span aria-hidden="true">‹&nbsp;</span>
           {pl.run.diff.back}
         </Link>
+        {/* S-12, FR-048: the same diff in the cockpit's Changes tab. */}
+        <a
+          href={cockpitChangesPath(projectId, runId)}
+          aria-label={pl.shell.openTaskInCockpitLabel}
+          className="touch-target ml-auto inline-flex items-center px-2 text-sm text-accent"
+        >
+          {pl.shell.openTaskInCockpit}
+          <span aria-hidden="true">&nbsp;↗</span>
+        </a>
       </div>
 
       <section className="flex flex-col gap-1 border-b border-border px-4 py-3">
@@ -128,6 +138,7 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
                 key={`${file.oldPath ?? ''}\0${file.path}`}
                 file={file}
                 defaultOpen={openByDefault(data.files.length)}
+                cockpitHref={cockpitChangesPath(projectId, runId)}
               />
             ))
           )}

@@ -79,6 +79,13 @@ describe('RunScreen — the header (FR-014)', () => {
     expect(pr).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('jumps to the same task in the full cockpit (FR-048)', async () => {
+    renderRun()
+    const link = await screen.findByRole('link', { name: pl.shell.openTaskInCockpitLabel })
+    // The cockpit's own route for a task, outside the app's /m/ scope.
+    expect(link).toHaveAttribute('href', `/p/cezar-pwa/tasks/${RUN.id}`)
+  })
+
   it('says the step in hand for a multi-step chain', async () => {
     renderRun({
       run: () =>
@@ -166,7 +173,10 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
 
   it('says older entries live in the cockpit when the page does not reach the start (FR-049 parked)', async () => {
     renderRun({ history: recordingPage })
-    expect(await screen.findByRole('link', { name: pl.run.transcript.older })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: pl.run.transcript.older })).toHaveAttribute(
+      'href',
+      `/p/cezar-pwa/tasks/${RUN.id}`,
+    )
     expect(screen.queryByText(pl.run.transcript.task)).not.toBeInTheDocument()
   })
 
@@ -269,6 +279,11 @@ describe('RunScreen — failures', () => {
     renderRun({ run: () => jsonResponse({ error: 'not found' }, 404) })
     expect(await screen.findByText(pl.run.notFound)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: pl.run.back })).toHaveAttribute('href', '/')
+    // The cockpit may still know it (a task archived there, or listed under another project).
+    expect(screen.getByRole('link', { name: pl.shell.openTaskInCockpitLabel })).toHaveAttribute(
+      'href',
+      `/p/cezar-pwa/tasks/${RUN.id}`,
+    )
   })
 
   it('hands a lapsed session to the gate: "Połącz z Cezarem", not an error', async () => {
