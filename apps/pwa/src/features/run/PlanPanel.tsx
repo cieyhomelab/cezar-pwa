@@ -4,7 +4,7 @@ import { pl } from '../../i18n/pl.ts'
 
 const GLYPH: Record<string, string> = {
   completed: '✓',
-  in_progress: '◐',
+  in_progress: '▸',
   pending: '○',
   cancelled: '–',
 }

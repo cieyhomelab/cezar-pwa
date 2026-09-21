@@ -8,7 +8,7 @@ import { StatusBadge } from '../runs-list/StatusBadge.tsx'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex gap-3">
+    <div className="flex items-baseline gap-3">
       <dt className="w-20 shrink-0 text-text-muted">{label}</dt>
       <dd className="min-w-0 flex-1 break-words">{children}</dd>
     </div>

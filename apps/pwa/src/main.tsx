@@ -12,8 +12,11 @@ const queryClient = new QueryClient()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      {/* The app is mounted under /m/, so every route is relative to it. */}
-      <BrowserRouter basename="/m">
+      {/* The app is mounted under /m/, so every route is relative to it. The trailing slash is
+          load-bearing: with `/m`, a link to the list resolves to `/m`, which is outside the
+          service worker's scope and outside nginx's `location ^~ /m/` — a reload there reaches
+          the gated cockpit instead of the app. */}
+      <BrowserRouter basename="/m/">
         <AppRoutes />
       </BrowserRouter>
     </QueryClientProvider>

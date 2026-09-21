@@ -64,7 +64,8 @@ Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx 
 | Lista zadań ze **wszystkich** projektów | `GET /api/v1/workspace/runs-index` | `runsIndexResponseSchema`: `runs: RunIndexEntry[]` (najnowsze pierwsze, max 200/projekt), `truncated[]` |
 | Lista projektów | `GET /api/v1/projects` | rejestr projektów |
 | Szczegóły zadania | `GET /api/v1/p/:projectId/runs/:id` | `ApiRun` (= `RunRecord` + pola API) |
-| Transkrypt – strona historii (od końca) | `GET /api/v1/p/:projectId/runs/:id/history?cursor=` | `RunHistoryPage`: `events[]` (max 100), `olderCursor`, `liveCursor`, `asOfSeq`, `hasOlder` |
+| Transkrypt – strona historii (od końca) | `GET /api/v1/p/:projectId/runs/:id/history?cursor=` | `RunHistoryPage`: `events[]` (surowe linie ostatnich 100 *elementów*, nie 100 linii), `itemCount`, `olderCursor`, `newerCursor`, `liveCursor`, `asOfSeq`, `hasOlder` |
+| Transkrypt – kontekst bieżący | `GET /api/v1/p/:projectId/runs/:id/history-context` | `RunHistoryContext`: `contextEvents[]` (najnowszy `plan.updated`, granice tur, otwarte elementy — gdziekolwiek leżą w pliku), `asOfSeq` |
 | Diff zadania | `GET /api/v1/p/:projectId/runs/:id/diff` | tekst/struktura diffu |
 | Zmienione pliki | `GET /api/v1/p/:projectId/runs/:id/changes` | lista plików |
 | Commity zadania | `GET /api/v1/p/:projectId/runs/:id/commits` | `{ commits: RunCommit[] }` |
@@ -89,6 +90,17 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 
 ### Dodatkowe pola `RunRecord` (szczegóły)
 `task, steps[{id,name,kind:'agent'|'check',status,…}], currentStepId, diffStat, model, runner, autonomous, queuedMessages[], tokensUsed, inputTokens, outputTokens, error, worktreePath, groupId, variant, pinned`
+
+### Ekran zadania w PWA (S-05) — jak czytamy rekord i transkrypt
+- Trzy odczyty równolegle: rekord (`['run', projectId, runId]`), najnowsza strona historii bez kursora (`['history', projectId, runId]`) i kontekst (`['history', projectId, runId, 'context']`). Odświeżanie jak listy przed S-04: przy powrocie na pierwszy plan, co 30 s gdy widoczny, przyciskiem; bez cichych ponowień. Odpowiedź starsza niż 60 s w trakcie odświeżania jest przygaszona (guardrail: nieaktualny stan nigdy nie udaje bieżącego).
+- **Strona historii to surowy plik, nie sam protokół v2.** Zdarzenia v2 (`item.*`, `turn.*`, `plan.updated`) leżą przemieszane ze swoimi bliźniakami v1 (`text`, `tool-call`, `tool-result`) i z liniami tylko-v1 (`user-message` — wiadomości operatora istnieją **wyłącznie** w v1 — `note`, `lifecycle`, `check-output`, `image`, nieudany `step-end`). Zmierzone na żywej stronie: każde wywołanie narzędzia jest w pliku dwa razy. Stąd `apps/pwa/src/domain/transcript.ts` to port `reduceThread()` z `web/src/routes/task-thread/thread-state.ts` razem z regułami deduplikacji (w obrębie tury v2 wygrywa dla narzędzi; proza v1 znika tylko wtedy, gdy wiadomość v2 tej samej tury ma ten sam tekst).
+- `item.delta` **nie występuje** w historii (delty są efemeryczne, tylko w strumieniu na żywo). Reducer i tak je obsługuje — S-06 dołoży zdarzenia z `…/events?afterSeq=<asOfSeq>` do tego samego złożenia.
+- Nieznany `type`, `item.*` z nieznanym `kind` albo bez `id` — pominięte, nic nie rzuca (reguła 5; PRD dopuszcza „renderuje ogólnie albo pomija”).
+- **Plan przypięty nad transkryptem** składany jest z kontekstu ∪ strony (odpowiednik `currentEvents` z cockpitu), bo najnowszy `plan.updated` może leżeć przed pierwszą linią strony. Treść transkryptu — tylko ze strony. Błąd kontekstu nie psuje ekranu (plan wtedy tylko ze strony).
+- Gdy `hasOlder`, na górze transkryptu jest odnośnik do cockpitu — starsze strony (FR-049) są odłożone.
+- Obrazy z transkryptu nie są ładowane: linia v1 `image` niesie URL z zamrożonej powierzchni `/api/runs/…` (reguła 2). Obrazy w Markdownie agenta też nie — renderujemy tekst alternatywny (żadnych żądań do stron trzecich).
+- **Przeczytane (FR-020):** `POST …/runs/:id/read` wysyłane raz, tylko gdy `isUnread(run)`. Odpowiedź to cały rekord, ale do cache'u (`['run', …]` i wiersz w `['runs-index']`) trafia **wyłącznie** `seenAt` — tak jak `useMarkRunSeen` w cockpicie (migawka sprzed lotu cofnęłaby pola, które w międzyczasie się zmieniły).
+- Ścieżka ekranu: `/m/p/:projectId/runs/:runId` — tę samą otworzy powiadomienie (S-10). Router ma `basename="/m/"` **ze slashem**: z `/m` link do listy prowadzi pod `/m`, poza scope service workera i poza `location ^~ /m/` w nginx.
 
 ## 3. Strumienie na żywo (SSE)
 

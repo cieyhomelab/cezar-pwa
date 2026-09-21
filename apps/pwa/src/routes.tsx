@@ -4,7 +4,7 @@ import { RunScreen } from './features/run/RunScreen.tsx'
 import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
 
 /**
- * Every screen, relative to the router's `/m` basename. `App` is the layout: its chrome and the
+ * Every screen, relative to the router's `/m/` basename. `App` is the layout: its chrome and the
  * session gate wrap whichever screen matches.
  *
  * The task path is the one S-10's notifications will open (`/m/p/:projectId/runs/:runId`, see

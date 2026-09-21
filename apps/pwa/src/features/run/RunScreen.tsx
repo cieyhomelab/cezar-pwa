@@ -23,7 +23,7 @@ export function RunScreen() {
 
 function BackBar({ children }: { children?: ReactNode }) {
   return (
-    <div className="sticky top-0 z-20 border-b border-border bg-surface/95 backdrop-blur">
+    <div className="sticky top-0 z-20 border-b border-border bg-surface">
       <div className="flex items-center justify-between gap-3 px-2">
         <Link to="/" className="touch-target inline-flex items-center px-2 text-accent">
           <span aria-hidden="true">‹&nbsp;</span>

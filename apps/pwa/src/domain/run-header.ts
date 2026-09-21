@@ -8,21 +8,6 @@ import { prNumber } from './run-display.ts'
  * → `compactTokens`, tag `v0.11.0`).
  */
 
-export type HeaderRun = Pick<
-  ApiRun,
-  | 'workflow'
-  | 'steps'
-  | 'currentStepId'
-  | 'runner'
-  | 'model'
-  | 'tokensUsed'
-  | 'inputTokens'
-  | 'outputTokens'
-  | 'pullRequestUrl'
-  | 'referencedPullRequestUrl'
-  | 'markerRefs'
->
-
 /** An inline chain shows its first agent step's name, not the bare `(planned)` placeholder. */
 export function workflowLabel(run: Pick<ApiRun, 'workflow' | 'steps'>): string {
   if (run.workflow === '(planned)' || run.workflow === '(inbox)') {
@@ -101,7 +86,7 @@ export function prLink(
   return null
 }
 
-/** The task screen's path under the router's `/m` basename. Ids are url-encoded. */
+/** The task screen's path under the router's `/m/` basename. Ids are url-encoded. */
 export function runPath(projectId: string, runId: string): string {
   return `/p/${encodeURIComponent(projectId)}/runs/${encodeURIComponent(runId)}`
 }
