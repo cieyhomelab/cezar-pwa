@@ -77,6 +77,13 @@ Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx 
 `queued | running | waiting | review | done | failed | cancelled`
 plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pracę w tle, **nie** wymaga uwagi) oraz `autoResumeAt` (zadanie `failed` przez limit dostawcy, wznowi się samo → traktuj jak „zaplanowane”, nie jak błąd).
 
+### Lista zadań w PWA (S-03) — jak czytamy `runs-index`
+- Jedno zapytanie `GET /api/v1/workspace/runs-index` (trasa workspace — nie ma wariantu `/p/:projectId/`), klucz `['runs-index']`. Nazwy projektów z `GET /api/v1/health` → `projects[]` (już w cache po sondzie sesji).
+- Odpowiedź **nie jest** walidowana schematem zod w runtime: enumy kontraktu są zamknięte, a słownik rośnie. Sprawdzamy tylko, że `runs` jest tablicą — inaczej błąd, nigdy pusta lista („nic nie czeka” byłoby nieprawdą). Schematy walidują fixture'y w testach (`apps/pwa/test/contract/`).
+- Sekcje PRD (FR-008): Wymaga uwagi / W toku / W kolejce (+ zaplanowane wznowienia) / Zakończone; zarchiwizowane ukryte. Kolejność w sekcji = `sortRuns` z `web/src/lib/task-groups.ts`. Numer w kolejce liczony dla całego workspace'u (semafor `maxParallel` jest wspólny dla projektów).
+- Odświeżanie: przy powrocie na pierwszy plan (`refetchOnWindowFocus: 'always'`), co 30 s gdy widoczna (do czasu SSE w S-04), przyciskiem i gestem „pociągnij”. 401/403 → ponowna sonda `health` → ekran „Połącz z Cezarem”.
+- `runs-index` **nie niesie** `pinned` ani `groupId` — lista PWA nie ma więc sekcji „Przypięte” ani zwijania wariantów.
+
 ### Kluczowe pola `RunIndexEntry` (lista)
 `projectId, id, title, titleSummary, status, activity, createdAt, startedAt, finishedAt, seenAt, archived, autoResumeAt, workflow, branch, pullRequestUrl, prNumber, issueNumber, costUsd, peakRssBytes, usage{cpu,rss…}`
 
@@ -140,13 +147,18 @@ Akcja na `permission.requested`: mechanizm odpowiedzi do potwierdzenia w `packag
 
 ## 5. „Wymaga uwagi” — reguła powiadomień
 
-Kopia `deriveAttention()` z `packages/web/src/lib/attention.ts` (first-match-wins):
-1. oczekujące `permission.requested` → **permission** (najwyższy priorytet) — **gałąź nieosiągalna na tej instancji, patrz niżej**
-2. `failed` + `autoResumeAt` → zaplanowane, **bez** uwagi
-3. `waiting` → czeka na odpowiedź
-4. `review` → do przeglądu
-5. `failed` → błąd
-6. `running` + `activity: 'monitoring'` → bez uwagi
+Kopia 1:1 `deriveAttention()` z `packages/web/src/lib/attention.ts` @ `v0.11.0` → `packages/shared/src/attention.ts` (uzgodniona ze źródłem 2026-09-21, razem z testami tablicowymi upstreamu). Zwraca `{ bucket, tone, pulse, label }`, first-match-wins:
+1. oczekujące `permission.requested` → `permission` — **na sztywno `false` także upstream, gałąź nieosiągalna, patrz 5a**
+2. `failed` + `autoResumeAt` → `none` / „scheduled” — **bez** uwagi
+3. `failed` → `error`
+4. `waiting` → `waiting` / „needs you”
+5. `review` → `waiting` / „needs review”
+6. `running` + `activity: 'monitoring'` → `running` / „monitoring” — bez uwagi
+7. `running` → `running`; `queued`, `done`, reszta → `none` (**ostatni szczebel to catch-all z etykietą „cancelled”** — PWA pokazuje nieznany status jako jego surową nazwę, nie jako „anulowane”)
+
+„Wymaga uwagi” = `wantsAttention()` = kubełki `permission | error | waiting` (czyli `waiting`, `review`, `failed` bez `autoResumeAt`). To predykat powiadomień w cockpicie i **ta sama** odpowiedź dla górnej sekcji listy PWA i odznaki (PRD, Business Logic). Uwaga: pasek boczny cockpitu ma węższy kubełek „Needs you” (tylko `waiting`/`review`; `failed` ląduje w „Recent”) — PRD świadomie idzie za regułą powiadomień, nie za paskiem bocznym.
+
+Przeczytane/nieprzeczytane (znacznik w wierszu) to osobny kanał: kopia `web/src/lib/read-state.ts` → `packages/shared/src/read-state.ts` (`isUnread`: `done`/`failed`, nie zarchiwizowane, nie zaplanowane, `seenAt < finishedAt`).
 
 Powiadamiamy przy **wejściu** zadania w stan wymagający uwagi (przejście, nie stan), tak jak `web/src/lib/notifications.ts`.
 

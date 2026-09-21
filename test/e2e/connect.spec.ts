@@ -29,7 +29,22 @@ async function grantSession(page: Page) {
       body: JSON.stringify({ version: '0.11.1', projects: [] }),
     }),
   )
+  await serveEmptyWorkspace(page)
 }
+
+/** Behind the gate sits the task list (S-03); an empty workspace is the least it needs. */
+async function serveEmptyWorkspace(page: Page) {
+  await page.route('**/api/v1/workspace/runs-index', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ runs: [], referenceStatuses: {}, perProjectLimit: 200, truncated: [] }),
+    }),
+  )
+}
+
+/** What the gate guards, rendered: the list's headline. */
+const behindTheGate = (page: Page) => page.getByRole('heading', { name: 'Nic nie czeka na Ciebie' })
 
 test.describe('Connect to Cezar', () => {
   test('a refused session shows the connect screen, not an error or an empty list', async ({
@@ -49,7 +64,7 @@ test.describe('Connect to Cezar', () => {
     await grantSession(page)
     await page.goto('.')
 
-    await expect(page.getByText('Szkielet aplikacji działa.', { exact: false })).toBeVisible()
+    await expect(behindTheGate(page)).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeHidden()
   })
 
@@ -94,6 +109,7 @@ test.describe('Connect to Cezar', () => {
       // rehearsed against real nginx): exact-match the raw key, set the cookie,
       // 302 to the bare path.
       let authorized = false
+      await serveEmptyWorkspace(page)
       await page.route('**/api/v1/health', (route) =>
         authorized
           ? route.fulfill({
@@ -122,7 +138,7 @@ test.describe('Connect to Cezar', () => {
       await page.getByLabel('Wklej link dostępowy').fill('/?key=Zm9v/YmFy+cXV4==')
       await page.getByRole('button', { name: 'Połącz' }).click()
 
-      await expect(page.getByText('Szkielet aplikacji działa.', { exact: false })).toBeVisible()
+      await expect(behindTheGate(page)).toBeVisible()
       expect(new URL(page.url()).pathname).toBe('/m/')
       expect(page.url()).not.toContain('key=')
       await expect(page.getByText('Brama nie przyjęła tego linku', { exact: false })).toBeHidden()
@@ -150,7 +166,7 @@ test.describe('Connect to Cezar', () => {
     await grantSession(page)
 
     await page.getByRole('button', { name: 'Sprawdź ponownie' }).click()
-    await expect(page.getByText('Szkielet aplikacji działa.', { exact: false })).toBeVisible()
+    await expect(behindTheGate(page)).toBeVisible()
   })
 
   test('the service worker lets the unlock navigation through to the gateway', async ({
