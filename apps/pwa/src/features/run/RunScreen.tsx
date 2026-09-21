@@ -164,7 +164,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
       </BackBar>
 
       <div aria-busy={stale} className={stale ? 'opacity-50' : undefined}>
-        <RunHeader run={run.data} projectName={projectName} />
+        <RunHeader run={run.data} projectId={projectId} projectName={projectName} />
         <RunActionBar run={run.data} actions={actions} busy={delivery.pending} />
 
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm text-text-muted">

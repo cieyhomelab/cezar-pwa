@@ -1,0 +1,33 @@
+{
+  "files": [
+    {
+      "path": "apps/pwa/src/domain/run-header.ts",
+      "status": "modified",
+      "adds": 5,
+      "dels": 0,
+      "binary": false,
+      "patch": "diff --git a/apps/pwa/src/domain/run-header.ts b/apps/pwa/src/domain/run-header.ts\nindex ac12976..3cff689 100644\n--- a/apps/pwa/src/domain/run-header.ts\n+++ b/apps/pwa/src/domain/run-header.ts\n@@ -90,3 +90,8 @@ export function prLink(\n export function runPath(projectId: string, runId: string): string {\n   return `/p/${encodeURIComponent(projectId)}/runs/${encodeURIComponent(runId)}`\n }\n+\n+/** S-09: the task's diff, one level under its screen. */\n+export function diffPath(projectId: string, runId: string): string {\n+  return `${runPath(projectId, runId)}/diff`\n+}\n"
+    },
+    {
+      "path": "apps/pwa/src/features/run/RunScreen.tsx",
+      "status": "modified",
+      "adds": 1,
+      "dels": 1,
+      "binary": false,
+      "patch": "diff --git a/apps/pwa/src/features/run/RunScreen.tsx b/apps/pwa/src/features/run/RunScreen.tsx\nindex da6b842..3c5becf 100644\n--- a/apps/pwa/src/features/run/RunScreen.tsx\n+++ b/apps/pwa/src/features/run/RunScreen.tsx\n@@ -164,7 +164,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }\n       </BackBar>\n \n       <div aria-busy={stale} className={stale ? 'opacity-50' : undefined}>\n-        <RunHeader run={run.data} projectName={projectName} />\n+        <RunHeader run={run.data} projectId={projectId} projectName={projectName} />\n         <RunActionBar run={run.data} actions={actions} busy={delivery.pending} />\n \n         <div className=\"flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm text-text-muted\">\n"
+    },
+    {
+      "path": "apps/pwa/src/routes.tsx",
+      "status": "modified",
+      "adds": 2,
+      "dels": 0,
+      "binary": false,
+      "patch": "diff --git a/apps/pwa/src/routes.tsx b/apps/pwa/src/routes.tsx\nindex 79c2334..f36640b 100644\n--- a/apps/pwa/src/routes.tsx\n+++ b/apps/pwa/src/routes.tsx\n@@ -1,5 +1,6 @@\n import { Navigate, Route, Routes } from 'react-router'\n import App from './App.tsx'\n+import { DiffScreen } from './features/diff/DiffScreen.tsx'\n import { RunScreen } from './features/run/RunScreen.tsx'\n import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'\n \n@@ -16,6 +17,7 @@ export function AppRoutes() {\n       <Route element={<App />}>\n         <Route index element={<RunsListScreen />} />\n         <Route path=\"p/:projectId/runs/:runId\" element={<RunScreen />} />\n+        <Route path=\"p/:projectId/runs/:runId/diff\" element={<DiffScreen />} />\n         <Route path=\"*\" element={<Navigate to=\"/\" replace />} />\n       </Route>\n     </Routes>\n"
+    }
+  ],
+  "stat": {
+    "adds": 8,
+    "dels": 1,
+    "files": 3
+  }
+}

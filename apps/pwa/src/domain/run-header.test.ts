@@ -2,6 +2,7 @@ import type { ApiRun } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
 import {
   compactTokens,
+  diffPath,
   prLink,
   runPath,
   runnerModel,
@@ -110,5 +111,11 @@ describe('runPath', () => {
   it('encodes the ids', () => {
     expect(runPath('cezar-pwa', 'e5eb57e0')).toBe('/p/cezar-pwa/runs/e5eb57e0')
     expect(runPath('a b', 'x/y')).toBe('/p/a%20b/runs/x%2Fy')
+  })
+})
+
+describe('diffPath', () => {
+  it('sits under the task path', () => {
+    expect(diffPath('a b', 'x/y')).toBe('/p/a%20b/runs/x%2Fy/diff')
   })
 })

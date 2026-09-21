@@ -66,8 +66,8 @@ Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx 
 | Szczegóły zadania | `GET /api/v1/p/:projectId/runs/:id` | `ApiRun` (= `RunRecord` + pola API) |
 | Transkrypt – strona historii (od końca) | `GET /api/v1/p/:projectId/runs/:id/history?cursor=` | `RunHistoryPage`: `events[]` (surowe linie ostatnich 100 *elementów*, nie 100 linii), `itemCount`, `olderCursor`, `newerCursor`, `liveCursor`, `asOfSeq`, `hasOlder` |
 | Transkrypt – kontekst bieżący | `GET /api/v1/p/:projectId/runs/:id/history-context` | `RunHistoryContext`: `contextEvents[]` (najnowszy `plan.updated`, granice tur, otwarte elementy — gdziekolwiek leżą w pliku), `asOfSeq` |
-| Diff zadania | `GET /api/v1/p/:projectId/runs/:id/diff` | tekst/struktura diffu |
-| Zmienione pliki | `GET /api/v1/p/:projectId/runs/:id/changes` | lista plików |
+| Diff zadania (tekst) | `GET /api/v1/p/:projectId/runs/:id/diff` | jeden blob `text/plain`; dla zadania bez worktree **200** ze zdaniem „(no worktree — …)” zamiast diffu — PWA tego nie używa |
+| Zmienione pliki z poprawkami (S-09) | `GET /api/v1/p/:projectId/runs/:id/changes` | `ChangesPayload`: `files[]` (`ChangedFile`: `path`, `oldPath?`, `status`, `adds`, `dels`, `binary`, `image?`, `patch`), `stat`, `repointedHead?`; brak katalogu/błąd gita → **409** `{ error }` |
 | Commity zadania | `GET /api/v1/p/:projectId/runs/:id/commits` | `{ commits: RunCommit[] }` |
 | Notatki przekazania | `GET /api/v1/p/:projectId/runs/:id/handoff` | Markdown |
 | Obrazek z transkryptu | `GET /api/v1/p/:projectId/runs/:id/images/:file` | bajty obrazu |
@@ -102,6 +102,14 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 - Obrazy z transkryptu nie są ładowane: linia v1 `image` niesie URL z zamrożonej powierzchni `/api/runs/…` (reguła 2). Obrazy w Markdownie agenta też nie — renderujemy tekst alternatywny (żadnych żądań do stron trzecich).
 - **Przeczytane (FR-020):** `POST …/runs/:id/read` wysyłane raz, tylko gdy `isUnread(run)`. Odpowiedź to cały rekord, ale do cache'u (`['run', …]` i wiersz w `['runs-index']`) trafia **wyłącznie** `seenAt` — tak jak `useMarkRunSeen` w cockpicie (migawka sprzed lotu cofnęłaby pola, które w międzyczasie się zmieniły).
 - Ścieżka ekranu: `/m/p/:projectId/runs/:runId` — tę samą otworzy powiadomienie (S-10). Router ma `basename="/m/"` **ze slashem**: z `/m` link do listy prowadzi pod `/m`, poza scope service workera i poza `location ^~ /m/` w nginx.
+
+### Diff zadania w PWA (S-09) — jak czytamy `/changes`
+- Ekran `/m/p/:projectId/runs/:runId/diff`, otwierany wierszem „Zmiany” w nagłówku zadania (liczby z `run.diffStat`, gdy rekord je ma — pojawia się dopiero po pierwszej skończonej turze, więc wiersz jest zawsze, najwyżej z „Pokaż zmiany”). Klucz `['changes', projectId, runId]`.
+- **`/changes`, nie `/diff`.** `/changes` to strukturalny odpowiednik z tą samą bazą co zakładka Changes cockpitu (`resolveTaskDiffBase`: merge-base z najświeższym ref bazy; dla worktree przepiętego na inną gałąź — tylko to, co zadanie tam zmieniło, plus `repointedHead`). `/diff` odpowiada tekstem i dla zadania bez worktree zwraca **200** z komunikatem — telefon wziąłby go za diff. Zmierzone na żywo: zadanie z przepiętym worktree odpowiada `{ files: [], stat: 0, repointedHead: { headBranch: 'HEAD', taskBranch: 'cez/…' } }` (`test/fixtures/changes-repointed.live-0.11.0.json`).
+- `patch` to sekcja `git diff` jednego pliku (`diff --git` + nagłówki + hunki), ucięta przez serwer po 200 000 znaków z dopiskiem `… (patch truncated)`. Parser (`apps/pwa/src/domain/diff.ts`) to port `parse-patch.ts` z cockpitu bez tego, czego telefon nie pokazuje (widok split, znaczniki słów, rozwijany kontekst).
+- `binary` / `image` → jedna linia tekstu; obrazów nie ładujemy (reguła z S-05). Pusty `patch` bez binarności (czysta zmiana nazwy lub uprawnień) → „Bez zmian w treści”.
+- Walidacja w runtime jak wszędzie: `files` musi być tablicą, inaczej błąd (nigdy „brak zmian”); plik bez `path`/`patch` wypada sam; nieznany `status` → „zmieniony” (reguła 5). `stat` liczony z wierszy, żeby nagłówek zgadzał się z listą.
+- Odświeżanie: przy powrocie do aplikacji; co 30 s tylko, gdy zadanie jest aktywne (`isRunActive`); bez cichych ponowień. Timeout 15 s (duże odpowiedzi).
 
 ## 3. Strumienie na żywo (SSE)
 
