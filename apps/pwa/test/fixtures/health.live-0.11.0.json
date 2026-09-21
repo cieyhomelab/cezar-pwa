@@ -1,0 +1,68 @@
+{
+    "version": "0.11.0",
+    "repoRoot": "kai-phone",
+    "repo": {
+        "root": "/home/ubuntu/cezar/projects/kai-phone",
+        "branch": "main",
+        "remote": "https://github.com/cieyhomelab/kai-phone.git"
+    },
+    "checks": [
+        {
+            "name": "claude",
+            "available": true,
+            "version": "2.1.278 (Claude Code)",
+            "hint": "if not authenticated, run `claude` once and log in"
+        },
+        {
+            "name": "codex",
+            "available": false,
+            "hint": "optional: install the Codex CLI (npm i -g @openai/codex) and log in to use the Codex runner"
+        },
+        {
+            "name": "opencode",
+            "available": false,
+            "hint": "optional: install OpenCode (https://opencode.ai) and configure a provider to use the OpenCode runner"
+        },
+        {
+            "name": "pi",
+            "available": false,
+            "hint": "optional: install the pi CLI and log in to use the pi runner"
+        },
+        {
+            "name": "gh",
+            "available": true,
+            "version": "authenticated"
+        },
+        {
+            "name": "git",
+            "available": true,
+            "version": "git version 2.53.0"
+        }
+    ],
+    "defaultRunner": "claude",
+    "forge": {
+        "kind": "github",
+        "available": true
+    },
+    "capabilities": {
+        "localHandoff": false,
+        "followups": false,
+        "singleProject": false,
+        "automations": true,
+        "dispatch": true,
+        "tokenMetrics": true,
+        "tokenUsageMetrics": true,
+        "costMetrics": true
+    },
+    "projects": [
+        {
+            "id": "kai-phone",
+            "name": "kai-phone"
+        },
+        {
+            "id": "cezar-pwa",
+            "name": "cezar-pwa"
+        }
+    ],
+    "bootProject": "kai-phone"
+}

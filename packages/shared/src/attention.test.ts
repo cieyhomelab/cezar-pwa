@@ -1,100 +1,132 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ATTENTION_PRIORITY,
+  ATTENTION_RANK,
   deriveAttention,
-  needsAttention,
+  wantsAttention,
+  type Attention,
   type AttentionInput,
-  type AttentionReason,
 } from './attention.ts'
+import type { RunStatus } from './types.ts'
 
-type Case = {
-  name: string
-  run: AttentionInput
-  expected: AttentionReason | null
-}
+/**
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`). The expected
+ * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
+ * copy, not the table.
+ */
 
-// One case per branch of `docs/CEZAR_API.md` §5, plus the orderings that the
-// first-match-wins rule makes load-bearing.
-const cases: Case[] = [
-  // Branch 1 — unreachable on this instance (§5a), asserted anyway so the copy
-  // stays 1:1 with the cockpit if Cezar ever wires the emitter.
-  {
-    name: 'pending permission request wins over everything',
-    run: { status: 'running', hasPendingPermissionRequest: true },
-    expected: 'permission',
-  },
-  {
-    name: 'permission outranks waiting',
-    run: { status: 'waiting', hasPendingPermissionRequest: true },
-    expected: 'permission',
-  },
-  // Branch 2 — must precede branch 5.
-  {
-    name: 'failed with autoResumeAt is scheduled, not attention',
-    run: { status: 'failed', autoResumeAt: '2026-09-20T18:00:00Z' },
-    expected: null,
-  },
-  {
-    name: 'failed with autoResumeAt as epoch millis is still scheduled',
-    run: { status: 'failed', autoResumeAt: 1_790_000_000_000 },
-    expected: null,
-  },
-  {
-    name: 'failed with null autoResumeAt is a real failure',
-    run: { status: 'failed', autoResumeAt: null },
-    expected: 'failed',
-  },
-  // Branch 3.
-  { name: 'waiting needs an answer', run: { status: 'waiting' }, expected: 'waiting' },
-  // Branch 4.
-  { name: 'review needs a review', run: { status: 'review' }, expected: 'review' },
-  // Branch 5.
-  { name: 'failed needs attention', run: { status: 'failed' }, expected: 'failed' },
-  // Branch 6.
-  {
-    name: 'running while monitoring does not need attention',
-    run: { status: 'running', activity: 'monitoring' },
-    expected: null,
-  },
-  { name: 'plain running does not need attention', run: { status: 'running' }, expected: null },
-  // Statuses with no branch at all.
-  { name: 'queued does not need attention', run: { status: 'queued' }, expected: null },
-  { name: 'done does not need attention', run: { status: 'done' }, expected: null },
-  { name: 'cancelled does not need attention', run: { status: 'cancelled' }, expected: null },
+const run = (over: Partial<AttentionInput> = {}): AttentionInput => ({ status: 'running', ...over })
+
+/** Every status the API can send. Stops type-checking if `RunStatus` grows. */
+const ALL_STATUSES: readonly RunStatus[] = [
+  'queued',
+  'running',
+  'waiting',
+  'review',
+  'done',
+  'failed',
+  'cancelled',
 ]
 
 describe('deriveAttention', () => {
-  it.each(cases)('$name', ({ run, expected }) => {
-    expect(deriveAttention(run)).toBe(expected)
+  const cases: ReadonlyArray<[RunStatus, Attention]> = [
+    ['waiting', { bucket: 'waiting', tone: 'pending', pulse: true, label: 'needs you' }],
+    ['review', { bucket: 'waiting', tone: 'violet', pulse: true, label: 'needs review' }],
+    ['running', { bucket: 'running', tone: 'violet', pulse: true, label: 'running' }],
+    ['queued', { bucket: 'none', tone: 'neutral', pulse: false, label: 'queued' }],
+    ['done', { bucket: 'none', tone: 'success', pulse: false, label: 'done' }],
+    ['failed', { bucket: 'error', tone: 'danger', pulse: false, label: 'failed' }],
+    ['cancelled', { bucket: 'none', tone: 'neutral', pulse: false, label: 'cancelled' }],
+  ]
+
+  it.each(cases)('maps %s', (status, expected) => {
+    expect(deriveAttention(run({ status }))).toEqual(expected)
   })
 
-  it('ignores unknown fields — the vocabulary is append-only', () => {
-    const run = {
-      status: 'waiting',
-      activity: 'some-future-activity',
-      somethingCezarAddedLater: true,
-    } as AttentionInput
-    expect(deriveAttention(run)).toBe('waiting')
+  it('answers for every status the API can send', () => {
+    expect(cases.map(([status]) => status).sort()).toEqual([...ALL_STATUSES].sort())
   })
 
-  it('does not throw on a status outside the known union', () => {
-    const run = { status: 'a-status-from-the-future' } as unknown as AttentionInput
-    expect(() => deriveAttention(run)).not.toThrow()
-    expect(deriveAttention(run)).toBeNull()
+  it('pulses exactly the transitioning states', () => {
+    const pulsing = ALL_STATUSES.filter((status) => deriveAttention(run({ status })).pulse)
+    expect(pulsing).toEqual(['running', 'waiting', 'review'])
+  })
+
+  it('never claims a permission prompt — Cezar emits none (docs/CEZAR_API.md § 5a)', () => {
+    for (const status of ALL_STATUSES) {
+      expect(deriveAttention(run({ status })).bucket).not.toBe('permission')
+    }
+  })
+
+  it('never claims unseen — unread rides its own channel', () => {
+    for (const status of ALL_STATUSES) {
+      expect(deriveAttention(run({ status })).bucket).not.toBe('unseen')
+    }
+  })
+
+  it('ignores fields it does not read', () => {
+    const wider = { ...run({ status: 'done' }), archived: true, prNumber: 7, somethingNew: 'x' }
+    expect(deriveAttention(wider)).toEqual(deriveAttention(run({ status: 'done' })))
   })
 })
 
-describe('needsAttention', () => {
-  it.each(cases)('$name', ({ run, expected }) => {
-    expect(needsAttention(run)).toBe(expected !== null)
+describe('ATTENTION_RANK', () => {
+  it('is the ladder: permission > error > waiting > running > unseen', () => {
+    const order = Object.entries(ATTENTION_RANK)
+      .sort(([, a], [, b]) => a - b)
+      .map(([bucket]) => bucket)
+    expect(order).toEqual(['permission', 'error', 'waiting', 'running', 'unseen', 'none'])
   })
 })
 
-describe('ATTENTION_PRIORITY', () => {
-  it('orders the attention section permission → waiting → review → failed', () => {
-    const ordered = (Object.keys(ATTENTION_PRIORITY) as AttentionReason[]).sort(
-      (a, b) => ATTENTION_PRIORITY[a] - ATTENTION_PRIORITY[b],
+describe('a run waiting out a usage limit', () => {
+  const scheduled = run({ status: 'failed', autoResumeAt: '2026-08-03T19:33:53.000Z' })
+
+  it('reads as scheduled and parked, never as a red failure', () => {
+    expect(deriveAttention(scheduled)).toEqual({
+      bucket: 'none',
+      tone: 'pending',
+      pulse: false,
+      label: 'scheduled',
+    })
+  })
+
+  it('asks for nothing, while a plain failure does', () => {
+    expect(wantsAttention(scheduled)).toBe(false)
+    expect(wantsAttention(run({ status: 'failed' }))).toBe(true)
+  })
+
+  it('only applies to a FAILED run — a live run with a stale stamp is still live', () => {
+    expect(
+      deriveAttention(run({ status: 'running', autoResumeAt: '2026-08-03T19:33:53.000Z' })).label,
+    ).toBe('running')
+  })
+})
+
+describe('wantsAttention', () => {
+  it.each(ALL_STATUSES)('%s', (status) => {
+    const expected = status === 'waiting' || status === 'review' || status === 'failed'
+    expect(wantsAttention(run({ status }))).toBe(expected)
+  })
+})
+
+describe("running activity: 'monitoring'", () => {
+  it('is a distinct, non-attention sub-state of running', () => {
+    expect(deriveAttention(run({ status: 'running', activity: 'monitoring' }))).toEqual({
+      bucket: 'running',
+      tone: 'violet',
+      pulse: true,
+      label: 'monitoring',
+    })
+    expect(wantsAttention(run({ status: 'running', activity: 'monitoring' }))).toBe(false)
+  })
+
+  it('is inert on non-running statuses', () => {
+    expect(deriveAttention(run({ status: 'done', activity: 'monitoring' })).label).toBe('done')
+  })
+
+  it('treats an activity it does not know as plain running (append-only vocabulary)', () => {
+    expect(deriveAttention(run({ status: 'running', activity: 'compacting' })).label).toBe(
+      'running',
     )
-    expect(ordered).toEqual(['permission', 'waiting', 'review', 'failed'])
   })
 })

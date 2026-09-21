@@ -1,0 +1,184 @@
+{
+  "runs": [
+    {
+      "projectId": "cezar-pwa",
+      "id": "38be21ae-97ab-4798-b3a2-616c4e17f90c",
+      "title": "/om-auto-implement-spec From @context/foundation/roadmap.md implement S-03: tas…",
+      "titleSummary": "implementing task list",
+      "titleOrigin": "auto",
+      "status": "running",
+      "createdAt": "2026-09-21T06:21:05.866Z",
+      "archived": false,
+      "workflow": "(planned)",
+      "branch": "cez/38be21ae",
+      "startedAt": "2026-09-21T06:21:05.902Z"
+    },
+    {
+      "projectId": "cezar-pwa",
+      "id": "b6af5a8a-75db-4154-9f0f-663a2805633a",
+      "title": "/om-auto-implement-spec From @context/foundation/roadmap.md implement S-02 conn…",
+      "titleSummary": "implementing connect-to-cezar",
+      "titleOrigin": "auto",
+      "status": "done",
+      "createdAt": "2026-09-20T20:35:46.161Z",
+      "finishedAt": "2026-09-21T06:14:58.785Z",
+      "seenAt": "2026-09-21T06:14:59.228Z",
+      "archived": false,
+      "workflow": "(planned)",
+      "branch": "cez/b6af5a8a",
+      "startedAt": "2026-09-20T20:35:46.189Z",
+      "pullRequestUrl": "https://github.com/cieyhomelab/cezar-pwa/pull/12",
+      "prNumber": 14,
+      "markerRefs": {
+        "pr": 14
+      },
+      "costUsd": 837.238528,
+      "peakRssBytes": 7599300608,
+      "peakProcCount": 51
+    },
+    {
+      "projectId": "cezar-pwa",
+      "id": "20458938-a914-4191-8b6e-2ec0cb96fd99",
+      "title": "/om-auto-implement-spec From @context/foundation/roadmap.md implement S-01 inst…",
+      "titleSummary": "10: implementing S-01 install-to-home",
+      "titleOrigin": "marker",
+      "status": "done",
+      "createdAt": "2026-09-20T19:55:33.812Z",
+      "finishedAt": "2026-09-20T20:31:04.495Z",
+      "seenAt": "2026-09-20T20:31:05.480Z",
+      "archived": false,
+      "workflow": "(planned)",
+      "branch": "cez/20458938",
+      "startedAt": "2026-09-20T19:55:33.841Z",
+      "referencedPullRequestUrl": "https://github.com/cieyhomelab/cezar-pwa/pull/10",
+      "prNumber": 10,
+      "markerRefs": {
+        "pr": 10
+      },
+      "costUsd": 401.9954429999999,
+      "peakRssBytes": 4649406464,
+      "peakProcCount": 38
+    },
+    {
+      "projectId": "cezar-pwa",
+      "id": "12d1b71c-0d97-4a7f-b806-3e798511e2c7",
+      "title": "commit changes and open PR",
+      "titleSummary": "opening pull request",
+      "titleOrigin": "auto",
+      "status": "done",
+      "createdAt": "2026-09-20T19:31:52.775Z",
+      "finishedAt": "2026-09-20T19:37:59.684Z",
+      "seenAt": "2026-09-20T19:37:59.858Z",
+      "archived": false,
+      "workflow": "quick-task",
+      "branch": "cez/12d1b71c",
+      "startedAt": "2026-09-20T19:31:52.800Z",
+      "pullRequestUrl": "https://github.com/cieyhomelab/cezar-pwa/pull/9",
+      "prNumber": 9,
+      "markerRefs": {
+        "pr": 9
+      },
+      "costUsd": 3.1303895,
+      "peakRssBytes": 843022336,
+      "peakProcCount": 9
+    },
+    {
+      "projectId": "kai-phone",
+      "id": "899202d3-9f33-4d9d-983b-14748d698694",
+      "title": "57: /om-auto-fix-issue Fix GitHub issue #57: docs/stack.md and tech-stack.md de… (B)",
+      "titleSummary": "78: correcting phantom CI docs",
+      "titleOrigin": "marker",
+      "status": "done",
+      "createdAt": "2026-09-19T18:35:24.678Z",
+      "finishedAt": "2026-09-19T18:43:49.919Z",
+      "seenAt": "2026-09-19T18:51:36.908Z",
+      "archived": true,
+      "workflow": "Ciey-issue-fix",
+      "startedAt": "2026-09-19T18:35:24.714Z",
+      "pullRequestUrl": "https://github.com/cieyhomelab/kai-phone/pull/78",
+      "prNumber": 78,
+      "issueNumber": 57,
+      "referencedIssueUrl": "https://github.com/cieyhomelab/kai-phone/issues/57",
+      "markerRefs": {
+        "pr": 78,
+        "issue": 57
+      },
+      "costUsd": 4.7228155,
+      "peakRssBytes": 956088320,
+      "peakProcCount": 15
+    },
+    {
+      "projectId": "kai-phone",
+      "id": "03f34ef8-02b0-4a38-853e-a3bad69bf222",
+      "title": "57: /om-auto-fix-issue Fix GitHub issue #57: docs/stack.md and tech-stack.md de… (A)",
+      "titleSummary": "79: correcting the CI pipeline docs",
+      "titleOrigin": "marker",
+      "status": "done",
+      "createdAt": "2026-09-19T18:35:24.671Z",
+      "finishedAt": "2026-09-19T18:47:10.842Z",
+      "seenAt": "2026-09-19T18:47:11.088Z",
+      "archived": false,
+      "workflow": "Ciey-issue-fix",
+      "branch": "cez/03f34ef8",
+      "startedAt": "2026-09-19T18:35:24.705Z",
+      "pullRequestUrl": "https://github.com/cieyhomelab/kai-phone/pull/79",
+      "prNumber": 79,
+      "issueNumber": 57,
+      "referencedIssueUrl": "https://github.com/cieyhomelab/kai-phone/issues/57",
+      "markerRefs": {
+        "pr": 79,
+        "issue": 57
+      },
+      "costUsd": 5.813144500000002,
+      "peakRssBytes": 796422144,
+      "peakProcCount": 11
+    },
+    {
+      "projectId": "kai-phone",
+      "id": "cdc3c9e8-0d73-4261-a9d9-c2357267fcbd",
+      "title": "59: /om-auto-fix-issue https://github.com/cieyhomelab/kai-phone/issues/59",
+      "titleSummary": "77: removing the Hono scaffold route",
+      "titleOrigin": "marker",
+      "status": "done",
+      "createdAt": "2026-09-19T13:43:22.790Z",
+      "finishedAt": "2026-09-19T14:20:40.091Z",
+      "seenAt": "2026-09-19T14:20:40.260Z",
+      "archived": false,
+      "workflow": "(planned)",
+      "branch": "cez/cdc3c9e8",
+      "startedAt": "2026-09-19T13:43:22.835Z",
+      "referencedPullRequestUrl": "https://github.com/cieyhomelab/kai-phone/pull/77",
+      "prNumber": 77,
+      "issueNumber": 59,
+      "referencedIssueUrl": "https://github.com/cieyhomelab/kai-phone/issues/59",
+      "markerRefs": {
+        "pr": 77,
+        "issue": 59
+      },
+      "costUsd": 35.02794999999998,
+      "peakRssBytes": 862973952,
+      "peakProcCount": 14
+    }
+  ],
+  "perProjectLimit": 200,
+  "truncated": [],
+  "referenceStatuses": {
+    "kai-phone": {
+      "prs": {
+        "77": "merged",
+        "78": "merged",
+        "79": "merged"
+      },
+      "issues": {}
+    },
+    "cezar-pwa": {
+      "prs": {
+        "9": "merged",
+        "10": "merged",
+        "12": "merged",
+        "14": "merged"
+      },
+      "issues": {}
+    }
+  }
+}

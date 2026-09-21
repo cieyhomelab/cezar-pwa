@@ -1,13 +1,13 @@
 /**
- * Shared run vocabulary, transcribed from `docs/CEZAR_API.md` §2.
+ * Shared run vocabulary.
  *
- * These are hand-written *locally scoped* types, not a mirror of Cezar's DTOs
- * (CLAUDE.md rule 3). They cover only the fields the attention rule reads.
- * Once `packages/cezar-contract/` is populated by `npm run sync:contract <sha>`,
- * prefer the vendored zod-inferred types over these.
+ * Spelled out rather than imported from `@cezar-pwa/cezar-contract`, because this package is
+ * built to `dist/` for the sidecar and the vendored contract is TypeScript source only. The
+ * PWA asserts at compile time that these stay equal to the contract's types
+ * (`apps/pwa/src/domain/contract-parity.test.ts`), so the duplication cannot drift silently.
  */
 
-/** `docs/CEZAR_API.md` §2 → RunStatus. */
+/** `runStatusSchema` in `packages/contract/src/runs.ts`. */
 export type RunStatus =
   | 'queued'
   | 'running'
@@ -18,8 +18,8 @@ export type RunStatus =
   | 'cancelled'
 
 /**
- * Sub-state of `running`. Kept as an open string because the event/state
- * vocabulary is append-only (CLAUDE.md rule 5) — an unknown activity must not
- * change how a run is classified.
+ * Sub-state of `running` — `runActivitySchema` upstream, today only `'monitoring'`. Kept as an
+ * open string because the vocabulary is append-only (CLAUDE.md rule 5): an activity this copy
+ * has never seen must classify as plain `running`, not fail to type or to render.
  */
 export type RunActivity = string

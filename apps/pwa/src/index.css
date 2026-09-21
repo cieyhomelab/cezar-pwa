@@ -22,6 +22,12 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-accent: var(--accent);
+  /* The cockpit's status tones (attention.ts → AttentionTone). Never the only signal: every
+     dot is paired with a glyph and a word (US-02: "not by colour alone"). */
+  --color-success: var(--success);
+  --color-pending: var(--pending);
+  --color-danger: var(--danger);
+  --color-violet: var(--violet);
 }
 
 :root {
@@ -33,6 +39,10 @@
   --text: #e6edf3;
   --text-muted: #8b98a5;
   --accent: #4b93e8;
+  --success: #3fb950;
+  --pending: #d29922;
+  --danger: #f85149;
+  --violet: #a371f7;
 }
 
 @media (prefers-color-scheme: light) {
@@ -42,6 +52,11 @@
     --border: #d9dee3;
     --text: #131a20;
     --text-muted: #5b6771;
+    /* Darker in light mode so text in these colours keeps ≥ 4.5:1 on white. */
+    --success: #1a7f37;
+    --pending: #9a6700;
+    --danger: #cf222e;
+    --violet: #8250df;
   }
 }
 

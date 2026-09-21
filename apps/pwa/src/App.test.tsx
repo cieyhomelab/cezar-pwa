@@ -3,17 +3,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
 import { pl } from './i18n/pl.ts'
 import {
+  emptyRunsIndexResponse,
   healthResponse,
   refusalResponse,
   renderWithQuery,
-  stubFetch,
+  routeFetch,
 } from '../test/query.tsx'
 
 // Every App render now probes the session (S-02), so each test has to say what
 // Cezar answers. The chrome assertions use an authorized instance; the gate's
 // own behaviour is covered in features/auth.
-function renderApp(respond: () => Response | Promise<Response> = healthResponse) {
-  stubFetch(respond)
+function renderApp(authorized = true) {
+  routeFetch({
+    '/api/v1/health': authorized ? () => healthResponse() : refusalResponse,
+    '/api/v1/workspace/runs-index': authorized ? emptyRunsIndexResponse : refusalResponse,
+  })
   return renderWithQuery(<App />)
 }
 
@@ -25,7 +29,8 @@ describe('App shell', () => {
   it('renders the app chrome', async () => {
     renderApp()
     expect(screen.getByRole('heading', { name: pl.app.name })).toBeInTheDocument()
-    expect(await screen.findByText(pl.shell.empty)).toBeInTheDocument()
+    // Behind the gate: the task list (S-03), here with nothing waiting.
+    expect(await screen.findByRole('heading', { name: pl.runs.summary.none })).toBeInTheDocument()
   })
 
   it('links back to the full cockpit at the origin root', () => {
@@ -55,11 +60,11 @@ describe('App shell', () => {
     // The update prompt, the offline banner and the install hint all live
     // outside the gate: an operator whose session lapsed must still be able to
     // accept a new version or read that they are offline.
-    renderApp(refusalResponse)
+    renderApp(false)
 
     expect(await screen.findByRole('heading', { name: pl.auth.title })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: pl.app.name })).toBeInTheDocument()
     expect(screen.getByText(pl.install.title)).toBeInTheDocument()
-    expect(screen.queryByText(pl.shell.empty)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: pl.runs.summary.none })).not.toBeInTheDocument()
   })
 })

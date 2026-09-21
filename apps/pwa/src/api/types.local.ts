@@ -1,24 +1,9 @@
 /**
- * Local types for API shapes this client reads, kept here until F-02
- * (`vendor-cezar-contract`) vendors the real zod schemas into
- * `packages/cezar-contract/`.
+ * Local types for API shapes the vendored contract (`@cezar-pwa/cezar-contract`) does not
+ * cover. CLAUDE.md rule 3 allows one only with a note naming where it comes from.
  *
- * Source: `docs/CEZAR_API.md` § 2 — `GET /api/v1/health` → `healthResponseSchema`
- * in `packages/contract/src/` of `open-mercato/cezar`. CLAUDE.md rule 3 allows a
- * local type only with a note saying where it comes from; delete this file's
- * entries as the vendored schemas land.
- *
- * Every field is optional but `version`: the vocabulary is append-only and the
- * product must never break on a payload that grew (CLAUDE.md rule 5).
+ * Empty since F-02 vendored the contract at v0.11.0: the health probe's local
+ * `HealthResponse` was replaced by the contract's own type. Prefer the contract; add here only
+ * what it genuinely lacks.
  */
-
-export type CezarProject = {
-  id: string
-  name: string
-}
-
-export type HealthResponse = {
-  version: string
-  projects?: CezarProject[]
-  bootProject?: string | null
-}
+export {}
