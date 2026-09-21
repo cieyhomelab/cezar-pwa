@@ -1,5 +1,6 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { AuthGate } from './features/auth/AuthGate.tsx'
+import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
 import { pl } from './i18n/pl.ts'
 import { InstallHint } from './pwa/InstallHint.tsx'
 import { OfflineBanner } from './pwa/OfflineBanner.tsx'
@@ -8,9 +9,9 @@ import { useOnlineStatus } from './pwa/useOnlineStatus.ts'
 import { useStandalone } from './pwa/useStandalone.ts'
 
 /**
- * The frame the later milestones fill in: app chrome, the safe-area layout and
- * the three installation-slice affordances (S-01: install, offline, update),
- * wrapped around the session gate (S-02). The chrome stays outside the gate on
+ * App chrome, the safe-area layout and the three installation-slice
+ * affordances (S-01: install, offline, update), wrapped around the session gate
+ * (S-02), which guards the task list (S-03). The chrome stays outside the gate on
  * purpose — the update prompt and the offline banner must still reach an
  * operator whose session has lapsed.
  *
@@ -44,9 +45,7 @@ export default function App() {
       <main className="flex flex-1 flex-col">
         {/* S-02: nothing past this point renders without a session. */}
         <AuthGate>
-          <div className="flex flex-1 items-center justify-center px-6 text-center">
-            <p className="text-text-muted">{pl.shell.empty}</p>
-          </div>
+          <RunsListScreen />
         </AuthGate>
       </main>
 

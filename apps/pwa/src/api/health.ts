@@ -1,5 +1,5 @@
 import { apiFetch } from './http.ts'
-import type { HealthResponse } from './types.local.ts'
+import type { HealthResponse } from '@cezar-pwa/cezar-contract/contract'
 
 /** Query key, per CLAUDE.md → "Klucze query". */
 export const HEALTH_QUERY_KEY = ['health'] as const

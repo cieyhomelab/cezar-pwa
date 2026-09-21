@@ -47,3 +47,30 @@ export function refusalResponse(): Response {
 export function stubFetch(respond: () => Response | Promise<Response>) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async () => respond())
 }
+
+/** A JSON answer from Cezar. */
+export function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+/** An empty workspace: the runs index with nothing in it. */
+export function emptyRunsIndexResponse(): Response {
+  return jsonResponse({ runs: [], referenceStatuses: {}, perProjectLimit: 200, truncated: [] })
+}
+
+/**
+ * Route `fetch` by API path, for screens that make more than one request. An unrouted path
+ * fails the test loudly rather than answering with something plausible.
+ */
+export function routeFetch(routes: Record<string, () => Response | Promise<Response>>) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    const path = new URL(url, 'http://localhost').pathname
+    const respond = routes[path]
+    if (!respond) throw new Error(`unrouted fetch in test: ${path}`)
+    return respond()
+  })
+}

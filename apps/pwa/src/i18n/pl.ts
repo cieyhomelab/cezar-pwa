@@ -3,14 +3,21 @@
  * wyłącznie przez src/i18n/pl.ts"). The shape is ready for an `en.ts` sibling
  * (NF-8) but nothing selects a locale yet.
  */
+/** Polish plural: 1 → one, 2–4 (not 12–14) → few, everything else → many. */
+function plural(count: number, one: string, few: string, many: string): string {
+  if (count === 1) return one
+  const tens = count % 100
+  const units = count % 10
+  if (units >= 2 && units <= 4 && (tens < 12 || tens > 14)) return few
+  return many
+}
+
 export const pl = {
   app: {
     name: 'Cezar',
     tagline: 'Podgląd agentów',
   },
   shell: {
-    /** M0 placeholder — M1 replaces this with the runs list. */
-    empty: 'Szkielet aplikacji działa. Lista zadań pojawi się w kolejnym etapie.',
     openCockpit: 'Otwórz w pełnym cockpicie',
   },
   auth: {
@@ -51,6 +58,67 @@ export const pl = {
       title: 'Nie mogę połączyć się z Cezarem',
       body: 'Nie ma odpowiedzi z serwera. To nie znaczy, że dostęp wygasł — sprawdź sieć i spróbuj ponownie.',
     },
+  },
+  runs: {
+    /** US-02: the answer to "does anything need me?", before any row is read. */
+    summary: {
+      none: 'Nic nie czeka na Ciebie',
+      /** Under a project filter, attention elsewhere is still said — never hidden. */
+      elsewhere: (count: number) => `${count} w innych projektach`,
+      some: (count: number) =>
+        `${count} ${plural(count, 'zadanie wymaga', 'zadania wymagają', 'zadań wymaga')} uwagi`,
+    },
+    loading: 'Wczytuję zadania…',
+    sections: {
+      attention: 'Wymaga uwagi',
+      running: 'W toku',
+      queued: 'W kolejce',
+      finished: 'Zakończone',
+    },
+    filter: {
+      label: 'Projekt',
+      all: 'Wszystkie projekty',
+    },
+    empty: {
+      all: 'Brak zadań. Nowe zadania pojawią się tutaj.',
+      project: 'W tym projekcie nie ma zadań.',
+    },
+    /** A status is never conveyed by colour alone — every dot carries one of these. */
+    status: {
+      'needs permission': 'prosi o zgodę',
+      'needs you': 'czeka na Ciebie',
+      'needs review': 'do przeglądu',
+      failed: 'błąd',
+      scheduled: 'zaplanowane',
+      monitoring: 'monitoruje',
+      running: 'pracuje',
+      queued: 'w kolejce',
+      done: 'gotowe',
+      cancelled: 'anulowane',
+    } as Record<string, string>,
+    timing: {
+      queued: (position: number) => `#${position} w kolejce`,
+      scheduled: (at: string) => `wznowi o ${at}`,
+      since: (age: string) => `od ${age}`,
+      ago: (age: string) => `${age} temu`,
+    },
+    unread: 'nieprzeczytane',
+    reference: {
+      PR: (n: number) => `PR #${n}`,
+      Issue: (n: number) => `#${n}`,
+    },
+    showOlder: (count: number) => `Pokaż starsze (${count})`,
+    refresh: 'Odśwież',
+    refreshing: 'Odświeżam…',
+    updatedAt: (time: string) => `Zaktualizowano ${time}`,
+    pull: 'Pociągnij, aby odświeżyć',
+    release: 'Puść, aby odświeżyć',
+    /** Guardrail: a stale status is never presented as current. */
+    refreshFailed: (time: string) => `Nie udało się odświeżyć. Lista pochodzi z ${time}.`,
+    loadFailed: 'Nie udało się wczytać zadań.',
+    retry: 'Spróbuj ponownie',
+    truncated: (limit: number, projects: string) =>
+      `Pokazuję tylko ${limit} najnowszych zadań z: ${projects}. Starsze są w pełnym cockpicie.`,
   },
   install: {
     title: 'Dodaj Cezara do ekranu początkowego',
