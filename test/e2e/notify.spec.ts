@@ -60,11 +60,11 @@ async function serveSidecar(page: Page) {
  * The installed app on iOS 16.4+, as far as the page can tell: launched from the icon, with the
  * Notification and Push APIs. The prompt answers "allow"; subscribing hands back a subscription.
  */
-async function installedWithPush(page: Page) {
+async function installedWithPush(page: Page, { subscribed = false } = {}) {
   await page.addInitScript(
-    ({ endpoint }) => {
+    ({ endpoint, subscribed }) => {
       Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true })
-      let permission = 'default'
+      let permission = subscribed ? 'granted' : 'default'
       let current: unknown = null
       const subscription = {
         endpoint,
@@ -75,6 +75,7 @@ async function installedWithPush(page: Page) {
           return true
         },
       }
+      if (subscribed) current = subscription
       const pushManager = {
         getSubscription: async () => current,
         subscribe: async () => {
@@ -97,7 +98,7 @@ async function installedWithPush(page: Page) {
         get: () => Promise.resolve({ pushManager }),
       })
     },
-    { endpoint: ENDPOINT },
+    { endpoint: ENDPOINT, subscribed },
   )
 }
 
@@ -118,6 +119,24 @@ test('in a browser tab, Settings shows how to install instead of a prompt that c
   await expect(section.getByRole('note')).toContainText('Najpierw dodaj Cezara do ekranu początkowego')
   await expect(section.getByRole('button')).toHaveCount(0)
   expect(sent).toEqual([])
+})
+
+test('installed and already on: launching the app re-registers this device with the sidecar (S-11)', async ({
+  page,
+}) => {
+  await serveCezar(page)
+  const sent = await serveSidecar(page)
+  await installedWithPush(page, { subscribed: true })
+  await page.goto('.')
+
+  // A push service may have replaced the subscription; the sidecar hears the current one.
+  await expect.poll(() => sent.filter((call) => call.method === 'POST')).toEqual([
+    {
+      method: 'POST',
+      path: '/m/push/subscription',
+      body: { endpoint: ENDPOINT, expirationTime: null, keys: { p256dh: 'p', auth: 'a' } },
+    },
+  ])
 })
 
 test('installed: a tap turns notifications on, and a test reaches this device (FR-036, FR-045)', async ({ page }) => {

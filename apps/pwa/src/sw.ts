@@ -2,6 +2,7 @@
 import { createHandlerBoundToURL, precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { NAVIGATE_MESSAGE, notificationFor, pickAppWindow, readPushPayload } from './pwa/push-message.ts'
+import { replaceSubscription } from './pwa/subscription-sync.ts'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -75,4 +76,13 @@ self.addEventListener('notificationclick', (event) => {
       await self.clients.openWindow(url)
     })(),
   )
+})
+
+/**
+ * S-11: the push service replaced this device's subscription. The sidecar learns the new endpoint
+ * and forgets the old one, so it neither loses the device nor keeps calling a dead address
+ * (FR-044). `/m/push/` is the sidecar, not Cezar: rule 4 keeps this worker off `/api/**` only.
+ */
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(replaceSubscription(event, self.registration.pushManager))
 })
