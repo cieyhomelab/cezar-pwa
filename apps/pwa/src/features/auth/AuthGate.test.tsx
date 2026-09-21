@@ -75,9 +75,9 @@ describe('AuthGate', () => {
   })
 
   it('re-probes when the app comes back to the foreground, with nothing pressed', async () => {
-    // The fallback path for FR-005: the operator opened the access link in
-    // Safari and switched back. iOS froze the app meanwhile, so the only
-    // trigger available is the visibility change (CLAUDE.md → "Specyfika iOS").
+    // The session changed while the app was frozen — it expired, or (in a
+    // browser tab) the operator opened the access link and switched back. The
+    // only trigger available is the visibility change (CLAUDE.md → "Specyfika iOS").
     let authorized = false
     stubFetch(() => (authorized ? healthResponse() : refusalResponse()))
     renderGate()

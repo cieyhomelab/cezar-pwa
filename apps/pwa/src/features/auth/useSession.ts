@@ -30,10 +30,9 @@ export type Session = {
  * (`HttpOnly`), so "am I still authorized" has exactly one answer: ask
  * (`docs/CEZAR_API.md` § 1a). Every return to the foreground re-asks, because
  * iOS suspends the app for hours at a time and the answer may have changed
- * while it was frozen — the session may have expired, or the operator may have
- * created one by opening their access link in Safari, which is the fallback
- * path in `unlock.ts` and the reason this listener is what makes it work
- * without a button press.
+ * while it was frozen — the session may have expired. In a browser tab it also
+ * completes the "open the link in this browser and come back" route without a
+ * button press; the installed app has no such route (its cookies are its own).
  */
 export function useSession(): Session {
   const query = useQuery(healthQueryOptions())

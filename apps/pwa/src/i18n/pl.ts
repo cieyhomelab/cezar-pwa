@@ -25,10 +25,20 @@ export const pl = {
     submit: 'Połącz',
     /** Reassurance that pasting a secret here is safe. R-AUTH-5. */
     privacy: 'Link nie jest nigdzie zapisywany — służy tylko do przejścia przez bramę.',
-    /** The fallback when the gateway ignores the key at the app's own path. */
-    unlockFailed:
-      'Brama nie przyjęła linku pod adresem aplikacji. Otwórz link w Safari, a potem wróć tutaj — aplikacja sama sprawdzi połączenie.',
-    manual: 'Możesz też otworzyć link w Safari i wrócić do aplikacji.',
+    /**
+     * The key came back unconsumed: either the link is wrong or incomplete, or
+     * the server has no unlock at /m/. Both are said, because the app cannot
+     * tell them apart.
+     */
+    unlockFailed: 'Brama nie przyjęła tego linku. Sprawdź, czy link jest skopiowany w całości — razem z końcówką klucza.',
+    unlockFailedServer:
+      'Jeśli link jest kompletny, serwer nie obsługuje jeszcze odblokowania pod adresem aplikacji — na serwerze trzeba uruchomić deploy/nginx/install.sh.',
+    /**
+     * Only true in a browser tab. The installed app keeps its own cookies
+     * (R-AUTH-1), so a session opened in Safari never reaches it — offering
+     * this there would send the operator down a path that cannot work.
+     */
+    manualTab: 'Możesz też otworzyć link w tej przeglądarce i wrócić tutaj.',
     recheck: 'Sprawdź ponownie',
     rechecking: 'Sprawdzam…',
     errors: {

@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { type AccessLinkProblem, buildUnlockUrl } from '../../domain/access-link.ts'
 import { pl } from '../../i18n/pl.ts'
+import { useStandalone } from '../../pwa/useStandalone.ts'
 import { navigateToUnlock } from './unlock.ts'
 
 const problemMessage: Record<AccessLinkProblem, string> = {
@@ -19,6 +20,8 @@ export type ConnectScreenProps = {
   /** Seams for tests, which must not perform a real navigation. */
   origin?: string
   navigate?: (url: string) => void
+  /** Defaults to detection; decides which fallback advice is true here. */
+  standalone?: boolean
 }
 
 /**
@@ -38,7 +41,10 @@ export function ConnectScreen({
   isProbing,
   origin = window.location.origin,
   navigate = navigateToUnlock,
+  standalone: standaloneOverride,
 }: ConnectScreenProps) {
+  const detectedStandalone = useStandalone()
+  const standalone = standaloneOverride ?? detectedStandalone
   const [link, setLink] = useState('')
   const [problem, setProblem] = useState<AccessLinkProblem | null>(null)
 
@@ -62,9 +68,15 @@ export function ConnectScreen({
       </div>
 
       {unlockFailed && (
-        <p role="alert" className="rounded border border-border bg-surface-raised p-3 text-sm">
-          {pl.auth.unlockFailed}
-        </p>
+        <div role="alert" className="rounded border border-border bg-surface-raised p-3 text-sm">
+          <p>{pl.auth.unlockFailed}</p>
+          {/* In the installed app there is no other way in, so the one
+              remaining cause the operator can act on is the server. In a tab,
+              opening the link directly works too. */}
+          <p className="mt-2 text-text-muted">
+            {standalone ? pl.auth.unlockFailedServer : pl.auth.manualTab}
+          </p>
+        </div>
       )}
 
       <form className="flex flex-col gap-2" onSubmit={onSubmit} noValidate>
@@ -107,7 +119,9 @@ export function ConnectScreen({
       </form>
 
       <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
-        <p className="text-sm text-text-muted">{pl.auth.manual}</p>
+        {!standalone && !unlockFailed && (
+          <p className="text-sm text-text-muted">{pl.auth.manualTab}</p>
+        )}
         <button
           type="button"
           className="touch-target rounded border border-border px-4 text-sm"
