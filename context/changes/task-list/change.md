@@ -1,7 +1,7 @@
 ---
 change_id: task-list
 title: Task list across projects, attention first
-status: in-progress
+status: implemented
 created: 2026-09-21
 updated: 2026-09-21
 archived_at: null

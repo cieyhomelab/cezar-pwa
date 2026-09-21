@@ -1,9 +1,9 @@
 ---
 change_id: install-to-home-screen
 title: Install to the home screen, run offline, and update on purpose
-status: in-progress
+status: implemented
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-21
 archived_at: null
 ---
 
