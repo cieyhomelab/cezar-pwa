@@ -30,7 +30,14 @@ export function RunHeader({ run, projectName }: { run: ApiRun; projectName: stri
   return (
     <section className="flex flex-col gap-2 border-b border-border px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <StatusBadge attention={deriveAttention(run)} status={run.status} />
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <StatusBadge attention={deriveAttention(run)} status={run.status} />
+          {/* S-08: an archived task is off the list, so the screen says where it went. */}
+          {run.archived ? <span className="text-sm text-text-muted">{pl.run.actions.archivedBadge}</span> : null}
+          {run.pinned && !run.archived ? (
+            <span className="text-sm text-text-muted">{pl.run.actions.pinnedBadge}</span>
+          ) : null}
+        </span>
         <span className="min-w-0 truncate text-sm text-text-muted">{projectName}</span>
       </div>
       <h2 className="text-lg leading-snug font-semibold break-words">{runTitle(run)}</h2>

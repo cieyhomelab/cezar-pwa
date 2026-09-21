@@ -250,6 +250,51 @@ export const pl = {
           'Sesja się zakończyła i Cezar nie zapisał jej identyfikatora, więc tej odpowiedzi nie da się dostarczyć.',
       },
     },
+    /** S-08: the task's own actions (FR-025 to FR-029), and why one did not go through (FR-032). */
+    actions: {
+      label: 'Akcje zadania',
+      archivedBadge: 'Zarchiwizowane',
+      pinnedBadge: 'Przypięte',
+      cancel: 'Anuluj',
+      cancelling: 'Anuluję…',
+      /** `waiting` closes the session, `review` accepts the changes: one endpoint, two meanings. */
+      finish: { waiting: 'Zakończ', review: 'Akceptuj' } as Record<string, string>,
+      finishing: 'Kończę…',
+      draftPr: 'Otwórz draft PR',
+      draftPrPending: 'Otwieram PR…',
+      continue: 'Kontynuuj',
+      continuing: 'Wznawiam…',
+      pin: 'Przypnij',
+      unpin: 'Odepnij',
+      pinning: 'Zapisuję…',
+      archive: 'Archiwizuj',
+      unarchive: 'Przywróć z archiwum',
+      archiving: 'Zapisuję…',
+      confirmCancel: {
+        title: 'Anulować to zadanie?',
+        body: 'Agent zostanie zatrzymany, a zadanie zakończy się jako anulowane. Worktree zostaje.',
+        keep: 'Zostaw',
+        confirm: 'Anuluj zadanie',
+      },
+      done: {
+        cancel: 'Zadanie anulowane.',
+        alreadySettled: 'Zadanie zdążyło się zakończyć — nie było czego anulować.',
+        accepted: 'Zmiany zaakceptowane, zadanie zakończone.',
+        finished: 'Sesja zamknięta.',
+        draftPr: 'Draft PR otwarty — link jest w nagłówku.',
+        draftPrDryRun: 'Tryb próbny Cezara: PR nie został naprawdę otwarty.',
+        continued: 'Sesja wznowiona.',
+        archived: 'Zadanie zarchiwizowane — zniknęło z listy.',
+      },
+      failed: {
+        /** The server's own words, verbatim (FR-032). */
+        refused: (reason: string) => `Cezar odmówił: ${reason}`,
+        network: 'Brak połączenia z Cezarem — nic się nie zmieniło.',
+        /** A write that timed out may still have happened; a blind retry could do it twice. */
+        timeout: 'Cezar nie odpowiedział na czas. Akcja mogła się wykonać — odśwież, zanim spróbujesz ponownie.',
+        auth: 'Sesja z Cezarem wygasła — połącz się ponownie.',
+      },
+    },
   },
   install: {
     title: 'Dodaj Cezara do ekranu początkowego',

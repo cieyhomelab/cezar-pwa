@@ -14,12 +14,14 @@ import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
 import { Composer } from './Composer.tsx'
 import { PlanPanel } from './PlanPanel.tsx'
+import { RunActionBar } from './RunActionBar.tsx'
 import { RunHeader } from './RunHeader.tsx'
 import { TranscriptView } from './TranscriptView.tsx'
 import { useDeliver } from './useDeliver.ts'
 import { useFollowBottom } from './useFollowBottom.ts'
 import { useLiveTranscript } from './useLiveTranscript.ts'
 import { useMarkRead } from './useMarkRead.ts'
+import { useRunActions } from './useRunActions.ts'
 
 /** The route: `/m/p/:projectId/runs/:runId`, the same shape S-10's notifications will open. */
 export function RunScreen() {
@@ -45,7 +47,9 @@ function BackBar({ children }: { children?: ReactNode }) {
 /**
  * S-05: one task's header, its plan and the newest stretch of its transcript (US-01, FR-014,
  * FR-015, FR-017, FR-018, FR-020). S-07: the agent's open question is answerable in place and
- * a docked composer messages the task (FR-022, FR-023, FR-032). Rendered behind `AuthGate`.
+ * a docked composer messages the task (FR-022, FR-023, FR-032). S-08: under the header, the
+ * task's own actions — cancel, finish, draft PR, continue, pin, archive (FR-025 to FR-029).
+ * Rendered behind `AuthGate`.
  *
  * S-06: kept live by the task's event stream (FR-016), following the newest entry only while the
  * operator is at the end (FR-019), and resumed after a suspension from where it stopped (FR-021).
@@ -72,6 +76,8 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   useMarkRead(projectId, runId, run.data)
   // S-07: one delivery for the question card and the composer alike.
   const delivery = useDeliver(projectId, runId, run.data)
+  // S-08: cancel, finish, draft PR, continue, pin and archive.
+  const actions = useRunActions(projectId, runId, run.data)
 
   // A refusal means the session lapsed since the probe. Re-asking it hands the screen to
   // `AuthGate`, exactly as the list does.
@@ -159,6 +165,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
 
       <div aria-busy={stale} className={stale ? 'opacity-50' : undefined}>
         <RunHeader run={run.data} projectName={projectName} />
+        <RunActionBar run={run.data} actions={actions} busy={delivery.pending} />
 
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm text-text-muted">
           <ConnectionStatus
