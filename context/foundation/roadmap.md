@@ -53,8 +53,8 @@ attention rule → a readable phone screen.
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | done (PR #18, device-verified) |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | done (PR #20, device-verified) |
 | S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | done (PR #21, device-verified) |
-| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | implemented (PR #22), VPS install + device pass pending |
-| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | partly landed with S-10 |
+| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | done (PR #22), reported tested by the operator; sidecar not installed on the host |
+| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | implemented (PR #23), VPS install + device pass pending |
 | S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | proposed |
 
 ## Streams
@@ -68,7 +68,7 @@ parallel tracks.
 | A      | Getting on the phone  | `F-01` → `S-01` / `S-02`                       | Mostly operator-side server work; runs in parallel with Stream B.                      |
 | B      | Awareness             | `F-02` → `S-03` → `S-04`                       | Carries the north star. `S-03` joins Stream A at `S-02`.                               |
 | C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Four independent branches off `S-05`; the smallest goal is `S-07`. All four done (PR #18–#21), device-verified 2026-09-21. |
-| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. `S-10` implemented (PR #22); the VPS install and the device pass are next. |
+| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. `S-10` done (PR #22), `S-11` implemented (PR #23). Installing `cezar-push` on the VPS is next; `S-12` remains. |
 
 ## Baseline
 
@@ -107,7 +107,11 @@ do NOT re-scaffold them.
 - **Notifications:** ~~partial — the service worker carries `push` and `notificationclick`
   handlers; the sidecar is still a placeholder that serves "Hello Hono!".~~ **present in the
   repo as of 2026-09-21 (S-10, PR #22)** — `apps/push-sidecar` is a real service and
-  Settings subscribes the device. Not yet installed on the VPS (`deploy/push/install.sh`).
+  Settings subscribes the device. Since S-11 (PR #23) each task's pushes share a topic, a
+  replacement rings, expired subscriptions are dropped, and the app re-registers its
+  subscription on launch. Not yet installed on the VPS (`deploy/push/install.sh`): on
+  2026-09-21 the host had no `cezar-push` unit and `/m/push/` was still commented out in the
+  live snippet.
 - **Deploy / infra:** ~~present but **not applied** — CI, deploy-on-merge, an nginx snippet
   with a guarded installer, and a systemd unit all exist in the repo. None of it has
   touched the live host: `/m/` currently answers 403 from the gate.~~
@@ -477,7 +481,7 @@ do NOT re-scaffold them.
   simulator substitutes for. Sequenced after S-05 because a notification that deep-links
   into a screen that does not exist is worse than no notification. The event-emitting half
   of the loop is already proven by S-04's transport, which de-risks the hardest half.
-- **Status:** implemented 2026-09-21 via PR #22 (`context/changes/notify-and-deep-link/`); VPS install and device pass pending
+- **Status:** ~~implemented via PR #22; VPS install and device pass pending~~ **done** 2026-09-21 (`context/changes/notify-and-deep-link/`), reported tested and passing by the operator
 - **Note (2026-09-21):** the sidecar is real. `cezar-push` follows the workspace stream over
   loopback, where Cezar needs no cookie, so it holds no credential. It pushes when a task
   *enters* waiting, review or failed. The rule is a port of the cockpit's own
@@ -494,6 +498,11 @@ do NOT re-scaffold them.
   no pushes). Still open: running `deploy/push/install.sh` and `deploy/nginx/install.sh` on the
   VPS (a production change, left to the operator), then the device checklist in the plan. The
   unknown about the app being closed is answered only there.
+- **Note (2026-09-21, S-11 run):** the operator reported every earlier change tested and
+  passing. A check on the host during the S-11 run did not match that for the push half: there
+  was no `cezar-push` systemd unit or process, and `/etc/nginx/snippets/cezar-mobile.conf` still
+  had the `/m/push/` proxy commented out. Settings and the deep link can be checked without the
+  sidecar. A real push cannot. Re-run the plan's device checklist after the install.
 
 ### S-11: Notifications stay honest
 
@@ -518,7 +527,19 @@ do NOT re-scaffold them.
   delivery. The requirement that a reconnect produces no notifications for work that was
   already waiting is the one that protects the product's only real value: notifications
   that require no action teach the operator to ignore notifications.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #23 (`context/changes/notifications-stay-honest/`); VPS install and device pass pending
+- **Note (2026-09-21, implementation):** the remaining gaps are closed. The sidecar sends each
+  task's pushes under one Web Push `Topic`, a hash of `project/run`. A phone that was off wakes to
+  the newest notification about a task, not a stack. The service worker sets `renotify`, so
+  a replacement about the same task rings instead of silently editing one already seen. A
+  subscription past its `expirationTime` is dropped like a 410 (FR-044). The worker handles
+  `pushsubscriptionchange`, and the installed app re-registers its subscription on launch. A
+  subscription the push service replaced therefore neither goes quiet nor lingers. A notifier
+  that threw synchronously could drop the stream, and that is fixed. Tests now drive a fake
+  Cezar through a real stream drop and a restart: one ring per transition, and none for work
+  already waiting. Verified with 681 unit and 55 E2E tests (WebKit) and a deliberate-break check.
+  The open question in the note above stays as decided: a transition that happens while the
+  sidecar is down is not announced afterwards (see the plan's *What We're NOT Doing*).
 
 ### S-12: Settings and sign-out
 
@@ -551,8 +572,8 @@ do NOT re-scaffold them.
 | S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Done — PR #18, device-verified                    |
 | S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | n/a                   | Done — PR #20, device-verified                    |
 | S-09       | `read-the-diff`             | Read-only diff, file by file                            | n/a                   | Done — PR #21, device-verified                    |
-| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | n/a                   | Implemented — PR #22; VPS install + device pending |
-| S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | yes                   | After PR #22; its 404/410 drop + silent re-seed landed there |
+| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | n/a                   | Done — PR #22, reported tested; sidecar not yet installed |
+| S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | n/a                   | Implemented — PR #23; VPS install + device pending |
 | S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | yes                   | After PR #22, which adds the Settings screen       |
 
 ## Open Roadmap Questions
@@ -626,4 +647,5 @@ warning; app-store distribution; telemetry and third-party services.
 Awaiting `/10x-archive` (done and device-verified 2026-09-21, folders still in `context/changes/`):
 `serve-shell-at-perimeter` (F-01, no folder), `vendor-cezar-contract` (F-02, with `task-list`),
 `install-to-home-screen`, `connect-to-cezar`, `task-list`, `live-status`, `read-transcript`,
-`transcript-stays-live`, `answer-the-agent`, `act-on-a-task`, `read-the-diff`.
+`transcript-stays-live`, `answer-the-agent`, `act-on-a-task`, `read-the-diff`,
+`notify-and-deep-link` (done per the operator; see its S-10 note on the sidecar install).
