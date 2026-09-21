@@ -52,7 +52,7 @@ attention rule → a readable phone screen.
 | S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | implemented (PR #19), device pass pending |
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | implemented (PR #18), device pass pending |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | implemented (PR #20), device pass pending |
-| S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | proposed |
+| S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | implemented (PR #21), device pass pending |
 | S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | proposed |
 | S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | proposed |
 | S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | proposed |
@@ -67,7 +67,7 @@ parallel tracks.
 | ------ | --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
 | A      | Getting on the phone  | `F-01` → `S-01` / `S-02`                       | Mostly operator-side server work; runs in parallel with Stream B.                      |
 | B      | Awareness             | `F-02` → `S-03` → `S-04`                       | Carries the north star. `S-03` joins Stream A at `S-02`.                               |
-| C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Three independent branches off `S-05`; the smallest goal is `S-07`.                    |
+| C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Four independent branches off `S-05`; the smallest goal is `S-07`. All four implemented (PR #18–#21), device passes pending. |
 | D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. |
 
 ## Baseline
@@ -81,14 +81,16 @@ do NOT re-scaffold them.
   (S-02), the task list (S-03) and the task screen (S-05, `apps/pwa/src/features/run/`), which
   is live since S-06, where the agent can be answered and messaged since S-07, and where the
   task can be cancelled, finished, continued, sent to a draft PR, pinned and archived since
-  S-08. The routes
+  S-08. Since S-09 the task's diff has its own screen, file by file
+  (`apps/pwa/src/features/diff/`). The routes
   are in `apps/pwa/src/routes.tsx`, under `basename="/m/"`.
 - **Backend / API client:** ~~absent — no `apps/pwa/src/api/`; no HTTP wrapper, no event-stream manager.~~
   **present as of 2026-09-21**. `apps/pwa/src/api/http.ts` is the single door. `runs-index.ts`
   serves the list, and `run.ts` serves the record, the newest history page, `history-context`
   and the read receipt, and since S-07 the two writes that reach the agent: `POST …/messages`
   and `POST …/continue`. Since S-08 it also has the task's own actions: `cancel`, `finish`,
-  a bodyless `continue`, `pr`, `pin` and `archive`. `workspace-events.ts` carries the list's live stream (S-04, PR #16),
+  a bodyless `continue`, `pr`, `pin` and `archive`. `changes.ts` reads the task's diff per
+  file from `GET …/changes` (S-09). `workspace-events.ts` carries the list's live stream (S-04, PR #16),
   and `run-events.ts` carries the task's (S-06, PR #19). Both run on `live-stream.ts`, the
   shared backoff, watchdog and lifecycle.
 - **Domain rule:** present — the attention rule and its table tests live in
@@ -96,8 +98,8 @@ do NOT re-scaffold them.
 - **Contract:** ~~partial — `packages/cezar-contract/` exists as a slot; `src/` is empty
   until `npm run sync:contract <sha>` runs.~~ **present as of 2026-09-21**. It is vendored at
   tag `v0.11.0` (`67fc941`), the version the instance reports (F-02, PR #15). Live captures of
-  health, runs-index, a run, its history page and its history context validate against it in
-  `apps/pwa/test/contract/`.
+  health, runs-index, a run, its history page, its history context and (since S-09) two
+  `/changes` answers validate against it in `apps/pwa/test/contract/`.
 - **Auth:** ~~absent — no "Connect to Cezar" screen.~~ **present as of 2026-09-20** —
   `apps/pwa/src/api/http.ts` (refusal detection), `apps/pwa/src/domain/access-link.ts` and
   `apps/pwa/src/features/auth/` (the gate, the screen, the unlock). S-03 renders inside the
@@ -428,7 +430,21 @@ do NOT re-scaffold them.
 - **Risk:** Its own slice because the PRD argued it specifically and kept it: accepting a
   review without seeing the change is signing blind. The size budget is the thing to watch —
   highlighting is a non-goal precisely because it is the largest thing that could land here.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #21 (`context/changes/read-the-diff/`); device pass pending
+- **Note (2026-09-21):** the phone reads `GET …/runs/:id/changes`, not `…/diff`. `/diff` is one
+  text blob, and for a run without a worktree it answers "(no worktree — …)" as a 200 that
+  would render as a diff. `/changes` is split per file by the server already, it is measured
+  against the same base as the cockpit's Changes tab, and it turns "nothing to diff" into a 409
+  with the reason. So "file by file" is the payload's own shape. The patch parser is a port of
+  the cockpit's `parsePatch`. The layout is the one the cockpit forces below `md`: unified,
+  wrapped, no file tree. The size budget held: no highlighting, no split view, no word marks,
+  no expandable context, no image previews. Nothing is virtualized either. Files start
+  closed, except when the diff has only one file, and a long file renders 1000 lines at a time.
+  A review run's repointed worktree is named rather than shown as empty. One server detail:
+  `/changes` runs `git add -N .` in a task worktree, so opening a diff touches that
+  worktree's index, the same as the cockpit's tab does. Verified with 537 unit and 50 E2E tests
+  (WebKit), in both themes at 390×844, and once against the live instance (loopback, GETs
+  only). Opening a real review's diff from the installed app is the last check.
 
 ### S-10: Be notified, and land in the task
 
@@ -500,7 +516,7 @@ do NOT re-scaffold them.
 | S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | n/a                   | Implemented — PR #19; device pass pending         |
 | S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Implemented — PR #18; device pass pending         |
 | S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | n/a                   | Implemented — PR #20; device pass pending         |
-| S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | S-05 merged (PR #17)                              |
+| S-09       | `read-the-diff`             | Read-only diff, file by file                            | n/a                   | Implemented — PR #21; device pass pending         |
 | S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | S-05 merged (PR #17); deep-link path exists       |
 | S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | no                    | Needs S-10                                        |
 | S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | no                    | Needs S-03, S-10                                  |
@@ -541,7 +557,8 @@ do NOT re-scaffold them.
    offline snapshot and `virtua` for transcript virtualization; both were cut, and both are
    now listed under Non-Goals. They entered during scaffolding, from a rules file older
    than the cuts. — Owner: operator. Block: nothing, but they should go before a slice
-   reaches for one out of habit.
+   reaches for one out of habit. *(2026-09-21: S-09 did not use `virtua` for long diffs. It
+   pages them instead. Neither package is imported anywhere yet.)*
 
 ## Parked
 
