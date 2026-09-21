@@ -81,7 +81,7 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 - Jedno zapytanie `GET /api/v1/workspace/runs-index` (trasa workspace — nie ma wariantu `/p/:projectId/`), klucz `['runs-index']`. Nazwy projektów z `GET /api/v1/health` → `projects[]` (już w cache po sondzie sesji).
 - Odpowiedź **nie jest** walidowana schematem zod w runtime: enumy kontraktu są zamknięte, a słownik rośnie. Sprawdzamy tylko, że `runs` jest tablicą — inaczej błąd, nigdy pusta lista („nic nie czeka” byłoby nieprawdą). Schematy walidują fixture'y w testach (`apps/pwa/test/contract/`).
 - Sekcje PRD (FR-008): Wymaga uwagi / W toku / W kolejce (+ zaplanowane wznowienia) / Zakończone; zarchiwizowane ukryte. Kolejność w sekcji = `sortRuns` z `web/src/lib/task-groups.ts`. Numer w kolejce liczony dla całego workspace'u (semafor `maxParallel` jest wspólny dla projektów).
-- Odświeżanie: przy powrocie na pierwszy plan (`refetchOnWindowFocus: 'always'`), co 30 s gdy widoczna (do czasu SSE w S-04), przyciskiem i gestem „pociągnij”. 401/403 → ponowna sonda `health` → ekran „Połącz z Cezarem”.
+- Odświeżanie: przy powrocie na pierwszy plan (`refetchOnWindowFocus: 'always'`), przyciskiem i gestem „pociągnij”; na żywo ze strumienia workspace (S-04, § 3a), z pollingiem co 30 s, gdy strumień nie działa, i co 5 min, gdy działa. 401/403 → ponowna sonda `health` → ekran „Połącz z Cezarem”.
 - `runs-index` **nie niesie** `pinned` ani `groupId` — lista PWA nie ma więc sekcji „Przypięte” ani zwijania wariantów.
 
 ### Kluczowe pola `RunIndexEntry` (lista)
@@ -95,18 +95,28 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 Wszystkie wysyłają `ping` co kilkanaście sekund. Nagłówki anty-buforujące są ustawiane przez serwer; nginx musi mieć `proxy_buffering off` (instalator Cezara już to robi).
 
 ### 3a. `GET /api/v1/workspace/events` — cały workspace (ekran listy)
+Trasa workspace (bez wariantu `/p/:projectId/`, jak `runs-index`). Kształty ramek odczytane z `server/server.js` @ `v0.11.0` i złapane na żywo po loopbacku (2026-09-21) — **stempel projektu to `project`, nie `projectId`**:
+
 | event | data |
 |---|---|
-| `run` | pełny `RunRecord` po każdej zmianie (ze stemplem projektu) |
-| `run-deleted` | `{ id, projectId }` |
-| `todos` | lista follow-upów (tylko przy `CEZ_FOLLOWUPS=1`) |
-| `usage` | próbki CPU/RSS działających zadań |
-| `project-added` / `project-removed` | wpis projektu |
-| `provider-status` | stan logowania agentów |
-| `automation-change` | zmiana automatyzacji |
-| `ping` | pusty |
+| `run` | pełny `RunRecord` po każdej zmianie + `project` (`{ ...run, project }`) |
+| `run-deleted` | `{ id, project }` |
+| `todos` | `{ project, items }` (tylko przy `CEZ_FOLLOWUPS=1`) |
+| `usage` | `{ project, usage: { [runId]: { cpuPct, rssBytes, procCount } } }` — co ~2 s, tylko gdy jakiś run ma żywy proces; projekt bez żywych wierszy nie dostaje ramki |
+| `project-added` / `project-removed` | wpis projektu (`project-removed` niesie `id`) |
+| `provider-status` | stan logowania agentów (bez stempla, host-wide) |
+| `checkout-progress` | postęp klonowania |
+| `ping` | pusty, **co 15 s** |
 
-Uwaga: przy reconnect nie ma replay — po wznowieniu **zawsze** refetch `runs-index`.
+Nie ma linii `id:` — **przy reconnect nie ma replay**, po wznowieniu **zawsze** refetch `runs-index`. Nagłówki: `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no`. Strumień podpina projekty, których kontekst serwer już zbudował, i dopina kolejne, gdy powstają (`onContextBuilt`).
+
+**Jak korzysta z tego PWA (S-04, `apps/pwa/src/api/workspace-events.ts`):**
+- Jedno `EventSource` na ekran listy. Nasłuch tylko na nazwane zdarzenia, których używamy (`run`, `run-deleted`, `project-added`, `project-removed`, `usage`, `ping`) — nowe nazwy upstreamu po prostu nie docierają (reguła 5).
+- `run` → wiersz przez `toIndexEntry()` (kopia `runIndexEntry()` z `server.js`), upsert do `['runs-index']` przez `setQueryData`; `run-deleted` → usunięcie. Nieczytelna ramka jest pomijana, nie rzuca. `usage` liczy się tylko jako oznaka życia (wiersz nie pokazuje CPU/RSS).
+- Ramki, które przyjdą, gdy `runs-index` jest w drodze, są odtwarzane na jego odpowiedzi (`FrameJournal`) — inaczej wolny refetch nadpisałby nowszy status starszym.
+- Stan połączenia: `connecting | live | reconnecting | lost`. Własny backoff (1, 2, 5, 10, 30 s) zamiast przeglądarkowego, watchdog 45 s (trzy zgubione pingi albo połączenie, które nigdy się nie otworzyło), `lost` po 20 s bez połączenia albo od razu przy `offline`. Każde otwarcie → refetch `runs-index`; każde zerwanie → ponowna sonda `health` (EventSource nie pokazuje kodu HTTP, a wygasła sesja to goły 403).
+- Strumień zamykany przy `visibilitychange → hidden`, otwierany na nowo przy `visible` (iOS zamraża aplikację).
+- Lista jest „na żywo” dopiero, gdy strumień jest otwarty **i** po otwarciu dotarł refetch; wcześniej pokazuje „lista z HH:MM”. Polling: 30 s, gdy nie jest na żywo; 5 min jako siatka bezpieczeństwa, gdy jest.
 
 ### 3b. `GET /api/v1/p/:projectId/runs/:id/events` — jedno zadanie (ekran szczegółów)
 - Parametry wznowienia: `?afterSeq=<n>` lub nagłówek `Last-Event-ID` (EventSource wysyła go sam), opcjonalnie `?cursor=<liveCursor>` z `/history`.

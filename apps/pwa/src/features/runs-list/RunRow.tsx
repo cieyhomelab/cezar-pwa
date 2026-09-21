@@ -59,6 +59,7 @@ export function RunRow({
   return (
     <li
       data-run-id={run.id}
+      data-run-key={`${run.projectId}/${run.id}`}
       className={`border-b border-border px-4 py-3 ${isReadDoneItem(run) ? 'opacity-70' : ''}`}
     >
       <div className="flex items-center justify-between gap-3">

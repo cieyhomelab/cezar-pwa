@@ -6,10 +6,13 @@ import { runsIndexQueryOptions } from '../../api/runs-index.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { attentionCount, buildTaskList } from '../../domain/task-list.ts'
 import { pl } from '../../i18n/pl.ts'
+import { ConnectionStatus } from './ConnectionStatus.tsx'
 import { RunRow } from './RunRow.tsx'
+import { useLiveRuns } from './useLiveRuns.ts'
 import { useNow } from './useNow.ts'
 import { useProjectFilter } from './useProjectFilter.ts'
 import { usePullToRefresh } from './usePullToRefresh.ts'
+import { useScrollAnchor } from './useScrollAnchor.ts'
 
 /** Finished work beyond this many rows waits behind a button: the index can hold 200 runs per
  *  project, and nobody on a phone reads last month's history by scrolling past it. */
@@ -24,6 +27,7 @@ export const STALE_AFTER_MS = 60_000
 
 /**
  * S-03: every task across every project, attention first (US-02, FR-007–009, FR-011, FR-013).
+ * S-04: kept current by the workspace event stream, which says whether it is (FR-010, FR-012).
  *
  * Rendered only behind `AuthGate`, so the health probe has already answered and its project
  * list is in the cache.
@@ -31,9 +35,11 @@ export const STALE_AFTER_MS = 60_000
 export function RunsListScreen() {
   const queryClient = useQueryClient()
   const health = useQuery(healthQueryOptions())
-  const runs = useQuery(runsIndexQueryOptions())
+  const live = useLiveRuns()
+  const runs = useQuery(runsIndexQueryOptions({ live: live.state === 'live' }))
   const now = useNow()
   const [showOlder, setShowOlder] = useState(false)
+  useScrollAnchor(runs.data)
 
   // A refusal here means the session lapsed since the probe. Re-asking the probe hands the
   // screen to `AuthGate`, which already knows how to say so (FR-004) — rather than this screen
@@ -90,8 +96,23 @@ export function RunsListScreen() {
 
   const totalAttention = attentionCount(all)
   const shownAttention = attentionCount(sections)
-  const updatedAt = clockTime(new Date(runs.dataUpdatedAt).toISOString(), now)
-  const stale = runs.isFetching && now - runs.dataUpdatedAt > STALE_AFTER_MS
+  // Current only when the stream is live AND a fetch landed after it opened (no replay fills the
+  // gap before that). Otherwise the list is as old as the later of its last fetch and the last
+  // moment the stream vouched for it — unless the last fetch failed, which vouches for nothing.
+  const synced =
+    live.state === 'live' && live.liveSince !== null && runs.dataUpdatedAt >= live.liveSince
+  const asOf = synced
+    ? now
+    : runs.isError
+      ? runs.dataUpdatedAt
+      : Math.max(runs.dataUpdatedAt, live.liveUntil ?? 0)
+  const asOfTime = clockTime(new Date(asOf).toISOString(), now)
+  const stale = runs.isFetching && now - asOf > STALE_AFTER_MS
+  const detail = runs.isFetching
+    ? pl.runs.refreshingInline
+    : synced
+      ? undefined
+      : pl.runs.listFrom(asOfTime)
   const truncated = runs.data.truncated.map((id) => projectNames.get(id) ?? id)
 
   return (
@@ -137,7 +158,7 @@ export function RunsListScreen() {
         ) : null}
 
         <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
-          <p role="status">{runs.isFetching ? pl.runs.refreshing : pl.runs.updatedAt(updatedAt)}</p>
+          <ConnectionStatus state={live.state} detail={detail} />
           <button
             type="button"
             className="touch-target rounded border border-border px-3 text-text"
@@ -151,7 +172,7 @@ export function RunsListScreen() {
 
       {runs.isError && !(runs.error instanceof AuthRequiredError) ? (
         <div role="alert" className="border-b border-border bg-surface-raised px-4 py-2 text-sm">
-          {pl.runs.refreshFailed(updatedAt)}
+          {pl.runs.refreshFailed(asOfTime)}
         </div>
       ) : null}
 
