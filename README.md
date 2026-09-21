@@ -118,6 +118,16 @@ Two steps remain manual and one-off, both run **on the VPS**:
    snippet. If the file holds more than one `location /` block it refuses to
    guess and tells you to add the `include` by hand.
 
+   It also copies the vhost's `if ($arg_key = …)` unlock guard into
+   `/etc/nginx/snippets/cezar-mobile-unlock.conf` (mode 600, never printed),
+   which the `/m/` location includes. Without that copy the installed app
+   cannot unlock itself: the guard lives in `location /`, which never sees
+   `/m/`. **Re-run the installer after rotating the access key**, or `/m/`
+   keeps accepting the old one. If it cannot find exactly one guard it says
+   so and leaves the file out — the shell still serves, it just cannot unlock.
+   `deploy/nginx/rehearse.sh` checks all of this against a scratch nginx,
+   no VPS needed.
+
 2. For push (M4), install `deploy/systemd/cezar-push.service` as a user unit,
    and uncomment the `/m/push/` block in the snippet **after** filling in the
    cookie check (open question Q1) — it is shipped commented out so the
