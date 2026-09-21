@@ -333,6 +333,54 @@ export const pl = {
       },
     },
   },
+  settings: {
+    title: 'Ustawienia',
+    /** The footer link that opens the screen. */
+    open: 'Ustawienia',
+    back: 'Lista zadań',
+  },
+  /** S-10: notifications — the settings section and the notification text itself. */
+  push: {
+    section: 'Powiadomienia',
+    /** FR-038, FR-043: what a notification says, and what it never carries. */
+    intro:
+      'Powiadomienie przychodzi, gdy zadanie czeka na Twoją odpowiedź, na przegląd albo zakończyło się błędem. Zawiera tytuł zadania, projekt i powód — bez kodu i bez treści rozmowy.',
+    /** FR-037: in a browser tab the permission prompt cannot work on iOS. */
+    installTitle: 'Najpierw dodaj Cezara do ekranu początkowego',
+    installBody:
+      'Na iPhonie powiadomienia działają tylko w aplikacji otwartej z ikony. W Safari naciśnij „Udostępnij”, potem „Dodaj do ekranu początkowego”, i otwórz Cezara z ekranu początkowego.',
+    unsupported: 'To urządzenie nie obsługuje powiadomień (potrzebny iOS 16.4 lub nowszy).',
+    denied: 'Powiadomienia są zablokowane. Włącz je w Ustawieniach iOS → Powiadomienia → Cezar.',
+    checking: 'Sprawdzam powiadomienia…',
+    off: 'Powiadomienia są wyłączone.',
+    on: 'Powiadomienia są włączone na tym urządzeniu.',
+    enable: 'Włącz powiadomienia',
+    enabling: 'Włączam…',
+    disable: 'Wyłącz powiadomienia',
+    disabling: 'Wyłączam…',
+    test: 'Wyślij powiadomienie testowe',
+    testing: 'Wysyłam…',
+    testSent: 'Wysłane — powiadomienie powinno pojawić się za chwilę.',
+    errors: {
+      dismissed: 'Nie udzielono zgody na powiadomienia.',
+      unknownDevice: 'Serwer nie zna tego urządzenia — wyłącz i włącz powiadomienia ponownie.',
+      gone: 'Usługa powiadomień nie zna już tego urządzenia — włącz powiadomienia ponownie.',
+      unavailable: 'Serwer powiadomień nie odpowiada. Spróbuj później.',
+      auth: 'Sesja z Cezarem wygasła — połącz się ponownie.',
+      failed: (reason: string) => `Nie udało się: ${reason}`,
+    },
+    /** The notification body says why, keyed by the attention label (`deriveAttention().label`). */
+    reason: {
+      'needs you': 'Czeka na Twoją odpowiedź',
+      'needs review': 'Czeka na przegląd',
+      failed: 'Zakończone błędem',
+      'needs permission': 'Prosi o zgodę',
+    } as Record<string, string>,
+    fallbackTitle: 'Cezar',
+    fallbackReason: 'Wymaga uwagi',
+    testTitle: 'Cezar',
+    testBody: 'Powiadomienia działają.',
+  },
   install: {
     title: 'Dodaj Cezara do ekranu początkowego',
     /** iOS has no install prompt — the operator does it from the Share sheet. */

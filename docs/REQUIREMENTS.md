@@ -123,7 +123,7 @@ Motyw (system/ciemny/jasny), powiadomienia (P1), filtr projektów, „Wyloguj”
 
 - Node 20+, TypeScript, Hono, `web-push`, bez bazy — subskrypcje w `~/.cezar-push/subscriptions.json` (zapis atomowy), stan statusów w pamięci.
 - Nasłuchuje na `127.0.0.1:4330`; nginx proxy `location /m/push/` → sidecar, za tym samym cookie.
-- Łączy się z `http://127.0.0.1:4321/api/v1/workspace/events` (Host: `127.0.0.1` — przechodzi host-guard w trybie loopback; jeśli Cezar działa w trybie hosted, też przechodzi). Reconnect z backoffem; po reconnect pobiera `runs-index` i **nie** wysyła pushy za stany zastane (tylko przejścia).
+- Łączy się z `http://127.0.0.1:4322/api/v1/workspace/events` (port żywej instancji; `CEZAR_URL` w unicie) (Host: `127.0.0.1` — przechodzi host-guard w trybie loopback; jeśli Cezar działa w trybie hosted, też przechodzi). Reconnect z backoffem; po reconnect pobiera `runs-index` i **nie** wysyła pushy za stany zastane (tylko przejścia).
 - Klucze VAPID generowane raz (`cezar-push init`), trzymane w `~/.cezar-push/vapid.json` (0600); `subject` = `mailto:` właściciela z env.
 - Endpointy: `GET /m/push/vapid-public-key`, `POST /m/push/subscription`, `DELETE /m/push/subscription`, `POST /m/push/test` (wysyła testowy push), `GET /m/push/health`.
 - Serwis systemd `cezar-push.service` (user), logi przez journald, bez logowania treści zadań.

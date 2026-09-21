@@ -101,7 +101,7 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 - Gdy `hasOlder`, na górze transkryptu jest odnośnik do cockpitu — starsze strony (FR-049) są odłożone.
 - Obrazy z transkryptu nie są ładowane: linia v1 `image` niesie URL z zamrożonej powierzchni `/api/runs/…` (reguła 2). Obrazy w Markdownie agenta też nie — renderujemy tekst alternatywny (żadnych żądań do stron trzecich).
 - **Przeczytane (FR-020):** `POST …/runs/:id/read` wysyłane raz, tylko gdy `isUnread(run)`. Odpowiedź to cały rekord, ale do cache'u (`['run', …]` i wiersz w `['runs-index']`) trafia **wyłącznie** `seenAt` — tak jak `useMarkRunSeen` w cockpicie (migawka sprzed lotu cofnęłaby pola, które w międzyczasie się zmieniły).
-- Ścieżka ekranu: `/m/p/:projectId/runs/:runId` — tę samą otworzy powiadomienie (S-10). Router ma `basename="/m/"` **ze slashem**: z `/m` link do listy prowadzi pod `/m`, poza scope service workera i poza `location ^~ /m/` w nginx.
+- Ścieżka ekranu: `/m/p/:projectId/runs/:runId` — tę samą otwiera powiadomienie (S-10, `apps/pwa/src/pwa/push-message.ts`). Router ma `basename="/m/"` **ze slashem**: z `/m` link do listy prowadzi pod `/m`, poza scope service workera i poza `location ^~ /m/` w nginx.
 
 ### Diff zadania w PWA (S-09) — jak czytamy `/changes`
 - Ekran `/m/p/:projectId/runs/:runId/diff`, otwierany wierszem „Zmiany” w nagłówku zadania (liczby z `run.diffStat`, gdy rekord je ma — pojawia się dopiero po pierwszej skończonej turze, więc wiersz jest zawsze, najwyżej z „Pokaż zmiany”). Klucz `['changes', projectId, runId]`.
@@ -138,6 +138,12 @@ Nie ma linii `id:` — **przy reconnect nie ma replay**, po wznowieniu **zawsze*
 - Stan połączenia: `connecting | live | reconnecting | lost`. Własny backoff (1, 2, 5, 10, 30 s) zamiast przeglądarkowego, watchdog 45 s (trzy zgubione pingi albo połączenie, które nigdy się nie otworzyło), `lost` po 20 s bez połączenia albo od razu przy `offline`. Każde otwarcie → refetch `runs-index`; każde zerwanie → ponowna sonda `health` (EventSource nie pokazuje kodu HTTP, a wygasła sesja to goły 403).
 - Strumień zamykany przy `visibilitychange → hidden`, otwierany na nowo przy `visible` (iOS zamraża aplikację).
 - Lista jest „na żywo” dopiero, gdy strumień jest otwarty **i** po otwarciu dotarł refetch; wcześniej pokazuje „lista z HH:MM”. Polling: 30 s, gdy nie jest na żywo; 5 min jako siatka bezpieczeństwa, gdy jest.
+
+**Jak korzysta z tego sidecar `cezar-push` (S-10, `apps/push-sidecar/src/watcher.ts`):**
+- Po loopbacku (`http://127.0.0.1:4322` — port żywej instancji, `cezar-cli serve --port 4322`), bez ciasteczka bramy. Node 20 nie ma `EventSource`, więc strumień czytany jest przez `fetch` (`sse.ts`). Tylko odczyty: `workspace/events`, `workspace/runs-index`, `health` (nazwy projektów).
+- Po każdym otwarciu: `runs-index` staje się **bazą** i nic z niej nie jest ogłaszane — zadanie, które czekało przed restartem sidecara albo przed zerwaniem strumienia, nie dzwoni. Ramki, które przyjdą, zanim baza dotrze, uzupełniają ją po cichu (nie da się stwierdzić, czy są starsze od odpowiedzi; zgubione powiadomienie jest mniejszym złem niż fałszywe).
+- `run` → `isEntering(before, run)` z `packages/shared/src/notifications.ts` (port `diffRunTransitions()` z `web/src/lib/notifications.ts`, kluczowany projektem + id). `run-deleted` → zapomnienie. `project-added` → odświeżenie nazw. Reszta ignorowana (reguła 5).
+- Backoff i watchdog jak w PWA (1, 2, 5, 10, 30 s; 45 s bez bajtu). W pamięci trzyma tylko statusy; nie loguje tytułów ani treści.
 
 ### 3b. `GET /api/v1/p/:projectId/runs/:id/events` — jedno zadanie (ekran szczegółów)
 Odczytane z `server/server.js` i `runs/ui-event-sink.js` @ `v0.11.0`:
@@ -215,7 +221,10 @@ Kopia 1:1 `deriveAttention()` z `packages/web/src/lib/attention.ts` @ `v0.11.0` 
 
 Przeczytane/nieprzeczytane (znacznik w wierszu) to osobny kanał: kopia `web/src/lib/read-state.ts` → `packages/shared/src/read-state.ts` (`isUnread`: `done`/`failed`, nie zarchiwizowane, nie zaplanowane, `seenAt < finishedAt`).
 
-Powiadamiamy przy **wejściu** zadania w stan wymagający uwagi (przejście, nie stan), tak jak `web/src/lib/notifications.ts`.
+Powiadamiamy przy **wejściu** zadania w stan wymagający uwagi (przejście, nie stan), tak jak `web/src/lib/notifications.ts`. Od S-10 to kod: `isEntering()` w `packages/shared/src/notifications.ts` — pierwsze zobaczenie i niezmieniony status nigdy nie dzwonią; zmiana między dwoma stanami uwagi (`waiting` → `failed`) dzwoni.
+
+### 5b. Powiadomienie — co niesie (S-10)
+Sidecar wysyła strukturę, nie tekst (`PushPayload`): `{ kind: 'attention', projectId, projectName, runId, title, reason }`, gdzie `title` = pierwsza linia `titleSummary ?? title`, ucięta do 100 znaków, a `reason` = `deriveAttention().label`. Słowa składa service worker z `i18n/pl.ts` („Czeka na Twoją odpowiedź”, „Czeka na przegląd”, „Zakończone błędem”). Bez kodu, bez treści transkryptu (FR-043). `tag` per zadanie — nowsze powiadomienie o tym samym zadaniu zastępuje starsze. Tap → `/m/p/:projectId/runs/:runId`; otwarte okno aplikacji dostaje `postMessage` i przechodzi tam w miejscu, bez przeładowania (FR-041). Endpointy sidecara: `apps/push-sidecar/README.md`.
 
 ### 5a. `permission.requested` jest martwym typem (zweryfikowane 2026-09-20)
 

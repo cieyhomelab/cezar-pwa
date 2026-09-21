@@ -45,6 +45,15 @@ if (\$cezar_gate_ok = 0) {
 GATE
 
 cat >"$T/vhost.conf" <<VHOST
+# Stands in for cezar-push on the next port.
+server {
+    listen 127.0.0.1:$((port + 1));
+    location / {
+        default_type application/json;
+        return 200 '{"sidecar":"\$request_uri"}';
+    }
+}
+
 server {
     listen 127.0.0.1:$port;
     include $T/snippets/cezar-mobile.conf;
@@ -57,6 +66,7 @@ server {
 VHOST
 
 sed -e "s#/var/www/cezar-mobile/#$T/www/#" -e "s#/etc/nginx/snippets/#$T/snippets/#g" \
+  -e "s#http://127.0.0.1:4330#http://127.0.0.1:$((port + 1))#" \
   "$here/cezar-mobile.conf" >"$T/snippets/cezar-mobile.conf"
 
 cat >"$T/nginx.conf" <<CONF
@@ -124,5 +134,19 @@ landed=$(curl -s -o /dev/null -c "$jar" -L -w '%{url_effective} %{http_code}' "$
 gated=$(curl -s -o /dev/null -b "$jar" -w '%{http_code}' "$base/")
 [[ "$gated" == 200 ]] || fail "the session from /m/ does not open the gate: $gated"
 pass "unlocking at /m/ lands on /m/ and the session opens the gate"
+
+read -r status _ _ _ < <(probe "$base/m/push/vapid-public-key")
+[[ "$status" == 403 ]] || fail "/m/push/ without a session → $status (want 403, never proxied)"
+pass "the push sidecar is gated like the cockpit"
+
+read -r status _ cookie _ < <(probe "$base/m/push/vapid-public-key?key=$KEY")
+[[ "$status" == 403 && "$cookie" == no ]] ||
+  fail "/m/push/?key= → $status cookie=$cookie (the sidecar path must not unlock; want 403)"
+pass "the sidecar path does not carry the unlock guard"
+
+pushed=$(curl -s -b "$jar" "$base/m/push/vapid-public-key")
+[[ "$pushed" == '{"sidecar":"/m/push/vapid-public-key"}' ]] ||
+  fail "with a session, /m/push/ did not reach the sidecar with its full path: $pushed"
+pass "with a session, /m/push/ reaches the sidecar, path intact"
 
 echo "all expectations met"

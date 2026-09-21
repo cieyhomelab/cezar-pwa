@@ -44,17 +44,17 @@ attention rule → a readable phone screen.
 | ---- | -------------------------- | --------------------------------------------------------------- | ------------- | ------------------------------------------- | -------- |
 | F-01 | `serve-shell-at-perimeter` | (foundation) the built shell is served at `/m/`, outside the gate | —             | Access Control §Perimeter facts, FR-001      | done (verified live) |
 | F-02 | `vendor-cezar-contract`    | (foundation) contract pinned to the running Cezar version        | —             | Guardrails, Business Logic                   | done (PR #15) |
-| S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | implemented (PR #10), device pass pending |
+| S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | done (PR #10, device-verified) |
 | S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | done (verified live) |
-| S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | implemented (PR #15), device pass pending |
-| S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | implemented (PR #16), device pass pending |
-| S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | implemented (PR #17), device pass pending |
-| S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | implemented (PR #19), device pass pending |
-| S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | implemented (PR #18), device pass pending |
-| S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | implemented (PR #20), device pass pending |
-| S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | implemented (PR #21), device pass pending |
-| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | proposed |
-| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | proposed |
+| S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | done (PR #15, device-verified) |
+| S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | done (PR #16, device-verified) |
+| S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | done (PR #17, device-verified) |
+| S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | done (PR #19, device-verified) |
+| S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | done (PR #18, device-verified) |
+| S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | done (PR #20, device-verified) |
+| S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | done (PR #21, device-verified) |
+| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | implemented (PR #22), VPS install + device pass pending |
+| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | partly landed with S-10 |
 | S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | proposed |
 
 ## Streams
@@ -67,8 +67,8 @@ parallel tracks.
 | ------ | --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
 | A      | Getting on the phone  | `F-01` → `S-01` / `S-02`                       | Mostly operator-side server work; runs in parallel with Stream B.                      |
 | B      | Awareness             | `F-02` → `S-03` → `S-04`                       | Carries the north star. `S-03` joins Stream A at `S-02`.                               |
-| C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Four independent branches off `S-05`; the smallest goal is `S-07`. All four implemented (PR #18–#21), device passes pending. |
-| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. |
+| C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Four independent branches off `S-05`; the smallest goal is `S-07`. All four done (PR #18–#21), device-verified 2026-09-21. |
+| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. `S-10` implemented (PR #22); the VPS install and the device pass are next. |
 
 ## Baseline
 
@@ -104,8 +104,10 @@ do NOT re-scaffold them.
   `apps/pwa/src/api/http.ts` (refusal detection), `apps/pwa/src/domain/access-link.ts` and
   `apps/pwa/src/features/auth/` (the gate, the screen, the unlock). S-03 renders inside the
   gate rather than adding one.
-- **Notifications:** partial — the service worker carries `push` and `notificationclick`
-  handlers; the sidecar is still a placeholder that serves "Hello Hono!".
+- **Notifications:** ~~partial — the service worker carries `push` and `notificationclick`
+  handlers; the sidecar is still a placeholder that serves "Hello Hono!".~~ **present in the
+  repo as of 2026-09-21 (S-10, PR #22)** — `apps/push-sidecar` is a real service and
+  Settings subscribes the device. Not yet installed on the VPS (`deploy/push/install.sh`).
 - **Deploy / infra:** ~~present but **not applied** — CI, deploy-on-merge, an nginx snippet
   with a guarded installer, and a systemd unit all exist in the repo. None of it has
   touched the live host: `/m/` currently answers 403 from the gate.~~
@@ -187,7 +189,7 @@ do NOT re-scaffold them.
 - **Risk:** The shell already carries the manifest, the icons and the update prompt, so
   this slice is mostly verification on the real device — which is the point: it is the
   first moment anything is confirmed on the actual phone rather than in a headless browser.
-- **Status:** implemented 2026-09-20 via PR #10 (`context/changes/install-to-home-screen/`); device pass pending
+- **Status:** ~~implemented via PR #10; device pass pending~~ **done** 2026-09-21 (`context/changes/install-to-home-screen/`), device-verified by the operator
 - **Note (2026-09-20):** implemented and deployed via PR #10
   (`context/changes/install-to-home-screen/`). The offline state and the install hint were
   the real gaps; the update prompt only needed tests. Left as `proposed` rather than moved
@@ -195,6 +197,7 @@ do NOT re-scaffold them.
   happened: the Share sheet, a real home-screen launcher and Airplane Mode all still need
   the device. Everything reachable from WebKit against the live host is verified and
   recorded in that change's `plan.md` § Progress. Archive it once the device pass is done.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-02: Connect to Cezar
 
@@ -236,6 +239,7 @@ do NOT re-scaffold them.
   vhost, so the extractor now follows the vhost's includes. Pasting the real link in the app
   lands behind the gate and survives a reload. What no browser can confirm is the phone
   itself — one paste in the installed app is the last check.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing.
 
 ### S-03: The task list
 
@@ -252,7 +256,7 @@ do NOT re-scaffold them.
   where the attention rule stops being a tested function and starts being the thing the
   operator reads, so a disagreement with the cockpit becomes visible here first — which
   the PRD names as the worst failure this product can produce.
-- **Status:** implemented 2026-09-21 via PR #15 (`context/changes/task-list/`); device pass pending
+- **Status:** ~~implemented via PR #15; device pass pending~~ **done** 2026-09-21 (`context/changes/task-list/`), device-verified by the operator
 - **Note (2026-09-21):** the list reads `GET /api/v1/workspace/runs-index`, sorted into
   Wymaga uwagi / W toku / W kolejce / Zakończone by the cockpit's own rules, ported 1:1. It
   is filterable by project and refreshes on pull, on return and every 30 s. One consequence
@@ -261,6 +265,7 @@ do NOT re-scaffold them.
   cockpit's sidebar files it under Recent. Verified in WebKit (5 E2E) and against the live
   instance's data. Pull-to-refresh and return-from-background on the installed app still need
   the phone. As of S-05 the rows are links to the task.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-04: Live status
 
@@ -277,7 +282,7 @@ do NOT re-scaffold them.
   indicator is what stops a stale list being mistaken for a quiet one. Sequenced right
   after the list because the guardrail it serves — never presenting a stale status as
   current — is the one the PRD calls the worst failure mode, since it is silent.
-- **Status:** implemented 2026-09-21 via PR #16 (`context/changes/live-status/`); device pass pending
+- **Status:** ~~implemented via PR #16; device pass pending~~ **done** 2026-09-21 (`context/changes/live-status/`), device-verified by the operator
 - **Note (2026-09-21):** the list now updates from `GET /api/v1/workspace/events`. A `run`
   frame is projected to the exact row `runs-index` serves, and frames that arrive while a
   refetch is in flight are replayed onto it. The header says `Na żywo` / `Łączę ponownie…` /
@@ -291,6 +296,7 @@ do NOT re-scaffold them.
   indicator across a lock/unlock and Airplane Mode on the phone, and a cockpit status flip
   arriving on the installed app, still need the device. The live transport S-06 and S-10
   build on is in place.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-05: Read a task's transcript
 
@@ -308,7 +314,7 @@ do NOT re-scaffold them.
   product and the place where the append-only vocabulary guardrail is enforced in anger.
   Only the latest page is required — paging backwards was cut — which keeps this slice
   from absorbing the whole middle of the roadmap.
-- **Status:** implemented 2026-09-21 via PR #17 (`context/changes/read-transcript/`); device pass pending
+- **Status:** ~~implemented via PR #17; device pass pending~~ **done** 2026-09-21 (`context/changes/read-transcript/`), device-verified by the operator
 - **Note (2026-09-21):** the risk was real, but it was already solved upstream. `GET /history`
   returns the raw file, with v2 events interleaved with their v1 twins: every tool call is in
   the live page twice, and the operator's own messages exist only in v1. The reducer
@@ -321,6 +327,7 @@ do NOT re-scaffold them.
   `/m/` location. The basename is now `/m/`. Verified with 320 unit and 30 E2E tests (WebKit)
   and against a live run. Opening a task on the installed app is the last check. S-07,
   S-08, S-09 and S-10 have their task screen, and with S-04 merged S-06 can start.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-06: The transcript stays live and survives suspension
 
@@ -337,7 +344,7 @@ do NOT re-scaffold them.
   phone freezes the app at will, and "nothing lost and nothing duplicated" has to hold
   across a dropped stream. Sequenced after both the live transport (S-04) and the reducer
   (S-05) because it is the join of the two.
-- **Status:** implemented 2026-09-21 via PR #19 (`context/changes/transcript-stays-live/`); device pass pending
+- **Status:** ~~implemented via PR #19; device pass pending~~ **done** 2026-09-21 (`context/changes/transcript-stays-live/`), device-verified by the operator
 - **Note (2026-09-21):** the risk was real, and it came from one detail of the server.
   `GET …/runs/:id/events?cursor=&afterSeq=` replays every persisted line after the given
   point, so "nothing lost" is a matter of always resuming from the page's high-water mark,
@@ -352,6 +359,7 @@ do NOT re-scaffold them.
   wrong until it was measured synchronously. Verified with 401 unit and 40 E2E tests (WebKit)
   and against this task's own run streaming live from the instance. The last check is on the
   phone: lock it mid-answer and unlock it a minute later.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-07: Answer the agent
 
@@ -368,7 +376,7 @@ do NOT re-scaffold them.
   it lands, the operator can already close a waiting task from the phone, just without
   being told to. Sequenced ahead of the housekeeping actions because it is the one that
   answers the product's reason for existing.
-- **Status:** implemented 2026-09-21 via PR #18 (`context/changes/answer-the-agent/`); device pass pending
+- **Status:** ~~implemented via PR #18; device pass pending~~ **done** 2026-09-21 (`context/changes/answer-the-agent/`), device-verified by the operator
 - **Note (2026-09-21):** the agent's question is answered in place. One tap answers a single
   single-select question. Any other shape collects every answer and sends one combined
   message, formatted `"<header>: <labels>"` exactly as the cockpit's ask card does, because
@@ -383,6 +391,7 @@ do NOT re-scaffold them.
   themes at 390×844. Nothing was posted to the live instance: no live run held a question,
   and a send would reach a real agent. Answering a real question from the installed app is
   the last check.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-08: Act on a task
 
@@ -398,7 +407,7 @@ do NOT re-scaffold them.
 - **Risk:** The PRD kept all of these as must-have against the counter-argument that
   housekeeping can wait for a laptop; cancel, finish and continue each close the loop for
   one of the notification reasons, so they are not optional decoration.
-- **Status:** implemented 2026-09-21 via PR #20 (`context/changes/act-on-a-task/`); device pass pending
+- **Status:** ~~implemented via PR #20; device pass pending~~ **done** 2026-09-21 (`context/changes/act-on-a-task/`), device-verified by the operator
 - **Note (2026-09-21):** the phone copies the cockpit's action policy (`runActionFlags` at
   `v0.11.0`) instead of forming its own view of what a task can still do. Cancel is offered
   while the engine owns the run (`running`, `queued`, `waiting`), behind an inline
@@ -416,6 +425,7 @@ do NOT re-scaffold them.
   themes at 390×844. Nothing was sent to the live instance, because every one of these actions
   stops a real agent or pushes to a real forge. Accepting a real review from the installed app
   is the last check.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-09: Read the diff
 
@@ -430,7 +440,7 @@ do NOT re-scaffold them.
 - **Risk:** Its own slice because the PRD argued it specifically and kept it: accepting a
   review without seeing the change is signing blind. The size budget is the thing to watch —
   highlighting is a non-goal precisely because it is the largest thing that could land here.
-- **Status:** implemented 2026-09-21 via PR #21 (`context/changes/read-the-diff/`); device pass pending
+- **Status:** ~~implemented via PR #21; device pass pending~~ **done** 2026-09-21 (`context/changes/read-the-diff/`), device-verified by the operator
 - **Note (2026-09-21):** the phone reads `GET …/runs/:id/changes`, not `…/diff`. `/diff` is one
   text blob, and for a run without a worktree it answers "(no worktree — …)" as a 200 that
   would render as a diff. `/changes` is split per file by the server already, it is measured
@@ -445,6 +455,7 @@ do NOT re-scaffold them.
   worktree's index, the same as the cockpit's tab does. Verified with 537 unit and 50 E2E tests
   (WebKit), in both themes at 390×844, and once against the live instance (loopback, GETs
   only). Opening a real review's diff from the installed app is the last check.
+- **Note (2026-09-21, device pass):** the operator confirmed it on the device: tested and passing. Done. The change folder is ready for `/10x-archive`.
 
 ### S-10: Be notified, and land in the task
 
@@ -466,7 +477,23 @@ do NOT re-scaffold them.
   simulator substitutes for. Sequenced after S-05 because a notification that deep-links
   into a screen that does not exist is worse than no notification. The event-emitting half
   of the loop is already proven by S-04's transport, which de-risks the hardest half.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #22 (`context/changes/notify-and-deep-link/`); VPS install and device pass pending
+- **Note (2026-09-21):** the sidecar is real. `cezar-push` follows the workspace stream over
+  loopback, where Cezar needs no cookie, so it holds no credential. It pushes when a task
+  *enters* waiting, review or failed. The rule is a port of the cockpit's own
+  `diffRunTransitions`, so the phone rings for what makes the cockpit ring, and every
+  (re)connect re-seeds a silent baseline from `runs-index`. The payload is structured (title,
+  project, attention label), and the service worker words it from `pl.ts`, so no code and no
+  transcript leave the server. Two old defects are fixed. The worker's deep link was
+  `/m/run/…`, which matches no route. And the systemd unit pointed at port 4321, while the
+  instance listens on 4322. A tap with the app open now routes that window in place. `/m/push/`
+  sits behind the gate by reusing the gate's own `$cezar_gate_ok`, so there is no secret in the
+  repo, and `nginx -t` fails closed on a host without it. The test notification (FR-045) is
+  folded in, as the roadmap allowed. Verified with 658 unit and 54 E2E tests (WebKit), the nginx
+  rehearsal, and the bundled sidecar against the live instance (reads only: a 14-run baseline,
+  no pushes). Still open: running `deploy/push/install.sh` and `deploy/nginx/install.sh` on the
+  VPS (a production change, left to the operator), then the device checklist in the plan. The
+  unknown about the app being closed is answered only there.
 
 ### S-11: Notifications stay honest
 
@@ -479,6 +506,13 @@ do NOT re-scaffold them.
 - **Parallel with:** S-12
 - **Blockers:** —
 - **Unknowns:** —
+- **Note (2026-09-21):** two parts landed with S-10 because the sidecar needed them to be
+  safe at all. A device the push service reports gone (404/410) is dropped (FR-044). A
+  restart or reconnect re-seeds silently, so work that was already waiting never rings. The
+  per-task `tag` makes a newer notification replace the older one on the phone (FR-039, second
+  half). What is left: proving each of these on the device, and deciding whether a transition
+  that happens *while* the sidecar is down should ring once it is back. Today it does not; the
+  missed ring is the chosen failure over a false one.
 - **Risk:** Split from S-10 because it is a different kind of work — transition bookkeeping
   that has to survive the service restarting and its connection dropping, rather than
   delivery. The requirement that a reconnect produces no notifications for work that was
@@ -508,18 +542,18 @@ do NOT re-scaffold them.
 | ---------- | --------------------------- | ------------------------------------------------------ | --------------------- | ------------------------------------------------- |
 | F-01       | `serve-shell-at-perimeter`  | Serve the shell at /m/ outside the gate                 | n/a                   | Done — verified live 2026-09-21                   |
 | F-02       | `vendor-cezar-contract`     | Vendor the Cezar contract at the running version        | n/a                   | Done — PR #15, at `v0.11.0`                       |
-| S-01       | `install-to-home-screen`    | Install to the home screen and update on purpose        | n/a                   | Implemented — PR #10; device pass pending         |
+| S-01       | `install-to-home-screen`    | Install to the home screen and update on purpose        | n/a                   | Done — PR #10, device-verified                    |
 | S-02       | `connect-to-cezar`          | Detect a missing session and offer re-unlocking         | n/a                   | Done — PR #12–#14, verified live                  |
-| S-03       | `task-list`                 | Task list across projects, attention first              | n/a                   | Implemented — PR #15; device pass pending         |
-| S-04       | `live-status`               | Live status updates and connection health               | n/a                   | Implemented — PR #16; device pass pending         |
-| S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Implemented — PR #17; device pass pending         |
-| S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | n/a                   | Implemented — PR #19; device pass pending         |
-| S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Implemented — PR #18; device pass pending         |
-| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | n/a                   | Implemented — PR #20; device pass pending         |
-| S-09       | `read-the-diff`             | Read-only diff, file by file                            | n/a                   | Implemented — PR #21; device pass pending         |
-| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | S-05 merged (PR #17); deep-link path exists       |
-| S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | no                    | Needs S-10                                        |
-| S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | no                    | Needs S-03, S-10                                  |
+| S-03       | `task-list`                 | Task list across projects, attention first              | n/a                   | Done — PR #15, device-verified                    |
+| S-04       | `live-status`               | Live status updates and connection health               | n/a                   | Done — PR #16, device-verified                    |
+| S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Done — PR #17, device-verified                    |
+| S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | n/a                   | Done — PR #19, device-verified                    |
+| S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Done — PR #18, device-verified                    |
+| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | n/a                   | Done — PR #20, device-verified                    |
+| S-09       | `read-the-diff`             | Read-only diff, file by file                            | n/a                   | Done — PR #21, device-verified                    |
+| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | n/a                   | Implemented — PR #22; VPS install + device pending |
+| S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | yes                   | After PR #22; its 404/410 drop + silent re-seed landed there |
+| S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | yes                   | After PR #22, which adds the Settings screen       |
 
 ## Open Roadmap Questions
 
@@ -570,8 +604,9 @@ low-complexity goal and one operator working after hours. Any of these can be pr
   task from a tram may cost more than it gives.
 - **Icon badge** (FR-042) — Why parked: it restates what the notification already said, and
   needs a counter kept consistent while the app is closed. Open Roadmap Question 3 gates it.
-- **Test notification** (FR-045) — Why parked: useful while building S-10, not a product
-  requirement; fold it in there if it helps.
+- ~~**Test notification** (FR-045) — Why parked: useful while building S-10, not a product
+  requirement; fold it in there if it helps.~~ **Folded into S-10** (PR #22): the device
+  checklist needs it.
 - **Cancelling a scheduled auto-resume** (FR-030) — Why parked: nice-to-have on a state the
   attention rule deliberately treats as "not needing a human".
 - **Paging backwards through transcript history** (FR-049) — Why parked: the largest scope
@@ -587,3 +622,8 @@ warning; app-store distribution; telemetry and third-party services.
 ## Done
 
 (Empty. `/10x-archive` appends here when a change matching a Change ID is archived.)
+
+Awaiting `/10x-archive` (done and device-verified 2026-09-21, folders still in `context/changes/`):
+`serve-shell-at-perimeter` (F-01, no folder), `vendor-cezar-contract` (F-02, with `task-list`),
+`install-to-home-screen`, `connect-to-cezar`, `task-list`, `live-status`, `read-transcript`,
+`transcript-stays-live`, `answer-the-agent`, `act-on-a-task`, `read-the-diff`.

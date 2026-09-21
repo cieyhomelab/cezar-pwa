@@ -22,6 +22,9 @@
 
 const API_PREFIX = '/api/v1/'
 
+/** The push sidecar (`apps/push-sidecar`), same origin, behind the same gate (REQUIREMENTS A6). */
+const PUSH_PREFIX = '/m/push/'
+
 /** Long enough for a cold Cezar, short enough to fail before the operator does. */
 export const DEFAULT_TIMEOUT_MS = 10_000
 
@@ -103,7 +106,21 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     // frozen and nothing here may reach for it.
     throw new Error(`API path must start with ${API_PREFIX}: ${path}`)
   }
+  return request<T>(path, options)
+}
 
+/**
+ * The same judgements for the push sidecar's `/m/push/…`. It sits behind the same gate and
+ * answers errors in Cezar's `{ error }` shape, so a lapsed session reads the same way here.
+ */
+export async function pushFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  if (!path.startsWith(PUSH_PREFIX)) {
+    throw new Error(`push path must start with ${PUSH_PREFIX}: ${path}`)
+  }
+  return request<T>(path, options)
+}
+
+async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
   const { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = options
 
   const controller = new AbortController()
