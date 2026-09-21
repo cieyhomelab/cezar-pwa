@@ -6,5 +6,9 @@
   "description": "Vendored copy of Cezar's zod contract, pinned to the commit in UPSTREAM",
   "dependencies": {
     "zod": "^4.1.13"
+  },
+  "exports": {
+    "./contract": "./src/contract/index.ts",
+    "./protocol": "./src/protocol/ui-events.ts"
   }
 }

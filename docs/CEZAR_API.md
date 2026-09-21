@@ -1,6 +1,6 @@
 # Cezar API — ściąga dla PWA
 
-Źródło: `open-mercato/cezar` @ `main`, wersja pakietów **0.11.1** (wrzesień 2026).
+Źródło: `open-mercato/cezar` @ tag `v0.11.0` (`67fc941`) — wersja, którą raportuje instancja na VPS (`GET /api/v1/health`, 2026-09-21). Kontrakt jest zvendorowany z tego samego commita (`packages/cezar-contract/UPSTREAM`).
 Pliki źródłowe prawdy (sprawdzaj je przy każdej aktualizacji Cezara):
 
 - `packages/contract/src/*.ts` — schematy zod wszystkich requestów/odpowiedzi (`runs.ts`, `events.ts`, `health.ts`, `workspace.ts`, `projects.ts`)

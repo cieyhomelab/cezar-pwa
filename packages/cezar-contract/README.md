@@ -7,7 +7,8 @@ Vendored copy of Cezar's request/response schemas and agent event dictionary:
 | `src/contract/**` | `packages/contract/src/**` |
 | `src/protocol/ui-events.ts` | `packages/api-client/src/protocol/ui-events.ts` |
 
-**`src/` is empty until you sync it.** The directory is created by:
+Pinned to tag `v0.11.0` (the version the instance reports) — the sha is in
+`UPSTREAM`. To move it:
 
 ```bash
 npm run sync:contract <sha>
@@ -19,6 +20,19 @@ npm run sync:contract <sha>
 prereleases (`0.10.0-pr931…`, September 2026) that are *older* than the server
 we run (0.11.x). The published packages therefore do not describe the live API.
 Pinning a commit is the only way to match what is actually deployed on the VPS.
+
+## Using it
+
+Import from the two entry points in `package.json` → `exports`:
+
+```ts
+import type { RunIndexEntry } from '@cezar-pwa/cezar-contract/contract'
+import { runsIndexResponseSchema } from '@cezar-pwa/cezar-contract/contract'
+```
+
+Types everywhere; **schemas only in tests** (`apps/pwa/test/contract/`). The
+enums are closed, and Cezar's vocabulary is append-only — parsing live
+responses with them would turn a new upstream status into a failed screen.
 
 ## Rules
 

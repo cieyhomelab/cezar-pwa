@@ -1,13 +1,13 @@
 /**
  * The Cezar version this client was built and tested against.
  *
- * Source: `docs/CEZAR_API.md` header — `open-mercato/cezar` @ main, packages
- * 0.11.1 (September 2026). Confirm against the live instance with
- * `GET /api/v1/health` → `version`, and bump this together with
+ * Source: the live instance's `GET /api/v1/health` → `version` on 2026-09-21,
+ * and the contract vendored for it (`packages/cezar-contract/UPSTREAM` = tag
+ * `v0.11.0` of `open-mercato/cezar`). Bump this together with
  * `npm run sync:contract <sha>` whenever the VPS moves (CLAUDE.md → "Gdy API
  * Cezara się zmieni").
  */
-export const TESTED_CEZAR_VERSION = '0.11.1'
+export const TESTED_CEZAR_VERSION = '0.11.0'
 
 /** Compares dotted version strings; missing segments count as 0. */
 function compareVersions(a: string, b: string): number {
