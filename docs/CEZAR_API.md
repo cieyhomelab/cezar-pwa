@@ -167,13 +167,13 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 |---|---|---|
 | Nowe zadanie | `POST /api/v1/p/:projectId/runs` → 201 | `{ task, workflow? \| steps?, runner?, model?, autonomous?, variants?(1-3), worktree?, images?(max 4) }` — dokładnie jedno z `workflow`/`steps`; domyślny workflow `quick-task` |
 | Wiadomość do działającej sesji / odpowiedź na `ask.requested` | `POST /api/v1/p/:projectId/runs/:id/messages` | `{ text, images? }` (odpowiedź na pytanie = jedna połączona wiadomość, patrz `web/src/routes/task-thread/ask-card.tsx`) |
-| Anuluj | `POST …/runs/:id/cancel` | — → `{ cancelled }` |
-| Kontynuuj (zakończony run) | `POST …/runs/:id/continue` | — |
-| Zakończ / zaakceptuj review | `POST …/runs/:id/finish` | — |
-| Draft PR | `POST …/runs/:id/pr` → 201 | — → `{ url… }` |
+| Anuluj | `POST …/runs/:id/cancel` | — → `{ cancelled: boolean }` (`false` = zadanie już się zakończyło, też 200) |
+| Kontynuuj (zakończony run) | `POST …/runs/:id/continue` | — lub `{ text?, runner?, model? }` → `{ continued: true }`; odmowa silnika = 409 |
+| Zakończ / zaakceptuj review | `POST …/runs/:id/finish` | — → `{ finished: true }`; `409 no open session` |
+| Draft PR | `POST …/runs/:id/pr` → 201 | — → `{ url, dryRun }`; 400 bez worktree, 409 `{ error, manual }` (błąd forge'a albo run aktywny) |
 | Oznacz jako przeczytane / nieprzeczytane | `POST …/runs/:id/read` / `…/unread` | — |
-| Przypnij / odepnij | `POST …/runs/:id/pin` | `{}` lub `{ pinned:false }` |
-| Archiwizuj | `POST …/runs/:id/archive` | — |
+| Przypnij / odepnij | `POST …/runs/:id/pin` | `{}` lub `{ pinned:false }` → cały rekord |
+| Archiwizuj / przywróć | `POST …/runs/:id/archive` | `{}` lub `{ archived:false }` → cały rekord (archiwizacja zdejmuje też pin i zaplanowane wznowienie) |
 | Anuluj auto-wznowienie | `DELETE …/runs/:id/auto-resume` | — |
 
 ### Odpowiedź agentowi i wiadomość w PWA (S-07) — jak piszemy
@@ -182,6 +182,13 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 - **Format odpowiedzi na pytanie** (`ask.requested`): `"<header>: <etykiety, po przecinku>"`, kilka pytań = jedna wiadomość, linia na pytanie. Reducer rozwiązuje kartę przy **następnym** `user-message`, więc odpowiedź własnymi słowami (dowolna wiadomość) też ją zamyka. Interaktywne jest tylko najnowsze pytanie — starsze nierozwiązane nie może się już rozwiązać.
 - Kompozytor jest tylko dla zadań aktywnych oraz dla zamkniętych z otwartym pytaniem; zwykłe „kontynuuj” to S-08. Zapis ma timeout 20 s i **nie jest ponawiany**: po timeoucie wiadomość mogła dotrzeć, więc operator dostaje to zdanie zamiast drugiej wysyłki. Szkic zostaje w polu, dopóki Cezar go nie przyjmie.
 - Po każdej próbie (udanej i nie) unieważniamy `['run', …]`, `['history', …]` (z kontekstem) i `['runs-index']`.
+
+### Akcje na zadaniu w PWA (S-08) — kiedy którą pokazujemy
+- **Polityka = kopia `runActionFlags()`** z `web/src/routes/task-thread/run-actions.ts` @ `v0.11.0` → `apps/pwa/src/domain/run-actions.ts`. „Aktywne” = `running | queued | waiting` (`review` **nie** jest aktywne). Anuluj: aktywne. Zakończ: `waiting` (zamyka sesję) albo `review` (akceptuje zmiany bez PR — ten sam endpoint, inna etykieta). Kontynuuj: nieaktywne **i** zapisana sesja (`steps[].sessionId`). Archiwizuj/przywróć: nieaktywne. Przypnij/odepnij: niezarchiwizowane.
+- **Draft PR** — jak panel przeglądu cockpitu (`review-panel.tsx`): tylko przy `review` i tylko, gdy `pullRequestUrl` nie jest linkiem http(s) (drugi tap otworzyłby duplikat). Po sukcesie serwer ustawia `pullRequestUrl` i kończy run jako `done`. Komendy `manual` z odpowiedzi 409 nie pokazujemy — na telefonie `git merge` nic nie da; pokazujemy powód.
+- **Anuluj** tylko po potwierdzeniu (FR-025). `{ cancelled: false }` → komunikat „zdążyło się zakończyć”, nie sukces.
+- **Kontynuuj** bez body: serwer wznawia sesję na silniku runu (bez `runner`/`model`).
+- Jedna akcja naraz; pasek czeka też na wysyłkę z S-07. Timeout 20 s, bez ponowień (akcja mogła się wykonać). Powód odmowy dosłownie (FR-032). Po każdej próbie unieważniamy `['run', …]`, `['history', …]` i `['runs-index']`; odpowiedź pin/archive trafia do cache'u **tylko jako flaga** (jak `seenAt` przy `/read`), `archived` także do wiersza listy — lista chowa zarchiwizowane od razu.
 
 Akcja na `permission.requested`: mechanizm odpowiedzi do potwierdzenia w `packages/web/src/routes/task-thread/` przed implementacją (domyślnie Cezar działa z `dontAsk`, więc prośby o uprawnienia pojawiają się tylko przy `CEZ_APPROVAL_GATE=1`).
 

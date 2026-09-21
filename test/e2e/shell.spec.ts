@@ -8,7 +8,7 @@ test.describe('PWA shell', () => {
   test('serves the shell under /m/', async ({ page }) => {
     await page.goto('.')
     await expect(page).toHaveTitle('Cezar')
-    await expect(page.getByRole('heading', { name: 'Cezar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Cezar', exact: true })).toBeVisible()
   })
 
   test('is installable: manifest is scoped to /m/ and fetched without credentials', async ({
