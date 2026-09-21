@@ -7,8 +7,6 @@ import { defineConfig } from 'vitest/config'
 // needs jsdom, the pure domain logic and the sidecar do not.
 export default defineConfig({
   test: {
-    // The sidecar has no tests yet; an empty project must not fail the run.
-    passWithNoTests: true,
     projects: [
       {
         test: {

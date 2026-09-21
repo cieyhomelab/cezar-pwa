@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2023",
     "module": "NodeNext",
     "strict": true,
     "verbatimModuleSyntax": true,
@@ -8,13 +8,13 @@
     "types": [
       "node"
     ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx",
-    "rootDir": "./src",
-    "outDir": "./dist"
+    // Type-check only: `build.mjs` bundles src/index.ts into one file with esbuild, so the host
+    // runs it with no node_modules and no workspace link to @cezar-pwa/shared.
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
-  "exclude": [
-    "node_modules"
+  "include": [
+    "src"
   ],
   "references": [
     {

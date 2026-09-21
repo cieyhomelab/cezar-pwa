@@ -1,4 +1,6 @@
-# User unit: install to ~/.config/systemd/user/cezar-push.service, then
+# User unit, installed by deploy/push/install.sh (run on the VPS as the user
+# Cezar runs as). By hand:
+#   cp deploy/systemd/cezar-push.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now cezar-push
 #   loginctl enable-linger $USER   # so it survives logout
@@ -10,19 +12,24 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/cezar-push
-ExecStart=/usr/bin/node %h/cezar-push/dist/index.js
+# One bundled file (apps/push-sidecar/build.mjs): no node_modules on the host.
+ExecStart=/usr/bin/node %h/cezar-push/cezar-push.mjs
 Restart=always
 RestartSec=5
 
 # Loopback only — nginx is the sole way in (A5/A6).
 Environment=HOST=127.0.0.1
 Environment=PORT=4330
-Environment=CEZAR_URL=http://127.0.0.1:4321
-# VAPID keys live in %h/.cezar-push/vapid.json (0600), never in the repo
-# (CLAUDE.md rule 6). Set the contact address here.
-Environment=VAPID_SUBJECT=mailto:CHANGE_ME@example.com
+# Cezar's own port on this host (`cezar-cli serve --port 4322`), on loopback,
+# where it answers without the gate's cookie.
+Environment=CEZAR_URL=http://127.0.0.1:4322
+# The VAPID keys and the subscriptions live in %h/.cezar-push (0700, files
+# 0600), never in the repo (CLAUDE.md rule 6). VAPID_SUBJECT defaults to the
+# site's https URL; a mailto: contact can be set in the optional file below.
+Environment=STATE_DIR=%h/.cezar-push
+EnvironmentFile=-%h/.cezar-push/env
 
-# journald only; the sidecar must never log task content (§6).
+# journald only; the sidecar never logs task content (§6).
 StandardOutput=journal
 StandardError=journal
 
