@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import type { ApiRun } from '@cezar-pwa/cezar-contract/contract'
 import { deriveAttention } from '@cezar-pwa/shared'
 import { formatCost, runTitle } from '../../domain/run-display.ts'
-import { prLink, runnerModel, stepProgress, tokenSummary, workflowLabel } from '../../domain/run-header.ts'
+import { diffPath, prLink, runnerModel, stepProgress, tokenSummary, workflowLabel } from '../../domain/run-header.ts'
 import { pl } from '../../i18n/pl.ts'
+import { DiffCounts } from '../diff/DiffCounts.tsx'
 import { StatusBadge } from '../runs-list/StatusBadge.tsx'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -18,9 +20,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /**
  * The task header (FR-014): status, workflow, step progress, runner and model, cost, tokens,
  * branch and PR link. A value the record does not carry leaves its row out rather than showing
- * a zero it never measured.
+ * a zero it never measured. S-09: the changes row is always there, since the record's `diffStat`
+ * only arrives with the first finished turn; the diff screen says why when there is nothing.
  */
-export function RunHeader({ run, projectName }: { run: ApiRun; projectName: string }) {
+export function RunHeader({ run, projectId, projectName }: { run: ApiRun; projectId: string; projectName: string }) {
   const progress = stepProgress(run)
   const agent = runnerModel(run)
   const cost = formatCost(run.costUsd)
@@ -64,6 +67,21 @@ export function RunHeader({ run, projectName }: { run: ApiRun; projectName: stri
             <span className="font-mono text-xs">{run.branch}</span>
           </Row>
         ) : null}
+        <Row label={pl.run.header.changes}>
+          <Link
+            to={diffPath(projectId, run.id)}
+            className="touch-target inline-flex items-center gap-2 text-accent underline"
+          >
+            {run.diffStat && run.diffStat.files > 0 ? (
+              <>
+                {pl.run.diff.files(run.diffStat.files)}
+                <DiffCounts adds={run.diffStat.adds} dels={run.diffStat.dels} />
+              </>
+            ) : (
+              pl.run.header.showChanges
+            )}
+          </Link>
+        </Row>
         {pr ? (
           <Row label="PR">
             <a

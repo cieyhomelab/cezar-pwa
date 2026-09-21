@@ -155,6 +155,43 @@ export const pl = {
       tokensDirectional: (input: string, output: string) => `we ${input} · wy ${output}`,
       branch: 'Gałąź',
       pr: (number: string | null) => (number ? `PR #${number}` : 'Pull request'),
+      /** S-09: the row that opens the diff. */
+      changes: 'Zmiany',
+      showChanges: 'Pokaż zmiany',
+    },
+    /** S-09: the task's diff, file by file, read-only (FR-031). */
+    diff: {
+      back: 'Zadanie',
+      title: 'Zmiany',
+      loading: 'Wczytuję zmiany…',
+      loadFailed: 'Nie udało się wczytać zmian.',
+      /** A 409: the server's own reason follows, e.g. the task ran without a worktree. */
+      refused: 'Brak zmian do pokazania.',
+      empty: 'Brak zmian — worktree zgadza się z gałęzią bazową.',
+      emptyActive: 'Agent jeszcze niczego nie zmienił. Zmiany pojawią się tutaj w trakcie pracy.',
+      files: (count: number) => `${count} ${plural(count, 'plik', 'pliki', 'plików')}`,
+      countsLabel: (adds: number, dels: number) =>
+        `${adds} ${plural(adds, 'linia dodana', 'linie dodane', 'linii dodanych')}, ${dels} ${plural(dels, 'usunięta', 'usunięte', 'usuniętych')}`,
+      repointed: (head: string, task: string) =>
+        `Worktree jest na gałęzi ${head}, nie na gałęzi zadania ${task} — widać tylko to, co zadanie tam zmieniło.`,
+      status: {
+        added: 'nowy',
+        modified: 'zmieniony',
+        deleted: 'usunięty',
+        renamed: 'przeniesiony',
+        copied: 'skopiowany',
+      } as Record<string, string>,
+      /** A status the vocabulary grew after `v0.11.0` (rule 5). */
+      statusUnknown: 'zmieniony',
+      renamedFrom: (path: string) => `z ${path}`,
+      binary: 'Plik binarny — brak podglądu tekstowego.',
+      image: 'Obraz — podgląd tylko w cockpicie.',
+      noContent: 'Bez zmian w treści (zmiana nazwy lub uprawnień).',
+      truncated: 'Serwer uciął tę poprawkę — całość jest w cockpicie.',
+      openCockpit: 'Otwórz cockpit',
+      showMore: (count: number) => `Pokaż kolejne ${count} ${plural(count, 'wiersz', 'wiersze', 'wierszy')}`,
+      /** Screen-reader words for the one-character markers. */
+      lineKind: { add: 'dodana', del: 'usunięta', context: '' } as Record<string, string>,
     },
     plan: {
       title: 'Plan',

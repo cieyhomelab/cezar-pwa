@@ -28,6 +28,9 @@
   --color-pending: var(--pending);
   --color-danger: var(--danger);
   --color-violet: var(--violet);
+  /* S-09: diff line backgrounds. Each line also carries its `+`/`−` marker. */
+  --color-diff-add: var(--diff-add);
+  --color-diff-del: var(--diff-del);
 }
 
 :root {
@@ -43,6 +46,8 @@
   --pending: #d29922;
   --danger: #f85149;
   --violet: #a371f7;
+  --diff-add: rgba(46, 160, 67, 0.18);
+  --diff-del: rgba(248, 81, 73, 0.18);
 }
 
 @media (prefers-color-scheme: light) {
@@ -57,6 +62,8 @@
     --pending: #9a6700;
     --danger: #cf222e;
     --violet: #8250df;
+    --diff-add: #e6ffec;
+    --diff-del: #ffebe9;
   }
 }
 

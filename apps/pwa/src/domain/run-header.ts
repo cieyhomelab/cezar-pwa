@@ -90,3 +90,8 @@ export function prLink(
 export function runPath(projectId: string, runId: string): string {
   return `/p/${encodeURIComponent(projectId)}/runs/${encodeURIComponent(runId)}`
 }
+
+/** S-09: the task's diff, one level under its screen. */
+export function diffPath(projectId: string, runId: string): string {
+  return `${runPath(projectId, runId)}/diff`
+}

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router'
 import App from './App.tsx'
+import { DiffScreen } from './features/diff/DiffScreen.tsx'
 import { RunScreen } from './features/run/RunScreen.tsx'
 import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
 
@@ -16,6 +17,7 @@ export function AppRoutes() {
       <Route element={<App />}>
         <Route index element={<RunsListScreen />} />
         <Route path="p/:projectId/runs/:runId" element={<RunScreen />} />
+        <Route path="p/:projectId/runs/:runId/diff" element={<DiffScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
