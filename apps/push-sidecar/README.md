@@ -25,7 +25,16 @@ Served on `127.0.0.1:4330` under `/m/push/`; nginx forwards them only past the c
 
 `~/.cezar-push/` (mode 0700): `vapid.json` (the key pair, created once by `init`, never rotated)
 and `subscriptions.json` (atomic writes). Both 0600, neither in the repo. A device the push
-service reports gone (404/410) is dropped.
+service reports gone (404/410), or whose `expirationTime` has passed, is dropped.
+
+## One ring per transition (S-11)
+
+The watcher remembers each run's last status in memory and rings only when it CHANGES into one
+that needs the operator. A reconnect or a restart re-seeds from the runs index silently, so work
+that was already waiting never rings again. A transition that happens while the sidecar is down is
+not announced afterwards. Each push about a task carries a `Topic` (a hash of `project/run`), so
+the push service keeps only the newest undelivered one. The phone's per-task `tag` does the same
+for notifications already shown.
 
 ## Run
 
