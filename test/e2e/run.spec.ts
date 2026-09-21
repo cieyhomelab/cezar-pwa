@@ -53,6 +53,8 @@ async function serveCezar(page: Page, run: Record<string, unknown> = liveRun) {
   await page.route(base, (route) => route.fulfill(json(JSON.stringify(run))))
   await page.route(`${base}/history`, (route) => route.fulfill(json(livePage)))
   await page.route(`${base}/history-context`, (route) => route.fulfill(json(planContext)))
+  // The task's stream (S-06) is held silent here; `live-transcript.spec.ts` drives it.
+  await page.route(new RegExp(`/runs/${liveRun.id}/events\\?`), () => undefined)
   await page.route(`${base}/read`, (route) => {
     counts.read += 1
     return route.fulfill(json(JSON.stringify({ ...run, seenAt: new Date().toISOString() })))

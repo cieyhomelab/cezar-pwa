@@ -6,6 +6,7 @@ import type {
   RunsIndexResponse,
 } from '@cezar-pwa/cezar-contract/contract'
 import type { QueryClient } from '@tanstack/react-query'
+import { carryOver } from '../domain/live-transcript.ts'
 import { ApiError, apiFetch } from './http.ts'
 import { RUNS_INDEX_QUERY_KEY } from './runs-index.ts'
 
@@ -25,10 +26,14 @@ export const historyContextQueryKey = (projectId: string, runId: string) =>
   ['history', projectId, runId, 'context'] as const
 
 /**
- * Until S-06 streams the transcript, an open task re-asks this often while it is on screen.
+ * While the task's stream is not live, an open task re-asks this often (the S-05 behaviour).
  * TanStack pauses the interval while the page is hidden.
  */
 export const RUN_REFETCH_MS = 30_000
+
+/** While it is live, the record is re-asked only as a safety net for anything the stream cannot
+ *  carry (the list's 5 min, S-04). The transcript is not re-asked at all: the stream replays. */
+export const RUN_LIVE_REFETCH_MS = 5 * 60_000
 
 function runBase(projectId: string, runId: string): string {
   return `/api/v1/p/${encodeURIComponent(projectId)}/runs/${encodeURIComponent(runId)}`
@@ -100,27 +105,45 @@ const liveish = {
   retry: false,
 }
 
-export function runQueryOptions(projectId: string, runId: string) {
+/** `live`: the task's event stream is open (S-06). */
+export function runQueryOptions(projectId: string, runId: string, live = false) {
   return {
     queryKey: runQueryKey(projectId, runId),
     queryFn: ({ signal }: { signal: AbortSignal }) => fetchRun(projectId, runId, signal),
     ...liveish,
+    refetchInterval: live ? RUN_LIVE_REFETCH_MS : RUN_REFETCH_MS,
   }
 }
 
-export function historyQueryOptions(projectId: string, runId: string) {
+/**
+ * The newest page, extended in the cache by the stream. A refetch landing over it keeps whatever
+ * the stream delivered past it (`carryOver`). While live, nothing re-asks it on its own: coming
+ * back to the app reconnects the stream, which replays the gap from the page's `asOfSeq`.
+ */
+export function historyQueryOptions(projectId: string, runId: string, live = false) {
   return {
     queryKey: historyQueryKey(projectId, runId),
-    queryFn: ({ signal }: { signal: AbortSignal }) => fetchHistory(projectId, runId, signal),
+    queryFn: async ({ signal, client }: { signal: AbortSignal; client: QueryClient }) =>
+      carryOver(
+        await fetchHistory(projectId, runId, signal),
+        client.getQueryData<RunHistoryPage>(historyQueryKey(projectId, runId)),
+      ),
     ...liveish,
+    refetchOnWindowFocus: live ? false : ('always' as const),
+    refetchOnReconnect: live ? false : ('always' as const),
+    refetchInterval: live ? (false as const) : RUN_REFETCH_MS,
   }
 }
 
-export function historyContextQueryOptions(projectId: string, runId: string) {
+export function historyContextQueryOptions(projectId: string, runId: string, live = false) {
   return {
     queryKey: historyContextQueryKey(projectId, runId),
     queryFn: ({ signal }: { signal: AbortSignal }) => fetchHistoryContext(projectId, runId, signal),
     ...liveish,
+    // The pinned plan also folds the page, and the stream brings every new `plan.updated` there.
+    refetchOnWindowFocus: live ? false : ('always' as const),
+    refetchOnReconnect: live ? false : ('always' as const),
+    refetchInterval: live ? (false as const) : RUN_REFETCH_MS,
   }
 }
 

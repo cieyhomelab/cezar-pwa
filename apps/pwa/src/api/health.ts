@@ -1,5 +1,6 @@
-import { apiFetch } from './http.ts'
 import type { HealthResponse } from '@cezar-pwa/cezar-contract/contract'
+import type { QueryClient } from '@tanstack/react-query'
+import { AuthRequiredError, apiFetch } from './http.ts'
 
 /** Query key, per CLAUDE.md → "Klucze query". */
 export const HEALTH_QUERY_KEY = ['health'] as const
@@ -32,4 +33,19 @@ export function healthQueryOptions() {
     retry: false,
     staleTime: 30_000,
   }
+}
+
+/**
+ * After a live stream drops. EventSource hides the HTTP status, so a lapsed session looks like
+ * any other drop: ask the probe, but hand its answer to the session query only when it is a
+ * refusal. Invalidating on every drop would let a network blip fail the session query and swap
+ * the whole screen for "unreachable", where a failed refresh keeps what is shown under a dated
+ * warning instead.
+ */
+export function reprobeSession(queryClient: QueryClient): void {
+  void fetchHealth().catch((error: unknown) => {
+    if (error instanceof AuthRequiredError) {
+      void queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY })
+    }
+  })
 }
