@@ -1,4 +1,5 @@
-import type { PushPayload } from '@cezar-pwa/shared'
+import { createHash } from 'node:crypto'
+import { runKey, type PushPayload } from '@cezar-pwa/shared'
 import webpush from 'web-push'
 import type { Subscription, SubscriptionStore } from './store.ts'
 import type { VapidKeys } from './vapid.ts'
@@ -25,12 +26,32 @@ const isGone = (error: unknown) => {
   return status === 404 || status === 410
 }
 
+/**
+ * FR-039 before the phone even sees it. A push service holds an undelivered message per `Topic`
+ * and replaces it with a newer one on the same topic (RFC 8030 § 5.4), so a phone that was off
+ * while a task went `waiting` and then `failed` wakes to one notification about it, not two.
+ * The tag does the same on the phone for what was already shown.
+ *
+ * A topic is at most 32 URL-safe base64 characters, and it travels in the clear to the push
+ * service, so it is a hash of the task's key rather than the key itself.
+ */
+export function topicFor(payload: PushPayload): string | undefined {
+  if (payload.kind !== 'attention' || !payload.projectId || !payload.runId) return undefined
+  return createHash('sha256').update(runKey(payload.projectId, payload.runId)).digest('base64url').slice(0, 32)
+}
+
+/** A subscription past the `expirationTime` its push service gave it is as gone as a 410. */
+export function isExpired(subscription: Subscription, now: number): boolean {
+  return typeof subscription.expirationTime === 'number' && subscription.expirationTime <= now
+}
+
 export type PusherOptions = {
   store: SubscriptionStore
   vapid: VapidKeys
   subject: string
   send?: SendNotification
   log?: (message: string) => void
+  now?: () => number
 }
 
 export class Pusher {
@@ -43,17 +64,24 @@ export class Pusher {
   }
 
   /**
-   * Deliver to one device. A device the push service reports gone is dropped from the store
-   * (FR-044), so nothing keeps targeting it.
+   * Deliver to one device. A device the push service reports gone, or whose subscription has
+   * expired, is dropped from the store (FR-044), so nothing keeps targeting it.
    */
   async sendTo(subscription: Subscription, payload: PushPayload): Promise<Delivery> {
     const { vapid, subject, store, log } = this.options
+    if (isExpired(subscription, (this.options.now ?? Date.now)())) {
+      await store.remove(subscription.endpoint)
+      log?.('dropped an expired subscription')
+      return 'gone'
+    }
+    const topic = topicFor(payload)
     try {
       await this.send(subscription, JSON.stringify(payload), {
         vapidDetails: { subject, publicKey: vapid.publicKey, privateKey: vapid.privateKey },
         TTL: PUSH_TTL_SECONDS,
         // The whole point is reaching a locked phone; `high` asks the service not to batch it.
         urgency: 'high',
+        ...(topic ? { topic } : {}),
       })
       return 'sent'
     } catch (error) {

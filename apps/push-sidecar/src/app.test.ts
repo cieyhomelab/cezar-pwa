@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { PushPayload } from '@cezar-pwa/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.ts'
-import { Pusher, PUSH_TTL_SECONDS, type SendNotification } from './push.ts'
+import { Pusher, PUSH_TTL_SECONDS, topicFor, type SendNotification } from './push.ts'
 import { SubscriptionStore } from './store.ts'
 import { APPLE, subscription } from './testing.ts'
 
@@ -117,5 +117,61 @@ describe('Pusher.sendToAll', () => {
     expect(store.list().map((entry) => entry.endpoint)).toEqual([APPLE, `${APPLE}-3`])
     // The status only: the push service's body can echo the payload.
     expect(log.mock.calls.flat().join(' ')).not.toContain('payload')
+  })
+})
+
+describe('Pusher.sendTo, staying honest (S-11)', () => {
+  const attention = (runId: string, projectId = 'cezar-pwa'): PushPayload => ({ kind: 'attention', projectId, runId })
+
+  it('gives every push about one task the same topic, so the push service keeps only the newest (FR-039)', async () => {
+    await store.upsert(subscription())
+    const pusher = new Pusher({ store, vapid, subject: ORIGIN, send })
+    await pusher.sendTo(subscription(), { ...attention('r1'), reason: 'needs you' })
+    await pusher.sendTo(subscription(), { ...attention('r1'), reason: 'failed' })
+    await pusher.sendTo(subscription(), attention('r2'))
+    const topics = send.mock.calls.map(([, , options]) => options.topic)
+    expect(topics[0]).toBe(topics[1])
+    expect(topics[2]).not.toBe(topics[0])
+  })
+
+  it('keeps topics inside what the Web Push protocol allows, and the task out of them', () => {
+    const topic = topicFor(attention('run-with-a-rather-long-identifier', 'a-project-with-a-long-name'))
+    expect(topic).toMatch(/^[A-Za-z0-9_-]{1,32}$/)
+    expect(topic).not.toContain('run')
+    // Same run id, another project: another task, another topic.
+    expect(topicFor(attention('r1', 'kai-phone'))).not.toBe(topicFor(attention('r1')))
+  })
+
+  it('sends the test without a topic: it must not replace a real notification waiting to be delivered', async () => {
+    await store.upsert(subscription())
+    await new Pusher({ store, vapid, subject: ORIGIN, send }).sendTo(subscription(), { kind: 'test' })
+    expect(send.mock.calls[0]?.[2]).not.toHaveProperty('topic')
+  })
+
+  it('drops a subscription past its expiration time without calling the push service (FR-044)', async () => {
+    const expired = { ...subscription(), expirationTime: 1_000 }
+    await store.upsert(expired)
+    await store.upsert(subscription(`${APPLE}-2`))
+    const log = vi.fn()
+    const pusher = new Pusher({ store, vapid, subject: ORIGIN, send, log, now: () => 2_000 })
+    expect(await pusher.sendToAll(attention('r1'))).toEqual(['gone', 'sent'])
+    expect(send).toHaveBeenCalledOnce()
+    expect(store.list().map((entry) => entry.endpoint)).toEqual([`${APPLE}-2`])
+    expect(log).toHaveBeenCalledWith('dropped an expired subscription')
+  })
+
+  it('keeps a subscription whose expiration time is still ahead', async () => {
+    await store.upsert({ ...subscription(), expirationTime: 3_000 })
+    const pusher = new Pusher({ store, vapid, subject: ORIGIN, send, now: () => 2_000 })
+    expect(await pusher.sendTo(store.list()[0]!, attention('r1'))).toBe('sent')
+    expect(store.list()).toHaveLength(1)
+  })
+
+  it('answers a test to an expired device with 410, so the app drops its own copy too', async () => {
+    await store.upsert({ ...subscription(), expirationTime: 1 })
+    const response = await call('POST', '/test', { endpoint: APPLE })
+    expect(response.status).toBe(410)
+    expect(send).not.toHaveBeenCalled()
+    expect(store.list()).toHaveLength(0)
   })
 })

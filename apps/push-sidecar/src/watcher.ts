@@ -196,7 +196,9 @@ export class Watcher {
         this.statuses.set(key, run.status)
         if (silent || !isEntering(before, run)) return
         const payload = attentionPayload(run, this.projectNames.get(run.projectId))
-        Promise.resolve(this.options.notify(payload)).catch((error: unknown) => {
+        // The status is already recorded, so a failed push is never retried into a second ring.
+        // A notifier that throws synchronously is a rejection too, never a dropped stream.
+        new Promise((resolve) => resolve(this.options.notify(payload))).catch((error: unknown) => {
           this.options.log?.(`notify failed: ${describe(error)}`)
         })
         return
