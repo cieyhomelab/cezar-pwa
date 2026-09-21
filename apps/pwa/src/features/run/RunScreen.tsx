@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router'
 import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
 import { ApiError, AuthRequiredError } from '../../api/http.ts'
 import { historyContextQueryOptions, historyQueryOptions, runQueryOptions } from '../../api/run.ts'
+import { composerOpen, openAsk } from '../../domain/answer.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
@@ -11,9 +12,11 @@ import { pl } from '../../i18n/pl.ts'
 import { ConnectionStatus } from '../runs-list/ConnectionStatus.tsx'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
+import { Composer } from './Composer.tsx'
 import { PlanPanel } from './PlanPanel.tsx'
 import { RunHeader } from './RunHeader.tsx'
 import { TranscriptView } from './TranscriptView.tsx'
+import { useDeliver } from './useDeliver.ts'
 import { useFollowBottom } from './useFollowBottom.ts'
 import { useLiveTranscript } from './useLiveTranscript.ts'
 import { useMarkRead } from './useMarkRead.ts'
@@ -41,7 +44,8 @@ function BackBar({ children }: { children?: ReactNode }) {
 
 /**
  * S-05: one task's header, its plan and the newest stretch of its transcript (US-01, FR-014,
- * FR-015, FR-017, FR-018, FR-020). Rendered behind `AuthGate`.
+ * FR-015, FR-017, FR-018, FR-020). S-07: the agent's open question is answerable in place and
+ * a docked composer messages the task (FR-022, FR-023, FR-032). Rendered behind `AuthGate`.
  *
  * S-06: kept live by the task's event stream (FR-016), following the newest entry only while the
  * operator is at the end (FR-019), and resumed after a suspension from where it stopped (FR-021).
@@ -66,6 +70,8 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   const now = useNow()
 
   useMarkRead(projectId, runId, run.data)
+  // S-07: one delivery for the question card and the composer alike.
+  const delivery = useDeliver(projectId, runId, run.data)
 
   // A refusal means the session lapsed since the probe. Re-asking it hands the screen to
   // `AuthGate`, exactly as the list does.
@@ -79,6 +85,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
     () => reduceTranscript(history.data?.events ?? [], { activeTurn: status === 'running' }),
     [history.data, status],
   )
+  const ask = useMemo(() => openAsk(transcript), [transcript])
   const plan = useMemo(
     () => latestPlan(reduceTranscript(mergeBySeq(context.data?.contextEvents ?? [], history.data?.events ?? []))),
     [context.data, history.data],
@@ -142,6 +149,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   const refreshFailed =
     (run.isError && !(run.error instanceof AuthRequiredError)) ||
     (history.isError && history.data !== undefined && !(history.error instanceof AuthRequiredError))
+  const composer = history.data !== undefined && composerOpen(run.data, ask)
 
   return (
     <div className="flex flex-1 flex-col">
@@ -179,6 +187,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             task={run.data.task ?? ''}
             hasOlder={history.data.hasOlder}
             footer={transcriptFooter(run.data.status, run.data.error)}
+            answering={{ delivery, ...(ask !== undefined ? { openAskId: ask.id } : {}) }}
           />
         ) : history.isError && !(history.error instanceof AuthRequiredError) ? (
           <section className="flex flex-col items-center gap-3 px-6 py-10 text-center">
@@ -202,16 +211,28 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
         )}
       </div>
 
-      {follow.unseen ? (
-        <button
-          type="button"
-          onClick={follow.jump}
-          className="touch-target fixed left-1/2 z-30 -translate-x-1/2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-lg"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
-        >
-          {pl.run.newMessages} <span aria-hidden="true">↓</span>
-        </button>
-      ) : null}
+      {/* One dock at the bottom: the composer (S-07) and, floating above it, "new messages"
+          (S-06). Two separately pinned things would sit on top of each other. */}
+      <div className="sticky bottom-0 z-30">
+        {follow.unseen ? (
+          <button
+            type="button"
+            onClick={follow.jump}
+            className="touch-target absolute left-1/2 -translate-x-1/2 rounded-full bg-accent px-4 text-sm font-semibold whitespace-nowrap text-white shadow-lg"
+            style={{ bottom: composer ? 'calc(100% + 0.75rem)' : 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+          >
+            {pl.run.newMessages} <span aria-hidden="true">↓</span>
+          </button>
+        ) : null}
+        {composer ? (
+          <Composer
+            status={run.data.status}
+            delivery={delivery}
+            {...(ask !== undefined ? { openAskId: ask.id } : {})}
+            queuedMessages={run.data.queuedMessages ?? []}
+          />
+        ) : null}
+      </div>
     </div>
   )
 }

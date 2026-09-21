@@ -176,6 +176,13 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 | Archiwizuj | `POST …/runs/:id/archive` | — |
 | Anuluj auto-wznowienie | `DELETE …/runs/:id/auto-resume` | — |
 
+### Odpowiedź agentowi i wiadomość w PWA (S-07) — jak piszemy
+- **Odpowiedź `/messages`** to jedna z trzech: `{ delivered: true }` (żywa sesja ją przyjęła), `{ queued: true, message }` (zadanie w kolejce — dopisane do polecenia, widoczne w `queuedMessages[]` rekordu, nie w historii), `{ deferred: true }` (sesja startuje — wiadomość czeka na jej otwarcie). Wszystko inne to `409`, np. `session closed` albo powód z bramki providera.
+- **Trasa jak w cockpicie (`ask-answer.ts`, `v0.11.0`):** zadanie aktywne (`running`/`waiting`/`queued`) → `POST …/messages { text }`. Zadanie zamknięte z zapisaną sesją (`steps[].sessionId`) → `POST …/continue { text }` — tekst staje się poleceniem otwierającym wznowioną sesję (bez `runner`/`model`, więc silnik zostaje ten sam). `409` z `/messages` przy zapisanej sesji = nieaktualny rekord → ta sama odpowiedź idzie przez `/continue`, zamiast przepaść. Gdy i to się nie uda, operator widzi powód odmowy `/messages`, nie powód próby zastępczej. Jedyne ponawianie: `409 run is still active` z `/continue` (sesja domyka się po timeoucie bezczynności), wg harmonogramu cockpitu, łącznie ok. 6 s.
+- **Format odpowiedzi na pytanie** (`ask.requested`): `"<header>: <etykiety, po przecinku>"`, kilka pytań = jedna wiadomość, linia na pytanie. Reducer rozwiązuje kartę przy **następnym** `user-message`, więc odpowiedź własnymi słowami (dowolna wiadomość) też ją zamyka. Interaktywne jest tylko najnowsze pytanie — starsze nierozwiązane nie może się już rozwiązać.
+- Kompozytor jest tylko dla zadań aktywnych oraz dla zamkniętych z otwartym pytaniem; zwykłe „kontynuuj” to S-08. Zapis ma timeout 20 s i **nie jest ponawiany**: po timeoucie wiadomość mogła dotrzeć, więc operator dostaje to zdanie zamiast drugiej wysyłki. Szkic zostaje w polu, dopóki Cezar go nie przyjmie.
+- Po każdej próbie (udanej i nie) unieważniamy `['run', …]`, `['history', …]` (z kontekstem) i `['runs-index']`.
+
 Akcja na `permission.requested`: mechanizm odpowiedzi do potwierdzenia w `packages/web/src/routes/task-thread/` przed implementacją (domyślnie Cezar działa z `dontAsk`, więc prośby o uprawnienia pojawiają się tylko przy `CEZ_APPROVAL_GATE=1`).
 
 ## 5. „Wymaga uwagi” — reguła powiadomień

@@ -202,6 +202,16 @@ export const pl = {
         title: 'Pytanie agenta',
         answered: (answer: string) => `Odpowiedź: ${answer}`,
         pending: 'Czeka na odpowiedź',
+        /** The reducer resolves only the newest question, so an older open one is dead. */
+        superseded: 'Agent zadał potem nowe pytanie — odpowiedz na nie niżej.',
+        multiSelect: 'zaznacz wszystkie pasujące',
+        pickOrWrite: 'Wybierz odpowiedź albo napisz własną w polu na dole.',
+        answerEach: 'Odpowiedz na każde pytanie albo napisz własną odpowiedź w polu na dole.',
+        send: 'Wyślij odpowiedź',
+        sendAndReopen: 'Wyślij i wznów sesję',
+        /** Said before the tap: answering a closed session does more than reply. */
+        resumeHint: 'Sesja się zakończyła — odpowiedź otworzy ją ponownie i trafi do agenta.',
+        sent: 'Odpowiedź wysłana. Czekam, aż pojawi się w transkrypcie.',
       },
       footer: {
         waiting: 'Agent czeka na Twoją odpowiedź.',
@@ -209,6 +219,35 @@ export const pl = {
         failedWith: (error: string) => `Sesja zakończona błędem — ${error}`,
         review: 'Sesja zamknięta — czeka na Twój przegląd.',
         closed: 'Sesja zamknięta.',
+      },
+    },
+    /** S-07: the composer, and why a send did not go through (FR-032). */
+    compose: {
+      label: 'Wiadomość do agenta',
+      placeholder: {
+        running: 'Napisz do agenta…',
+        waiting: 'Odpowiedz agentowi…',
+        queued: 'Dopisz do polecenia…',
+        resume: 'Własna odpowiedź — wznowi sesję…',
+      },
+      hint: {
+        queued: 'Zadanie jeszcze nie wystartowało. To, co dopiszesz, trafi do polecenia.',
+        resume: 'Sesja się zakończyła. Wysłanie odpowiedzi otworzy ją ponownie.',
+      },
+      send: 'Wyślij',
+      sending: 'Wysyłam…',
+      queuedTitle: (count: number) =>
+        `${count} ${plural(count, 'wiadomość dopisana', 'wiadomości dopisane', 'wiadomości dopisanych')} do polecenia`,
+      deferred: 'Sesja startuje — wiadomość trafi do agenta, gdy tylko się otworzy.',
+      failed: {
+        /** The server's own words, verbatim (FR-032). */
+        refused: (reason: string) => `Cezar odmówił: ${reason}`,
+        network: 'Brak połączenia z Cezarem — nic nie zostało wysłane.',
+        /** A write that timed out may still have landed; a blind retry could send it twice. */
+        timeout: 'Cezar nie odpowiedział na czas. Wiadomość mogła dotrzeć — odśwież, zanim wyślesz ją ponownie.',
+        auth: 'Sesja z Cezarem wygasła — połącz się ponownie.',
+        unavailable:
+          'Sesja się zakończyła i Cezar nie zapisał jej identyfikatora, więc tej odpowiedzi nie da się dostarczyć.',
       },
     },
   },
