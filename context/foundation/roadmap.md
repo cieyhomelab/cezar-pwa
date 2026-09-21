@@ -3,7 +3,7 @@ project: "Cezar Mobile"
 version: 1
 status: draft
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-21
 prd_version: 1
 main_goal: low-complexity
 top_blocker: capacity
@@ -42,13 +42,13 @@ attention rule → a readable phone screen.
 
 | ID   | Change ID                  | Outcome (user can …)                                            | Prerequisites | PRD refs                                    | Status   |
 | ---- | -------------------------- | --------------------------------------------------------------- | ------------- | ------------------------------------------- | -------- |
-| F-01 | `serve-shell-at-perimeter` | (foundation) the built shell is served at `/m/`, outside the gate | —             | Access Control §Perimeter facts, FR-001      | ready    |
-| F-02 | `vendor-cezar-contract`    | (foundation) contract pinned to the running Cezar version        | —             | Guardrails, Business Logic                   | ready    |
-| S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | proposed |
+| F-01 | `serve-shell-at-perimeter` | (foundation) the built shell is served at `/m/`, outside the gate | —             | Access Control §Perimeter facts, FR-001      | done (verified live) |
+| F-02 | `vendor-cezar-contract`    | (foundation) contract pinned to the running Cezar version        | —             | Guardrails, Business Logic                   | done (PR #15) |
+| S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | implemented (PR #10), device pass pending |
 | S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | done (verified live) |
-| S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | proposed |
+| S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | implemented (PR #15), device pass pending |
 | S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | proposed |
-| S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | proposed |
+| S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | implemented (PR #17), device pass pending |
 | S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | proposed |
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | proposed |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | proposed |
@@ -75,13 +75,23 @@ parallel tracks.
 What is already in place as of 2026-09-20. Foundations below assume these are present and
 do NOT re-scaffold them.
 
-- **Frontend:** partial — React 19 + Vite 8 + Tailwind v4 shell; router and server-state
-  providers wired in `apps/pwa/src/main.tsx`; no feature screens exist.
-- **Backend / API client:** absent — no `apps/pwa/src/api/`; no HTTP wrapper, no event-stream manager.
+- **Frontend:** ~~partial — React 19 + Vite 8 + Tailwind v4 shell; router and server-state
+  providers wired in `apps/pwa/src/main.tsx`; no feature screens exist.~~ **present as of
+  2026-09-21**. Screens are the install/offline/update chrome (S-01), "Połącz z Cezarem"
+  (S-02), the task list (S-03) and the task screen (S-05, `apps/pwa/src/features/run/`). The
+  routes are in `apps/pwa/src/routes.tsx`, under `basename="/m/"`.
+- **Backend / API client:** ~~absent — no `apps/pwa/src/api/`; no HTTP wrapper, no event-stream manager.~~
+  **present as of 2026-09-21**. `apps/pwa/src/api/http.ts` is the single door. `runs-index.ts`
+  serves the list, and `run.ts` serves the record, the newest history page, `history-context`
+  and the read receipt. The workspace event stream is S-04's (PR #16). The per-run stream is
+  S-06's.
 - **Domain rule:** present — the attention rule and its table tests live in
   `packages/shared/src/attention.ts`. This is the product's central rule and it is done.
-- **Contract:** partial — `packages/cezar-contract/` exists as a slot; `src/` is empty
-  until `npm run sync:contract <sha>` runs.
+- **Contract:** ~~partial — `packages/cezar-contract/` exists as a slot; `src/` is empty
+  until `npm run sync:contract <sha>` runs.~~ **present as of 2026-09-21**. It is vendored at
+  tag `v0.11.0` (`67fc941`), the version the instance reports (F-02, PR #15). Live captures of
+  health, runs-index, a run, its history page and its history context validate against it in
+  `apps/pwa/test/contract/`.
 - **Auth:** ~~absent — no "Connect to Cezar" screen.~~ **present as of 2026-09-20** —
   `apps/pwa/src/api/http.ts` (refusal detection), `apps/pwa/src/domain/access-link.ts` and
   `apps/pwa/src/features/auth/` (the gate, the screen, the unlock). S-03 renders inside the
@@ -121,7 +131,12 @@ do NOT re-scaffold them.
   while agent-side work runs in parallel. The perimeter facts make this load-bearing
   rather than cosmetic: if the shell were gated, the operator would get the gateway's
   error page at the app's own address and FR-004 would have no application to render in.
-- **Status:** ready
+- **Status:** ~~ready~~ done, verified live
+- **Note (2026-09-21):** re-measured without cookies: `GET /m/` → 200, `GET /` → 403, and a
+  deep task path (`/m/p/x/runs/y`) → 200 from the shell's `try_files` fallback, which S-05's
+  route and S-10's notification links rely on. Deploy-on-merge has shipped every slice since
+  PR #10. The open unknown (one `location /` block) was answered while installing S-02's
+  guard: the gate lives in an included snippet (see S-02's notes).
 
 ### F-02: Contract vendored at the running Cezar version
 
@@ -142,7 +157,11 @@ do NOT re-scaffold them.
   late rather than loud: hand-written types drift from the server and the drift surfaces
   as a blank screen on the phone, which is exactly the guardrail this project treats as
   non-negotiable.
-- **Status:** ready
+- **Status:** ~~ready~~ done 2026-09-21, landed with S-03 in PR #15
+- **Note (2026-09-21):** vendored at `v0.11.0` (`67fc941`), answering the unknown: that is the
+  version `GET /api/v1/health` reports. Vendoring made the attention rule a transcription of
+  upstream's `web/src/lib/attention.ts` rather than a reading of the docs (see
+  `context/changes/task-list/change.md`).
 
 ## Slices
 
@@ -160,7 +179,7 @@ do NOT re-scaffold them.
 - **Risk:** The shell already carries the manifest, the icons and the update prompt, so
   this slice is mostly verification on the real device — which is the point: it is the
   first moment anything is confirmed on the actual phone rather than in a headless browser.
-- **Status:** proposed
+- **Status:** implemented 2026-09-20 via PR #10 (`context/changes/install-to-home-screen/`); device pass pending
 - **Note (2026-09-20):** implemented and deployed via PR #10
   (`context/changes/install-to-home-screen/`). The offline state and the install hint were
   the real gaps; the update prompt only needed tests. Left as `proposed` rather than moved
@@ -225,7 +244,15 @@ do NOT re-scaffold them.
   where the attention rule stops being a tested function and starts being the thing the
   operator reads, so a disagreement with the cockpit becomes visible here first — which
   the PRD names as the worst failure this product can produce.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #15 (`context/changes/task-list/`); device pass pending
+- **Note (2026-09-21):** the list reads `GET /api/v1/workspace/runs-index`, sorted into
+  Wymaga uwagi / W toku / W kolejce / Zakończone by the cockpit's own rules, ported 1:1. It
+  is filterable by project and refreshes on pull, on return and every 30 s. One consequence
+  worth knowing: the top section follows the *notification* answer (`wantsAttention`), as the
+  PRD requires, so a failed task stays there until it is continued or archived, while the
+  cockpit's sidebar files it under Recent. Verified in WebKit (5 E2E) and against the live
+  instance's data. Pull-to-refresh and return-from-background on the installed app still need
+  the phone. As of S-05 the rows are links to the task.
 
 ### S-04: Live status
 
@@ -260,7 +287,19 @@ do NOT re-scaffold them.
   product and the place where the append-only vocabulary guardrail is enforced in anger.
   Only the latest page is required — paging backwards was cut — which keeps this slice
   from absorbing the whole middle of the roadmap.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #17 (`context/changes/read-transcript/`); device pass pending
+- **Note (2026-09-21):** the risk was real, but it was already solved upstream. `GET /history`
+  returns the raw file, with v2 events interleaved with their v1 twins: every tool call is in
+  the live page twice, and the operator's own messages exist only in v1. The reducer
+  (`apps/pwa/src/domain/transcript.ts`) is therefore a port of the cockpit's `reduceThread()`
+  with its dedup rules, so phone and laptop show the same transcript. The pinned plan also
+  folds `history-context`, because the newest plan can be older than the newest page. The
+  read receipt writes back only `seenAt`. Agent markdown never renders HTML, never loads an
+  image and never follows a `javascript:` link. Found on the way: with `basename="/m"` the
+  link back to the list resolved to `/m`, outside the service worker and outside nginx's
+  `/m/` location. The basename is now `/m/`. Verified with 320 unit and 30 E2E tests (WebKit)
+  and against a live run. Opening a task on the installed app is the last check. S-07,
+  S-08, S-09 and S-10 have their task screen. S-06 still waits on S-04's stream (PR #16).
 
 ### S-06: The transcript stays live and survives suspension
 
@@ -387,18 +426,18 @@ do NOT re-scaffold them.
 
 | Roadmap ID | Change ID                   | Suggested issue title                                  | Ready for `/10x-plan` | Notes                                             |
 | ---------- | --------------------------- | ------------------------------------------------------ | --------------------- | ------------------------------------------------- |
-| F-01       | `serve-shell-at-perimeter`  | Serve the shell at /m/ outside the gate                 | yes                   | Mostly operator-side server work                  |
-| F-02       | `vendor-cezar-contract`     | Vendor the Cezar contract at the running version        | yes                   | Run `/10x-plan vendor-cezar-contract`             |
-| S-01       | `install-to-home-screen`    | Install to the home screen and update on purpose        | no                    | Needs F-01                                        |
-| S-02       | `connect-to-cezar`          | Detect a missing session and offer re-unlocking         | no                    | Blocked — Open Roadmap Question 1                 |
-| S-03       | `task-list`                 | Task list across projects, attention first              | no                    | North star; needs F-02 and S-02                   |
+| F-01       | `serve-shell-at-perimeter`  | Serve the shell at /m/ outside the gate                 | n/a                   | Done — verified live 2026-09-21                   |
+| F-02       | `vendor-cezar-contract`     | Vendor the Cezar contract at the running version        | n/a                   | Done — PR #15, at `v0.11.0`                       |
+| S-01       | `install-to-home-screen`    | Install to the home screen and update on purpose        | n/a                   | Implemented — PR #10; device pass pending         |
+| S-02       | `connect-to-cezar`          | Detect a missing session and offer re-unlocking         | n/a                   | Done — PR #12–#14, verified live                  |
+| S-03       | `task-list`                 | Task list across projects, attention first              | n/a                   | Implemented — PR #15; device pass pending         |
 | S-04       | `live-status`               | Live status updates and connection health               | no                    | Needs S-03                                        |
-| S-05       | `read-transcript`           | Task header and most recent transcript                  | no                    | Needs S-03, F-02                                  |
-| S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | no                    | Needs S-04, S-05                                  |
-| S-07       | `answer-the-agent`          | Answer a question or message a task                     | no                    | Needs S-05                                        |
-| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | no                    | Needs S-05                                        |
-| S-09       | `read-the-diff`             | Read-only diff, file by file                            | no                    | Needs S-05                                        |
-| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | no                    | Needs F-01, S-05                                  |
+| S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Implemented — PR #17; device pass pending         |
+| S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | no                    | Needs S-04 (PR #16) and S-05 (PR #17) merged      |
+| S-07       | `answer-the-agent`          | Answer a question or message a task                     | yes                   | Once S-05 (PR #17) merges                         |
+| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | yes                   | Once S-05 (PR #17) merges                         |
+| S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | Once S-05 (PR #17) merges                         |
+| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | Once S-05 (PR #17) merges; deep-link path exists  |
 | S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | no                    | Needs S-10                                        |
 | S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | no                    | Needs S-03, S-10                                  |
 
