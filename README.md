@@ -15,37 +15,6 @@ no other arrangement works.
 - `docs/CEZAR_API.md`: endpoints, SSE, event protocol, the "needs attention" rule
 - `CLAUDE.md`: the hard rules. Read it before changing anything.
 
-## What it does
-
-Every slice in the roadmap (F-01, F-02, S-01 to S-12) is built, and the operator
-reported each one tested on the device (2026-09-21).
-
-- **Install and update:** the app installs to the home screen and launches
-  full-screen. Without a network it shows a plain offline state. A new version
-  waits for a tap and never swaps in mid-use.
-- **Connect to Cezar:** the app detects a missing session and shows
-  "Połącz z Cezarem" instead of an error. Pasting the access link unlocks it.
-- **Task list:** every task across all projects, with anything that needs
-  attention first. It updates live, says whether the live connection is healthy,
-  and can be filtered by project.
-- **Task screen:** the header (status, workflow, steps, runner and model, cost,
-  tokens, branch, PR) and the latest transcript, live, resumed without gaps or
-  duplicates after the phone freezes the app.
-- **Acting on a task:** answer the agent's question or message it, then cancel,
-  finish, continue, open a draft PR, pin or archive it.
-- **Diff:** the task's changes, file by file, read-only.
-- **Notifications:** Web Push when a task enters waiting, review or failed.
-  Tapping one opens that task. A newer notification replaces the older one, and
-  a dead device is dropped.
-- **Settings:** theme (system, dark or light), the app's and Cezar's versions,
-  links to the same task in the cockpit, and sign-out.
-
-Two host steps are still outstanding: installing the push sidecar
-(`deploy/push/install.sh`) and re-running the nginx installer, which enables
-`/m/push/` and the sign-out endpoint. Until both have run, no real push arrives
-and sign-out reports the session as still open. See
-[Deploying](#deploying).
-
 ## How it fits together
 
 ```mermaid
