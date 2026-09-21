@@ -35,7 +35,7 @@ FR-010, FR-012, the 2-second NF, and Cezar's server at `v0.11.0`.
   the "stale status presented as current" failure. Frames received during a fetch are
   therefore replayed onto its result (full-record upserts are idempotent, order is kept).
 - **EventSource hides the HTTP status.** A lapsed session (bare 403) looks like any error, so
-  every drop re-asks the health probe, which hands the screen to `AuthGate` if needed.
+  every drop asks the health probe, and a refusal hands the screen to `AuthGate`.
 - **Safari has no CSS scroll anchoring** worth relying on, so "without the list jumping" is
   done by hand: the first visible row is pinned across an update while scrolled.
 
@@ -61,11 +61,12 @@ FR-010, FR-012, the 2-second NF, and Cezar's server at `v0.11.0`.
   (`lost` after 20 s without a connection, or at once when the browser says offline).
   Plus the replay journal the runs-index query function uses.
 - `src/features/runs-list/useLiveRuns.ts` — wires the stream to the query cache: frames →
-  `setQueryData(['runs-index'])`; every (re)open → refetch (no replay); every drop → re-probe
-  health; `project-added/removed` → refetch health and the index; closes on hidden and
-  reopens on visible (iOS freezes the app); returns `{ state, verifiedAt }` where
-  `verifiedAt` is the last frame while live — the moment up to which the list is known to be
-  current.
+  `setQueryData(['runs-index'])`; every (re)open → refetch (no replay); every drop → probe
+  health, handing the answer to the session query only when it is a refusal;
+  `project-added/removed` → refetch health and the index; closes on hidden and reopens on
+  visible (iOS freezes the app). Returns `{ state, liveSince, liveUntil }`: the list is
+  current only while live *and* after a fetch landed past `liveSince`; otherwise it is as old
+  as the later of its last fetch and `liveUntil` (the last frame before it stopped being live).
 - List polling: 30 s while not live (the fallback it always was), 5 min while live (a safety
   net for anything the stream cannot carry).
 - `ConnectionStatus` in the list header: word + dot for each state (never colour alone);
