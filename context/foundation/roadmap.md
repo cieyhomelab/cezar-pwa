@@ -45,7 +45,7 @@ attention rule → a readable phone screen.
 | F-01 | `serve-shell-at-perimeter` | (foundation) the built shell is served at `/m/`, outside the gate | —             | Access Control §Perimeter facts, FR-001      | ready    |
 | F-02 | `vendor-cezar-contract`    | (foundation) contract pinned to the running Cezar version        | —             | Guardrails, Business Logic                   | ready    |
 | S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | proposed |
-| S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | implemented, awaiting VPS step |
+| S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | done (verified live) |
 | S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | proposed |
 | S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | proposed |
 | S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | proposed |
@@ -188,7 +188,7 @@ do NOT re-scaffold them.
   this slice before the question is answered would produce a plan for one of two different
   products. Detecting the refusal (FR-004) is unaffected and could be split out if the
   question stays open.
-- **Status:** ~~blocked~~ implemented 2026-09-20 (`context/changes/connect-to-cezar/`); unlock fixed 2026-09-21, pending `deploy/nginx/install.sh` on the VPS
+- **Status:** ~~blocked~~ implemented 2026-09-20 (`context/changes/connect-to-cezar/`); unlock fixed and installed 2026-09-21, verified on the live gateway
 - **Note (2026-09-20):** the blocker dissolved rather than being answered. Open Roadmap
   Question 1 asked whether the perimeter admits a return path; the answer is that it admits
   one *in the path* — the guard's `return 302 https://$host$uri` keeps the path and drops
@@ -204,6 +204,11 @@ do NOT re-scaffold them.
   re-encoded the key (`/` → `%2F`), which nginx's raw comparison rejects even with the guard
   in place. Fixed in `context/changes/connect-to-cezar/plan.md` § "Found on the device".
   S-02 is closed once `deploy/nginx/install.sh` has run on the VPS and one paste unlocks.
+- **Note (2026-09-21, later):** installed and verified on the live host. The guard turned out
+  to live in `/etc/nginx/snippets/cezar-gate.conf` (included by `location /`), not in the
+  vhost, so the extractor now follows the vhost's includes. Pasting the real link in the app
+  lands behind the gate and survives a reload. What no browser can confirm is the phone
+  itself — one paste in the installed app is the last check.
 
 ### S-03: The task list
 
@@ -419,6 +424,10 @@ do NOT re-scaffold them.
    reinstall could overwrite what this product adds; if it is externally managed, it will
    not. — Owner: operator. Block: roadmap-wide — it decides whether F-01 must be
    re-applicable after a Cezar upgrade. *(PRD Open Question 2.)*
+   **ANSWERED 2026-09-21:** Cezar's installer generates the vhost and rewrites it on
+   reinstall; `cezar-gate-ensure` re-asserts only the gate's include, not ours. After any
+   `cezar server-install`, re-run `deploy/nginx/install.sh`, or `/m/` falls behind the gate
+   and FR-004 has nowhere to render. Automating that is a candidate follow-up.
 3. **Does an icon badge work in an installed web app on this phone?** Should be verified on
    the device before any work goes into it. — Owner: operator. Block: nothing; FR-042 is
    parked. *(PRD Open Question 4.)*
