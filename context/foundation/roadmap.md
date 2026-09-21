@@ -50,7 +50,7 @@ attention rule → a readable phone screen.
 | S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | implemented (PR #16), device pass pending |
 | S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | implemented (PR #17), device pass pending |
 | S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | proposed |
-| S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | implemented (PR pending), device pass pending |
+| S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | implemented (PR #18), device pass pending |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | proposed |
 | S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | proposed |
 | S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | proposed |
@@ -348,7 +348,7 @@ do NOT re-scaffold them.
   it lands, the operator can already close a waiting task from the phone, just without
   being told to. Sequenced ahead of the housekeeping actions because it is the one that
   answers the product's reason for existing.
-- **Status:** implemented 2026-09-21 (`context/changes/answer-the-agent/`); device pass pending
+- **Status:** implemented 2026-09-21 via PR #18 (`context/changes/answer-the-agent/`); device pass pending
 - **Note (2026-09-21):** the agent's question is answered in place. One tap answers a single
   single-select question. Any other shape collects every answer and sends one combined
   message, formatted `"<header>: <labels>"` exactly as the cockpit's ask card does, because
@@ -463,7 +463,7 @@ do NOT re-scaffold them.
 | S-04       | `live-status`               | Live status updates and connection health               | n/a                   | Implemented — PR #16; device pass pending         |
 | S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Implemented — PR #17; device pass pending         |
 | S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | yes                   | S-04 (PR #16) and S-05 (PR #17) merged            |
-| S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Implemented — PR pending; device pass pending     |
+| S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Implemented — PR #18; device pass pending         |
 | S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | yes                   | S-05 merged (PR #17)                              |
 | S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | S-05 merged (PR #17)                              |
 | S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | S-05 merged (PR #17); deep-link path exists       |
