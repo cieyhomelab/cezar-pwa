@@ -53,9 +53,9 @@ attention rule → a readable phone screen.
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | done (PR #18, device-verified) |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | done (PR #20, device-verified) |
 | S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | done (PR #21, device-verified) |
-| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | done (PR #22), reported tested by the operator; sidecar not installed on the host |
-| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | done (PR #23), reported tested by the operator; sidecar not installed on the host |
-| S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | implemented (PR #24), nginx re-install + device pass pending |
+| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | done (PR #22), device-tested per the operator; sidecar not installed on the host |
+| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | done (PR #23), device-tested per the operator; sidecar not installed on the host |
+| S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | done (PR #24), device-tested per the operator; nginx re-install not applied on the host |
 
 ## Streams
 
@@ -68,7 +68,7 @@ parallel tracks.
 | A      | Getting on the phone  | `F-01` → `S-01` / `S-02`                       | Mostly operator-side server work; runs in parallel with Stream B.                      |
 | B      | Awareness             | `F-02` → `S-03` → `S-04`                       | Carries the north star. `S-03` joins Stream A at `S-02`.                               |
 | C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Four independent branches off `S-05`; the smallest goal is `S-07`. All four done (PR #18–#21), device-verified 2026-09-21. |
-| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. `S-10` and `S-11` done per the operator (PR #22, #23); `S-12` implemented (PR #24). What is left is operator work on the host: install `cezar-push`, re-run the nginx installer (it now also writes the sign-out), then the device checklists. |
+| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. All three done per the operator (PR #22–#24), reported tested on the device 2026-09-21. What the host still lacks: `cezar-push` installed and the nginx installer re-run (it also writes the sign-out). |
 
 ## Baseline
 
@@ -551,6 +551,10 @@ do NOT re-scaffold them.
   the end of the S-12 run, `cezar-push` was not running (no system or user unit, nothing on
   :4330), and `/m/push/` was still commented out in the live snippet. The plan's device checks
   about replacement, restarts and dropping a deleted app need the sidecar installed first.
+- **Note (2026-09-21, final pass):** the operator reported every change tested on the device. The
+  host check was unchanged: no `cezar-push` unit (system or `--user`), nothing on :4330, and
+  `/m/push/` still commented out in the live snippet. This caveat, and the one on S-10, can go once
+  `deploy/push/install.sh` and `deploy/nginx/install.sh` have run on the VPS.
 
 ### S-12: Settings and sign-out
 
@@ -566,7 +570,7 @@ do NOT re-scaffold them.
 - **Risk:** Last because sign-out is only fully meaningful once there is both local state
   and a notification subscription to tear down; doing it earlier would mean revisiting it.
   Nothing here is hard, which makes it the natural place to absorb slippage.
-- **Status:** ~~proposed~~ implemented 2026-09-21 via PR #24 (`context/changes/settings-and-sign-out/`); nginx re-install and device pass pending
+- **Status:** ~~implemented 2026-09-21 via PR #24; nginx re-install and device pass pending~~ **done** 2026-09-21 (`context/changes/settings-and-sign-out/`), reported tested on the device by the operator
 - **Note (2026-09-21, implementation):** the theme (system / dark / light) is one word in
   `localStorage` and a `data-theme` on `<html>`, and the status-bar colour follows it. Settings shows
   the build's commit and time, the Cezar version the session probe reported, and the tested version.
@@ -585,6 +589,12 @@ do NOT re-scaffold them.
   Still open: re-running the nginx installer on the VPS (a production change, left to the
   operator), then the device checklist in the plan. Until the installer runs, sign-out clears the
   phone and stops notifications but says the session is still open.
+- **Note (2026-09-21, device pass):** the operator reported every change tested on the device, so
+  S-12 is marked done. A check on the host after that report still showed the old nginx snippet:
+  `/etc/nginx/snippets/cezar-mobile.conf` had no `cezar-mobile-signout` include and there was no
+  `cezar-mobile-signout.conf`. `POST /m/session/end` therefore does not reach the perimeter yet. Sign-out
+  clears the phone but reports the session as still open. Re-run `deploy/nginx/install.sh` on the VPS
+  to close that.
 
 ## Backlog Handoff
 
@@ -601,9 +611,9 @@ do NOT re-scaffold them.
 | S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Done — PR #18, device-verified                    |
 | S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | n/a                   | Done — PR #20, device-verified                    |
 | S-09       | `read-the-diff`             | Read-only diff, file by file                            | n/a                   | Done — PR #21, device-verified                    |
-| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | n/a                   | Done — PR #22, reported tested; sidecar not yet installed |
-| S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | n/a                   | Done — PR #23, reported tested; sidecar not yet installed |
-| S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | n/a                   | Implemented — PR #24; nginx re-install + device pending |
+| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | n/a                   | Done — PR #22, device-tested per operator; sidecar not yet installed |
+| S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | n/a                   | Done — PR #23, device-tested per operator; sidecar not yet installed |
+| S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | n/a                   | Done — PR #24, device-tested per operator; nginx re-install pending |
 
 ## Open Roadmap Questions
 
@@ -677,8 +687,9 @@ Awaiting `/10x-archive` (done and device-verified 2026-09-21, folders still in `
 `serve-shell-at-perimeter` (F-01, no folder), `vendor-cezar-contract` (F-02, with `task-list`),
 `install-to-home-screen`, `connect-to-cezar`, `task-list`, `live-status`, `read-transcript`,
 `transcript-stays-live`, `answer-the-agent`, `act-on-a-task`, `read-the-diff`,
-`notify-and-deep-link` and `notifications-stay-honest` (done per the operator; see the S-10 and
-S-11 notes on the sidecar install).
+`notify-and-deep-link`, `notifications-stay-honest` and `settings-and-sign-out` (done per the
+operator; see the S-10, S-11 and S-12 notes on the host install).
 
-Implemented, not yet device-verified: `settings-and-sign-out` (S-12, PR #24). With it every slice
-in this roadmap is built; what remains is operator work on the host and the device passes.
+Every slice in this roadmap is built and was reported tested on the device on 2026-09-21. Two steps
+remain, both operator work on the VPS: `deploy/push/install.sh` (the sidecar) and a re-run of
+`deploy/nginx/install.sh` (`/m/push/` and the sign-out).

@@ -1,33 +1,121 @@
 # Cezar Mobile (PWA)
 
-Installable phone client (iPhone first, Android second) for a
+An installable phone client for a
 [Cezar](https://github.com/open-mercato/cezar) instance running at
 `https://cezar.ciey.studio`. It answers one question in three seconds: **what
-are the agents doing, and is anything waiting for me?**
+are the agents doing, and is anything waiting for me?** Then it lets the operator
+act on the answer.
 
 The app is served from the same origin as Cezar, under `/m/`. That is not a
-preference — Cezar rejects cross-origin writes with 403 and ships no CORS, so
-any other arrangement simply does not work.
+preference: Cezar rejects cross-origin writes with 403 and ships no CORS, so
+no other arrangement works.
 
-- `docs/REQUIREMENTS.md` — scope, priorities (P0/P1/P2), milestones M0–M5
-- `docs/CEZAR_API.md` — endpoints, SSE, event protocol, the "needs attention" rule
-- `CLAUDE.md` — the hard rules; read before changing anything
+- `context/foundation/roadmap.md`: slices, their status and what is left on the host
+- `context/foundation/prd.md`: the product requirements
+- `docs/CEZAR_API.md`: endpoints, SSE, event protocol, the "needs attention" rule
+- `CLAUDE.md`: the hard rules. Read it before changing anything.
 
-## Status
+## What it does
 
-**M0 (skeleton) is in place**: workspaces, build, manifest, icons, service
-worker, nginx snippet and deploy script. The shell renders and installs; it does
-not talk to Cezar yet. M1 (live runs list) is the next milestone.
+Every slice in the roadmap (F-01, F-02, S-01 to S-12) is built, and the operator
+reported each one tested on the device (2026-09-21).
+
+- **Install and update:** the app installs to the home screen and launches
+  full-screen. Without a network it shows a plain offline state. A new version
+  waits for a tap and never swaps in mid-use.
+- **Connect to Cezar:** the app detects a missing session and shows
+  "Połącz z Cezarem" instead of an error. Pasting the access link unlocks it.
+- **Task list:** every task across all projects, with anything that needs
+  attention first. It updates live, says whether the live connection is healthy,
+  and can be filtered by project.
+- **Task screen:** the header (status, workflow, steps, runner and model, cost,
+  tokens, branch, PR) and the latest transcript, live, resumed without gaps or
+  duplicates after the phone freezes the app.
+- **Acting on a task:** answer the agent's question or message it, then cancel,
+  finish, continue, open a draft PR, pin or archive it.
+- **Diff:** the task's changes, file by file, read-only.
+- **Notifications:** Web Push when a task enters waiting, review or failed.
+  Tapping one opens that task. A newer notification replaces the older one, and
+  a dead device is dropped.
+- **Settings:** theme (system, dark or light), the app's and Cezar's versions,
+  links to the same task in the cockpit, and sign-out.
+
+Two host steps are still outstanding: installing the push sidecar
+(`deploy/push/install.sh`) and re-running the nginx installer, which enables
+`/m/push/` and the sign-out endpoint. Until both have run, no real push arrives
+and sign-out reports the session as still open. See
+[Deploying](#deploying).
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  phone["Phone<br/>installed PWA + service worker"]
+
+  subgraph vps["VPS — cezar.ciey.studio"]
+    nginx["nginx"]
+    shell["/var/www/cezar-mobile<br/>static shell"]
+    cezar["Cezar<br/>127.0.0.1:4322"]
+    push["cezar-push sidecar<br/>127.0.0.1:4330"]
+  end
+
+  pushsvc["Browser push service<br/>(APNs / FCM)"]
+
+  phone -- "/m/ (public, unlocks the session)" --> nginx
+  phone -- "/api/v1/… + SSE (gated)" --> nginx
+  phone -- "/m/push/ (gated)" --> nginx
+  nginx --> shell
+  nginx --> cezar
+  nginx --> push
+  push -- "workspace events over loopback" --> cezar
+  push -- "Web Push (VAPID)" --> pushsvc
+  pushsvc --> phone
+```
+
+The shell at `/m/` sits outside Cezar's cookie gate, so the app can load and
+explain itself before it has a session. Everything that carries data (the API,
+the event streams and `/m/push/`) sits behind the gate. The service worker
+caches only the shell and never touches `/api/**` or the streams.
+
+When a task starts needing the operator, this happens:
+
+```mermaid
+sequenceDiagram
+  participant C as Cezar
+  participant S as cezar-push
+  participant P as Push service
+  participant W as Service worker
+  participant A as App
+
+  S->>C: GET /api/v1/workspace/runs-index (silent baseline)
+  S->>C: GET /api/v1/workspace/events (SSE)
+  C-->>S: run frame: task enters waiting / review / failed
+  S->>P: Web Push, Topic = task, payload = title, project, reason
+  P-->>W: push
+  W->>W: show notification (tag = task, words from pl.ts)
+  W->>A: tap opens /m/p/:projectId/runs/:runId
+```
+
+The sidecar pushes on the *transition*, using the cockpit's own rule. Each
+reconnect re-seeds a silent baseline, so work that was already waiting never
+rings twice. No code and no transcript content leave the server.
 
 ## Layout
 
 ```
 apps/pwa/                 # the PWA
-apps/push-sidecar/        # cezar-push — Web Push sidecar (M4)
+  src/api/                # the one HTTP door, live streams, push client
+  src/domain/             # pure logic: attention, transcript, diff, actions
+  src/features/           # auth, runs-list, run, diff, settings
+  src/sw.ts               # service worker: precache, push, notificationclick
+apps/push-sidecar/        # cezar-push, the Web Push sidecar (Hono + web-push)
 packages/shared/          # attention rule + types shared by app and sidecar
-packages/cezar-contract/  # vendored zod contract, pinned (empty until synced)
-deploy/                   # nginx snippet, systemd unit
+packages/cezar-contract/  # vendored zod contract, pinned at Cezar v0.11.0
+deploy/nginx/             # /m/ snippet, installer, rehearsal
+deploy/push/              # sidecar installer
+deploy/systemd/           # cezar-push user unit
 scripts/                  # deploy, contract sync, icon generation
+context/                  # PRD, roadmap and one folder per change
 ```
 
 ## Commands
@@ -38,7 +126,7 @@ npm run dev          # PWA on :5173 under /m/, proxying /api to Cezar
 npm run build        # shared -> sidecar -> pwa
 npm run typecheck
 npm test             # vitest across pwa + sidecar + shared
-npm run test:e2e     # playwright, webkit-iphone, against a production build
+npm run test:e2e     # playwright on WebKit, against a production build
 npm run lint         # oxlint
 npm run gen:icons    # regenerate the PWA icon set
 npm run deploy       # build + rsync to the VPS (needs DEPLOY_HOST)
@@ -128,7 +216,19 @@ Two steps remain manual and one-off, both run **on the VPS**:
    `deploy/nginx/rehearse.sh` checks all of this against a scratch nginx,
    no VPS needed.
 
-2. For push (M4), install `deploy/systemd/cezar-push.service` as a user unit,
-   and uncomment the `/m/push/` block in the snippet **after** filling in the
-   cookie check (open question Q1) — it is shipped commented out so the
-   sidecar endpoints cannot go live unauthenticated.
+2. Install the push sidecar, as the user Cezar runs as (not root):
+
+   ```bash
+   deploy/push/install.sh
+   ```
+
+   It builds the one-file bundle into `~/cezar-push` and creates the VAPID key
+   pair once, in `~/.cezar-push`. It then installs and starts the `cezar-push`
+   user unit, listening on `127.0.0.1:4330`. Re-running it upgrades the bundle
+   and keeps the keys and subscriptions. Run `sudo loginctl enable-linger $USER` once so
+   the unit survives logout. The `/m/push/` route comes from step 1 and reuses
+   the gate's `$cezar_gate_ok`, so it holds no secret. On a host without the
+   gate, `nginx -t` fails and the installer rolls back.
+
+**After any `cezar server-install`, re-run step 1.** Cezar's installer rewrites
+the vhost, and `/m/` falls behind the gate until the include is back.
