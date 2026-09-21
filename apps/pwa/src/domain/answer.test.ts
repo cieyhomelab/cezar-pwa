@@ -163,7 +163,7 @@ describe('toggleSelection', () => {
 })
 
 describe('resumeAfterIdleTeardown', () => {
-  const wait = vi.fn(async () => undefined)
+  const wait = vi.fn(async (_delayMs: number) => undefined)
 
   it('retries only "run is still active", then succeeds', async () => {
     const resume = vi
