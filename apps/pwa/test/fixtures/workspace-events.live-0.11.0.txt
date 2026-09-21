@@ -1,0 +1,24 @@
+event: ping
+data: 
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":11,"rssBytes":369917952,"procCount":1}}}
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":10.9,"rssBytes":369946624,"procCount":1}}}
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":10.9,"rssBytes":372527104,"procCount":1}}}
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":10.9,"rssBytes":376414208,"procCount":1}}}
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":10.7,"rssBytes":374902784,"procCount":1}}}
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":10.6,"rssBytes":375095296,"procCount":1}}}
+
+event: usage
+data: {"project":"cezar-pwa","usage":{"bafa07d6-b794-45c5-8cca-67ae99bb99f5":{"cpuPct":10.4,"rssBytes":374902784,"procCount":1}}}
+

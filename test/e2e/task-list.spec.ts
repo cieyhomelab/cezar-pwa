@@ -24,9 +24,17 @@ const health = JSON.stringify({
   ],
 })
 
+/**
+ * The event stream (S-04, `live-status.spec.ts`) is held open and silent here: these tests are
+ * about the list and its refresh paths, and an unrouted stream would reach the real gateway
+ * through the preview proxy, fail, and re-probe the session on a timing of its own.
+ */
+const holdEventStream = (page: Page) => page.route('**/api/v1/workspace/events', () => {})
+
 /** Serves both endpoints and counts how often the list was asked for. */
 async function serveCezar(page: Page) {
   const counts = { runsIndex: 0 }
+  await holdEventStream(page)
   await page.route('**/api/v1/health', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: health }),
   )
@@ -107,6 +115,7 @@ test.describe('Task list', () => {
     page,
   }) => {
     let authorized = true
+    await holdEventStream(page)
     await page.route('**/api/v1/health', (route) =>
       authorized
         ? route.fulfill({ status: 200, contentType: 'application/json', body: health })

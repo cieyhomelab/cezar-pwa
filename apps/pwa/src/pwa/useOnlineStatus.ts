@@ -17,8 +17,8 @@ const getSnapshot = () => navigator.onLine
  * FR-002 asks only that the product *say* it is offline, and `navigator.onLine`
  * is the only signal available until a data layer exists. It over-reports — a
  * captive portal reads as online — so it must never be used to vouch for the
- * freshness of data. Real connection health arrives with the event stream in
- * S-04 (`live-status`); this hook is deliberately not that.
+ * freshness of data. Real connection health is the event stream's
+ * (`api/workspace-events.ts`, S-04); this hook is deliberately not that.
  *
  * `useSyncExternalStore` rather than state-plus-effect because it re-reads the
  * snapshot right after subscribing: a network that drops between the first
