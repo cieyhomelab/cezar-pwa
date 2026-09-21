@@ -1,8 +1,13 @@
 import { turnBlocks, type TranscriptBlock } from '../../domain/transcript-blocks.ts'
 import type { Transcript, TranscriptEntry, TranscriptFooter } from '../../domain/transcript.ts'
 import { pl } from '../../i18n/pl.ts'
+import { AskCard } from './AskCard.tsx'
 import { Markdown } from './Markdown.tsx'
 import { ToolLine } from './ToolLine.tsx'
+import type { Delivery } from './useDeliver.ts'
+
+/** The only question that can still be answered (`openAsk`), and the way to answer it. */
+export type Answering = { delivery: Delivery; openAskId?: string }
 
 function UserBubble({ label, text, imageCount = 0 }: { label: string; text: string; imageCount?: number }) {
   return (
@@ -18,7 +23,7 @@ function UserBubble({ label, text, imageCount = 0 }: { label: string; text: stri
   )
 }
 
-function Entry({ entry }: { entry: TranscriptEntry }) {
+function Entry({ entry, answering }: { entry: TranscriptEntry; answering?: Answering }) {
   switch (entry.kind) {
     case 'message':
       if (entry.role === 'user') return <UserBubble label={pl.run.transcript.you} text={entry.text} />
@@ -43,31 +48,12 @@ function Entry({ entry }: { entry: TranscriptEntry }) {
     case 'provider-auth-required':
       return <p className="text-sm text-danger">{pl.run.transcript.providerAuth(entry.provider)}</p>
     case 'ask':
-      // Read-only until S-07: the operator can read the question here and answer in the cockpit.
       return (
-        <section className="rounded border border-pending px-3 py-2 text-sm">
-          <p className="font-semibold text-pending">{pl.run.transcript.ask.title}</p>
-          {entry.questions.map((question, index) => (
-            <div key={question.id ?? index} className="mt-2">
-              <p className="font-medium break-words">{question.question}</p>
-              <ul className="mt-1 list-disc pl-5 text-text-muted">
-                {question.options.map((option, optionIndex) => (
-                  <li key={optionIndex} className="break-words">
-                    {option.label}
-                    {option.description ? ` — ${option.description}` : ''}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <p className="mt-2 text-xs text-text-muted">
-            {entry.resolved && entry.answer
-              ? pl.run.transcript.ask.answered(entry.answer)
-              : entry.resolved
-                ? ''
-                : pl.run.transcript.ask.pending}
-          </p>
-        </section>
+        <AskCard
+          ask={entry}
+          {...(answering !== undefined ? { delivery: answering.delivery } : {})}
+          superseded={answering !== undefined && !entry.resolved && entry.id !== answering.openAskId}
+        />
       )
     case 'tool':
       return <ToolLine item={entry} nested={[]} />
@@ -77,11 +63,11 @@ function Entry({ entry }: { entry: TranscriptEntry }) {
   }
 }
 
-function Block({ block }: { block: TranscriptBlock }) {
+function Block({ block, answering }: { block: TranscriptBlock; answering?: Answering }) {
   return block.kind === 'tool' ? (
     <ToolLine item={block.item} nested={block.children} />
   ) : (
-    <Entry entry={block.entry} />
+    <Entry entry={block.entry} {...(answering !== undefined ? { answering } : {})} />
   )
 }
 
@@ -112,11 +98,14 @@ export function TranscriptView({
   task,
   hasOlder,
   footer,
+  answering,
 }: {
   transcript: Transcript
   task: string
   hasOlder: boolean
   footer: TranscriptFooter
+  /** S-07: how an open question is answered. Absent, every question is read-only. */
+  answering?: Answering
 }) {
   const turns = transcript.turns
     .map((turn) => ({ turn, blocks: turnBlocks(turn) }))
@@ -146,7 +135,7 @@ export function TranscriptView({
             />
           ) : null}
           {blocks.map((block) => (
-            <Block key={block.id} block={block} />
+            <Block key={block.id} block={block} {...(answering !== undefined ? { answering } : {})} />
           ))}
         </article>
       ))}

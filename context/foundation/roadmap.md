@@ -50,7 +50,7 @@ attention rule → a readable phone screen.
 | S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | implemented (PR #16), device pass pending |
 | S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | implemented (PR #17), device pass pending |
 | S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | proposed |
-| S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | proposed |
+| S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | implemented (PR #18), device pass pending |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | proposed |
 | S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | proposed |
 | S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | proposed |
@@ -78,13 +78,15 @@ do NOT re-scaffold them.
 - **Frontend:** ~~partial — React 19 + Vite 8 + Tailwind v4 shell; router and server-state
   providers wired in `apps/pwa/src/main.tsx`; no feature screens exist.~~ **present as of
   2026-09-21**. Screens are the install/offline/update chrome (S-01), "Połącz z Cezarem"
-  (S-02), the task list (S-03) and the task screen (S-05, `apps/pwa/src/features/run/`). The
+  (S-02), the task list (S-03) and the task screen (S-05, `apps/pwa/src/features/run/`), where
+  the agent can now be answered and messaged (S-07). The
   routes are in `apps/pwa/src/routes.tsx`, under `basename="/m/"`.
 - **Backend / API client:** ~~absent — no `apps/pwa/src/api/`; no HTTP wrapper, no event-stream manager.~~
   **present as of 2026-09-21**. `apps/pwa/src/api/http.ts` is the single door. `runs-index.ts`
   serves the list, and `run.ts` serves the record, the newest history page, `history-context`
-  and the read receipt. `workspace-events.ts` carries the list's live stream (S-04, PR #16). The per-run
-  stream is S-06's.
+  and the read receipt, and since S-07 the two writes that reach the agent: `POST …/messages`
+  and `POST …/continue`. `workspace-events.ts` carries the list's live stream (S-04, PR #16).
+  The per-run stream is S-06's.
 - **Domain rule:** present — the attention rule and its table tests live in
   `packages/shared/src/attention.ts`. This is the product's central rule and it is done.
 - **Contract:** ~~partial — `packages/cezar-contract/` exists as a slot; `src/` is empty
@@ -346,7 +348,21 @@ do NOT re-scaffold them.
   it lands, the operator can already close a waiting task from the phone, just without
   being told to. Sequenced ahead of the housekeeping actions because it is the one that
   answers the product's reason for existing.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #18 (`context/changes/answer-the-agent/`); device pass pending
+- **Note (2026-09-21):** the agent's question is answered in place. One tap answers a single
+  single-select question. Any other shape collects every answer and sends one combined
+  message, formatted `"<header>: <labels>"` exactly as the cockpit's ask card does, because
+  the agent reads the same reply either way. A composer docked at the bottom messages a
+  running, waiting or queued task, and it also answers an open question in the operator's own
+  words. Delivery ports the cockpit's `useAskAnswer`: an active task gets `POST …/messages`, a
+  closed one with a recorded session gets `POST …/continue` with the text as its opening
+  prompt, and a 409 from a stale record turns into a resume rather than a lost answer. Every
+  send shows it is in flight. On failure the draft stays and Cezar's own reason is shown.
+  A timed-out write is reported, never resent, because it may have landed. Plain Continue on
+  a finished task stays with S-08. Verified with 430 unit and 41 E2E tests (WebKit), in both
+  themes at 390×844. Nothing was posted to the live instance: no live run held a question,
+  and a send would reach a real agent. Answering a real question from the installed app is
+  the last check.
 
 ### S-08: Act on a task
 
@@ -447,7 +463,7 @@ do NOT re-scaffold them.
 | S-04       | `live-status`               | Live status updates and connection health               | n/a                   | Implemented — PR #16; device pass pending         |
 | S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Implemented — PR #17; device pass pending         |
 | S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | yes                   | S-04 (PR #16) and S-05 (PR #17) merged            |
-| S-07       | `answer-the-agent`          | Answer a question or message a task                     | yes                   | S-05 merged (PR #17)                              |
+| S-07       | `answer-the-agent`          | Answer a question or message a task                     | n/a                   | Implemented — PR #18; device pass pending         |
 | S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | yes                   | S-05 merged (PR #17)                              |
 | S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | S-05 merged (PR #17)                              |
 | S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | S-05 merged (PR #17); deep-link path exists       |
