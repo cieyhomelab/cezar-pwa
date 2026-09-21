@@ -120,6 +120,85 @@ export const pl = {
     truncated: (limit: number, projects: string) =>
       `Pokazuję tylko ${limit} najnowszych zadań z: ${projects}. Starsze są w pełnym cockpicie.`,
   },
+  /** S-05: one task — its header, its plan and the newest stretch of its transcript. */
+  run: {
+    back: 'Zadania',
+    loading: 'Wczytuję zadanie…',
+    loadFailed: 'Nie udało się wczytać zadania.',
+    notFound: 'Nie ma takiego zadania. Mogło zostać usunięte.',
+    retry: 'Spróbuj ponownie',
+    refresh: 'Odśwież',
+    refreshing: 'Odświeżam…',
+    updatedAt: (time: string) => `Zaktualizowano ${time}`,
+    /** Guardrail: a stale status is never presented as current. */
+    refreshFailed: (time: string) => `Nie udało się odświeżyć. Stan z ${time}.`,
+    header: {
+      workflow: 'Workflow',
+      step: (position: number, total: number, name: string) =>
+        `Krok ${position}/${total}${name ? ` · ${name}` : ''}`,
+      agent: 'Agent',
+      cost: 'Koszt',
+      tokens: 'Tokeny',
+      tokensDirectional: (input: string, output: string) => `we ${input} · wy ${output}`,
+      branch: 'Gałąź',
+      pr: (number: string | null) => (number ? `PR #${number}` : 'Pull request'),
+    },
+    plan: {
+      title: 'Plan',
+      progress: (done: number, total: number) => `${done}/${total}`,
+      /** Glyph + word, never colour alone. */
+      status: {
+        completed: 'zrobione',
+        in_progress: 'w trakcie',
+        pending: 'do zrobienia',
+        cancelled: 'niepotrzebne',
+      } as Record<string, string>,
+    },
+    transcript: {
+      heading: 'Transkrypt',
+      /** FR-049 is parked: only the newest page is shown. */
+      older: 'Starsze wpisy są dostępne w pełnym cockpicie.',
+      empty: 'Transkrypt jest jeszcze pusty.',
+      loadFailed: 'Nie udało się wczytać transkryptu.',
+      task: 'Zadanie',
+      you: 'Ty',
+      imagesAttached: (count: number) =>
+        `${count} ${plural(count, 'załącznik', 'załączniki', 'załączników')}`,
+      reasoning: 'Rozumowanie',
+      tool: {
+        input: 'Wejście',
+        output: 'Wynik',
+        error: 'Błąd',
+        exitCode: (code: number) => `kod wyjścia ${code}`,
+        clipped: (count: number) => `… pominięto ${count} znaków z początku`,
+        children: (count: number) =>
+          `${count} ${plural(count, 'krok podagenta', 'kroki podagenta', 'kroków podagenta')}`,
+        /** Status glyph + word per `ToolStatus`; unknown statuses show their raw name. */
+        status: {
+          pending: 'oczekuje',
+          running: 'w trakcie',
+          completed: 'gotowe',
+          failed: 'błąd',
+          declined: 'odrzucone',
+        } as Record<string, string>,
+      },
+      image: (name?: string) => `Obraz${name ? ` ${name}` : ''} — do obejrzenia w pełnym cockpicie`,
+      providerAuth: (provider: string) =>
+        `Agent ${provider} stracił logowanie. Zaloguj go ponownie w pełnym cockpicie.`,
+      ask: {
+        title: 'Pytanie agenta',
+        answered: (answer: string) => `Odpowiedź: ${answer}`,
+        pending: 'Czeka na odpowiedź',
+      },
+      footer: {
+        waiting: 'Agent czeka na Twoją odpowiedź.',
+        failed: 'Sesja zakończona błędem.',
+        failedWith: (error: string) => `Sesja zakończona błędem — ${error}`,
+        review: 'Sesja zamknięta — czeka na Twój przegląd.',
+        closed: 'Sesja zamknięta.',
+      },
+    },
+  },
   install: {
     title: 'Dodaj Cezara do ekranu początkowego',
     /** iOS has no install prompt — the operator does it from the Share sheet. */

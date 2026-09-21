@@ -1,6 +1,6 @@
+import { Outlet } from 'react-router'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { AuthGate } from './features/auth/AuthGate.tsx'
-import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
 import { pl } from './i18n/pl.ts'
 import { InstallHint } from './pwa/InstallHint.tsx'
 import { OfflineBanner } from './pwa/OfflineBanner.tsx'
@@ -11,9 +11,9 @@ import { useStandalone } from './pwa/useStandalone.ts'
 /**
  * App chrome, the safe-area layout and the three installation-slice
  * affordances (S-01: install, offline, update), wrapped around the session gate
- * (S-02), which guards the task list (S-03). The chrome stays outside the gate on
- * purpose — the update prompt and the offline banner must still reach an
- * operator whose session has lapsed.
+ * (S-02), which guards the screens in `routes.tsx` (the list, S-03; a task, S-05).
+ * The chrome stays outside the gate on purpose — the update prompt and the
+ * offline banner must still reach an operator whose session has lapsed.
  *
  * The browser-facing state lives in the hooks; everything below is wiring.
  */
@@ -27,7 +27,9 @@ export default function App() {
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-text">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-3 backdrop-blur">
+      {/* Not sticky: on a phone the brand is not worth a permanent strip, and the task screen
+          pins its own bar (back link and plan) to the top. */}
+      <header className="border-b border-border px-4 py-3">
         <h1 className="text-lg font-semibold">{pl.app.name}</h1>
         <p className="text-sm text-text-muted">{pl.app.tagline}</p>
       </header>
@@ -45,7 +47,7 @@ export default function App() {
       <main className="flex flex-1 flex-col">
         {/* S-02: nothing past this point renders without a session. */}
         <AuthGate>
-          <RunsListScreen />
+          <Outlet />
         </AuthGate>
       </main>
 

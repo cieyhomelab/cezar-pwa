@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { ReactElement, ReactNode } from 'react'
+import { MemoryRouter } from 'react-router'
 import { vi } from 'vitest'
 
 /**
@@ -17,9 +18,12 @@ export function createTestQueryClient(): QueryClient {
   })
 }
 
-export function renderWithQuery(ui: ReactElement, client = createTestQueryClient()) {
+/** Rendered inside a router too, at `path` (relative to the app's `/m` basename). */
+export function renderWithQuery(ui: ReactElement, client = createTestQueryClient(), path = '/') {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>
+    </QueryClientProvider>
   )
   return { client, ...render(ui, { wrapper }) }
 }

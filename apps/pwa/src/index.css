@@ -85,3 +85,9 @@ body {
   min-height: 44px;
   min-width: 44px;
 }
+
+/* Collapsed transcript lines and the plan are native <details>. WebKit keeps its own
+   disclosure triangle despite `list-style: none`, next to the glyph each summary draws. */
+summary::-webkit-details-marker {
+  display: none;
+}

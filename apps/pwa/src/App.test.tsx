@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from './App.tsx'
 import { pl } from './i18n/pl.ts'
+import { AppRoutes } from './routes.tsx'
 import {
   emptyRunsIndexResponse,
   healthResponse,
@@ -18,7 +18,7 @@ function renderApp(authorized = true) {
     '/api/v1/health': authorized ? () => healthResponse() : refusalResponse,
     '/api/v1/workspace/runs-index': authorized ? emptyRunsIndexResponse : refusalResponse,
   })
-  return renderWithQuery(<App />)
+  return renderWithQuery(<AppRoutes />)
 }
 
 afterEach(() => {
