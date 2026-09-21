@@ -1,5 +1,6 @@
 import {
   apiRunSchema,
+  changesPayloadSchema,
   healthResponseSchema,
   runEventSchema,
   runHistoryContextSchema,
@@ -7,6 +8,8 @@ import {
   runsIndexResponseSchema,
 } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
+import liveChangesRepointed from '../fixtures/changes-repointed.live-0.11.0.json'
+import liveChanges from '../fixtures/changes.live-0.11.0.json'
 import liveHealth from '../fixtures/health.live-0.11.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
@@ -40,6 +43,9 @@ describe('contract fixtures', () => {
     ['live run', apiRunSchema, liveRun],
     ['live history page', runHistoryPageSchema, liveHistory],
     ['live history context', runHistoryContextSchema, liveHistoryContext],
+    // S-09. The first is this repo's own task, trimmed to three of its files (stat recomputed).
+    ['live changes', changesPayloadSchema, liveChanges],
+    ['live changes, repointed and empty', changesPayloadSchema, liveChangesRepointed],
   ] as const)('%s matches the vendored schema', (_name, schema, fixture) => {
     const result = schema.safeParse(fixture)
     expect(result.error?.issues ?? []).toEqual([])

@@ -1,6 +1,7 @@
 import type { ApiRun } from '@cezar-pwa/cezar-contract/contract'
 import { fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import liveChanges from '../../../test/fixtures/changes.live-0.11.0.json'
 import liveRun from '../../../test/fixtures/run.live-0.11.0.json'
 import { createTestQueryClient, jsonResponse, refusalResponse, renderWithQuery } from '../../../test/query.tsx'
 import { DIFF_LINE_PAGE } from '../../domain/diff.ts'
@@ -50,11 +51,9 @@ const changes = (files: unknown[], extra: Record<string, unknown> = {}) => ({
 type Route = () => Response | Promise<Response>
 
 function serve(routes: Record<string, Route>, path = `/p/cezar-pwa/runs/${RUN.id}/diff`) {
-  const calls: string[] = []
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
     const pathname = new URL(url, 'http://localhost').pathname
-    calls.push(pathname)
     const all: Record<string, Route> = {
       '/api/v1/health': () => jsonResponse({ version: '0.11.0', projects: [{ id: 'cezar-pwa', name: 'Cezar PWA' }] }),
       [BASE]: () => jsonResponse(RUN),
@@ -65,7 +64,6 @@ function serve(routes: Record<string, Route>, path = `/p/cezar-pwa/runs/${RUN.id
     return route()
   })
   renderWithQuery(<AppRoutes />, createTestQueryClient(), path)
-  return { calls }
 }
 
 const file = (path: string) => screen.getByRole('region', { name: path })
@@ -121,6 +119,18 @@ describe('DiffScreen — file by file', () => {
     await screen.findByRole('region', { name: path })
     fireEvent.click(toggle(path))
     expect(within(file(path)).getByText(note)).toBeInTheDocument()
+  })
+
+  it('reads a real answer: git\'s own patch, numbered from the hunk header', async () => {
+    serve({ [`${BASE}/changes`]: () => jsonResponse(liveChanges) })
+    await screen.findByRole('region', { name: 'apps/pwa/src/routes.tsx' })
+    fireEvent.click(toggle('apps/pwa/src/routes.tsx'))
+    // The matcher sees the text with its indentation collapsed; the page keeps it (`pre-wrap`).
+    const added = within(file('apps/pwa/src/routes.tsx')).getByText(
+      '<Route path="p/:projectId/runs/:runId/diff" element={<DiffScreen />} />',
+    )
+    expect(added.parentElement).toHaveClass('bg-diff-add')
+    expect(screen.getByText(t.files(3))).toBeInTheDocument()
   })
 
   it('a single file is the whole diff, so it arrives open', async () => {

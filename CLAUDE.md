@@ -70,7 +70,7 @@ Bez dostępu do VPS: lokalnie `CEZ_DRY_RUN=1 npx cezar-cli` (mock agenta) i `CEZ
 - Kod, identyfikatory, commity po angielsku; teksty UI po polsku, wyłącznie przez `src/i18n/pl.ts`.
 - Komponenty funkcyjne, bez klas; logika domenowa jako czyste funkcje w `src/domain/` z testami tablicowymi.
 - Stan serwera tylko w TanStack Query; SSE aktualizuje cache przez `queryClient.setQueryData`, nie przez osobny store.
-- Klucze query: `['runs-index']`, `['run', projectId, runId]`, `['history', projectId, runId]`, `['health']`.
+- Klucze query: `['runs-index']`, `['run', projectId, runId]`, `['history', projectId, runId]`, `['changes', projectId, runId]`, `['health']`.
 - Transkrypt: reducer `(state, uiEvent) => state` w `src/domain/transcript.ts`, id-keyed (`item.started` → `item.delta` dokleja → `item.completed` nadpisuje). Testuj go na nagraniach NDJSON z `test/fixtures/`.
 - Każde wywołanie API przez `src/api/http.ts`, który: rozpoznaje brak auth (401/403 lub odpowiedź HTML zamiast JSON → `AuthRequiredError`), parsuje `{error}` z API, ma timeout.
 - CSS: Tailwind, mobile-first, `env(safe-area-inset-*)` na górnym/dolnym pasku, cele dotyku ≥ 44 px.
