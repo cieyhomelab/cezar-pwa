@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Rehearses the /m/ snippet against a scratch nginx shaped like the live
-# gateway (docs/CEZAR_API.md § 1a): the `?key=` guard and the cookie check both
-# inside `location /`. Needs nginx on PATH; no root, no VPS, no real secret.
+# Rehearses the /m/ snippet against a scratch nginx laid out like the live
+# gateway: `location /` includes snippets/cezar-gate.conf, which holds the
+# `?key=` guard and a cookie check on a `map` variable defined at http level
+# (conf.d/cezar-gate.conf). Needs nginx on PATH; no root, no VPS, no secret.
 #
 #   deploy/nginx/rehearse.sh [port]      (default 18480)
 #
@@ -30,20 +31,27 @@ base="http://127.0.0.1:$port"
 mkdir -p "$T/www" "$T/snippets" "$T/logs"
 echo '<!doctype html><title>shell</title>' >"$T/www/index.html"
 
+cat >"$T/snippets/cezar-gate.conf" <<GATE
+# Unlock link: /?key=<secret> plants the cookie, then redirects to the clean URL.
+if (\$arg_key = "$KEY") {
+    add_header Set-Cookie "cezar_access=$KEY; Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax";
+    return 302 http://\$http_host\$uri;
+}
+
+# No cookie, or a stale one: refuse before anything reaches the cockpit.
+if (\$cezar_gate_ok = 0) {
+    return 403 "forbidden\\n";
+}
+GATE
+
 cat >"$T/vhost.conf" <<VHOST
 server {
     listen 127.0.0.1:$port;
     include $T/snippets/cezar-mobile.conf;
 
     location / {
-        if (\$arg_key = "$KEY") {
-            add_header Set-Cookie "cezar_access=$KEY; Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax";
-            return 302 http://\$http_host\$uri;
-        }
-        if (\$cookie_cezar_access != "$KEY") {
-            return 403;
-        }
-        return 200 "cockpit\n";
+        include $T/snippets/cezar-gate.conf;
+        return 200 "cockpit\\n";
     }
 }
 VHOST
@@ -60,6 +68,10 @@ http {
     default_type text/html;
     client_body_temp_path $T/body; proxy_temp_path $T/proxy; fastcgi_temp_path $T/fcgi;
     uwsgi_temp_path $T/uwsgi; scgi_temp_path $T/scgi;
+    map \$cookie_cezar_access \$cezar_gate_ok {
+        default 0;
+        "$KEY" 1;
+    }
     include $T/vhost.conf;
 }
 CONF
@@ -80,7 +92,9 @@ pass "config is valid before the unlock guard exists"
 printed=$("$here/extract-unlock.sh" "$T/vhost.conf" "$T/snippets/cezar-mobile-unlock.conf")
 [[ -z "$printed" ]] || fail "extract-unlock.sh printed output — it must never echo the secret"
 [[ "$(stat -c %a "$T/snippets/cezar-mobile-unlock.conf")" == 600 ]] || fail "unlock file is not mode 600"
-pass "guard extracted silently, mode 600"
+grep -q 'cezar-gate.conf' "$T/snippets/cezar-mobile-unlock.conf" || fail "guard was not found through the vhost's include"
+grep -q 'cezar_gate_ok' "$T/snippets/cezar-mobile-unlock.conf" && fail "the cookie check was copied too — /m/ would 403 without a session"
+pass "guard found through the vhost's include, extracted silently, mode 600, cookie check left behind"
 
 ng -t 2>/dev/null || fail "nginx -t fails with the extracted guard"
 ng

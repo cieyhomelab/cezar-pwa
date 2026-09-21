@@ -93,8 +93,20 @@ stays reachable in every one of those states.
       `deploy/nginx/rehearse.sh`: raw key at `/m/` → 302 to `/m/` + cookie, and the session
       opens the gate; re-encoded key and wrong key → shell, no cookie; cockpit still gated.
       Against `main`'s snippet the same script fails on exactly the device's symptom.
-- [ ] **Run `deploy/nginx/install.sh` on the VPS**, then paste the link once on the phone.
-      Not possible from here: the deploy key is `rrsync -wo /var/www`.
+- [x] **Installed on the VPS** (2026-09-21). The operator's first run used a stale checkout
+      (`762f8fa`) with no unlock step. Reading the host showed the guard lives in
+      `snippets/cezar-gate.conf`, not the vhost, so `extract-unlock.sh` now follows the
+      vhost's includes (dry-run against the real config first, then installed with the
+      previous snippet backed up to `/var/backups/`).
+- [x] **Verified on the live gateway** — real key at `/m/` → 302 to `/m/` + `Set-Cookie`;
+      wrong key → shell, no cookie; `/` and `/api/v1/health` without a cookie → 403; the
+      session from `/m/` opens `/api/v1/health`. In WebKit against the live host, pasting the
+      real link lands behind the gate and survives a reload (`evidence/live-unlocked-dark.png`).
+- [ ] **One paste on the physical phone** — the only thing a headless browser cannot stand
+      in for (the installed app's separate cookie jar).
+
+The real key contains none of `/ + = ~ !`, so the re-encoding defect was real but latent
+for it; the guard's placement is what actually blocked the device.
 
 ## Found on the device (2026-09-21)
 
