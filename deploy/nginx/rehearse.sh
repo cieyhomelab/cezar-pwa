@@ -7,7 +7,7 @@
 #   deploy/nginx/rehearse.sh [port]      (default 18480)
 #
 # Exits non-zero on the first expectation that fails. Run it after touching
-# cezar-mobile.conf, install.sh or extract-unlock.sh.
+# cezar-mobile.conf, install.sh, extract-unlock.sh or signout-from-unlock.sh.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -106,7 +106,14 @@ grep -q 'cezar-gate.conf' "$T/snippets/cezar-mobile-unlock.conf" || fail "guard 
 grep -q 'cezar_gate_ok' "$T/snippets/cezar-mobile-unlock.conf" && fail "the cookie check was copied too — /m/ would 403 without a session"
 pass "guard found through the vhost's include, extracted silently, mode 600, cookie check left behind"
 
-ng -t 2>/dev/null || fail "nginx -t fails with the extracted guard"
+printed=$("$here/signout-from-unlock.sh" "$T/snippets/cezar-mobile-unlock.conf" "$T/snippets/cezar-mobile-signout.conf")
+[[ -z "$printed" ]] || fail "signout-from-unlock.sh printed output — it reads the guard and must never echo it"
+grep -qF "$KEY" "$T/snippets/cezar-mobile-signout.conf" && fail "the sign-out file carries the secret"
+grep -q 'cezar_access=;' "$T/snippets/cezar-mobile-signout.conf" || fail "sign-out does not expire the gate's own cookie name"
+grep -q 'Secure' "$T/snippets/cezar-mobile-signout.conf" && fail "sign-out marks Secure a cookie the gate did not"
+pass "sign-out generated from the guard: the gate's cookie name, no secret, attributes kept"
+
+ng -t 2>/dev/null || fail "nginx -t fails with the extracted guard and the sign-out"
 ng
 
 read -r status location cookie _ < <(probe "$base/m/?key=$KEY")
@@ -148,5 +155,31 @@ pushed=$(curl -s -b "$jar" "$base/m/push/vapid-public-key")
 [[ "$pushed" == '{"sidecar":"/m/push/vapid-public-key"}' ]] ||
   fail "with a session, /m/push/ did not reach the sidecar with its full path: $pushed"
 pass "with a session, /m/push/ reaches the sidecar, path intact"
+
+# S-12 sign-out. Only a same-origin POST ends the session.
+read -r status _ cookie _ < <(probe "$base/m/session/end")
+[[ "$status" == 405 && "$cookie" == no ]] || fail "GET /m/session/end → $status cookie=$cookie (want 405, no cookie)"
+pass "GET /m/session/end is refused: a prefetch or a pasted link cannot sign out"
+
+read -r status _ cookie _ < <(probe -X POST "$base/m/session/end")
+[[ "$status" == 403 && "$cookie" == no ]] || fail "POST without Origin → $status cookie=$cookie (want 403)"
+read -r status _ cookie _ < <(probe -X POST -H 'Origin: https://evil.example' "$base/m/session/end")
+[[ "$status" == 403 && "$cookie" == no ]] || fail "cross-site POST → $status cookie=$cookie (want 403)"
+pass "a POST from another origin, or with none, is refused"
+
+read -r status _ cookie csp < <(probe -X POST -H "Origin: $base" "$base/m/session/end")
+[[ "$status" == 204 && "$cookie" == yes && "$csp" == yes ]] ||
+  fail "same-origin POST /m/session/end → $status cookie=$cookie csp=$csp (want 204 with a Set-Cookie and the CSP)"
+pass "a same-origin POST answers 204 with a Set-Cookie, security headers intact"
+
+ended=$(curl -s -o /dev/null -b "$jar" -c "$jar" -X POST -H "Origin: $base" -w '%{http_code}' "$base/m/session/end")
+[[ "$ended" == 204 ]] || fail "signing out with a session → $ended (want 204)"
+gated=$(curl -s -o /dev/null -b "$jar" -w '%{http_code}' "$base/")
+[[ "$gated" == 403 ]] || fail "after signing out the cockpit still opens: $gated (want 403)"
+gated=$(curl -s -o /dev/null -b "$jar" -w '%{http_code}' "$base/m/push/vapid-public-key")
+[[ "$gated" == 403 ]] || fail "after signing out the sidecar still answers: $gated (want 403)"
+shell=$(curl -s -o /dev/null -b "$jar" -w '%{http_code}' "$base/m/")
+[[ "$shell" == 200 ]] || fail "after signing out the shell is gone: $shell (want 200 — it shows Connect to Cezar)"
+pass "after signing out the session is gone: cockpit and sidecar 403, the shell still loads"
 
 echo "all expectations met"

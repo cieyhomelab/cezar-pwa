@@ -5,8 +5,9 @@
 #
 # Safe by construction: the vhost is backed up first, `nginx -t` gates the
 # reload, and a config that fails the test is rolled back before nginx ever
-# sees it. Re-running is a no-op apart from refreshing the snippet and the
-# unlock guard (see extract-unlock.sh) — so re-run it after rotating the key.
+# sees it. Re-running is a no-op apart from refreshing the snippet, the
+# unlock guard (see extract-unlock.sh) and the sign-out derived from it
+# (signout-from-unlock.sh) — so re-run it after rotating the key.
 set -euo pipefail
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -24,6 +25,8 @@ src="$here/cezar-mobile.conf"
 dest="${CEZAR_SNIPPET_DEST:-/etc/nginx/snippets/cezar-mobile.conf}"
 # Must match the `include` glob in cezar-mobile.conf.
 unlock_dest="${CEZAR_UNLOCK_DEST:-/etc/nginx/snippets/cezar-mobile-unlock.conf}"
+# Likewise, for the sign-out endpoint (S-12).
+signout_dest="${CEZAR_SIGNOUT_DEST:-/etc/nginx/snippets/cezar-mobile-signout.conf}"
 
 install_snippet() {
   mkdir -p "$(dirname "$dest")"
@@ -33,10 +36,19 @@ install_snippet() {
 
 # The /m/ copy of the vhost's `?key=` guard. Not fatal when it cannot be
 # found: the shell still serves, it just cannot unlock — which is today's state.
+# The sign-out is derived from it, so it follows: no guard, no sign-out.
 install_unlock() {
   if "$here/extract-unlock.sh" "$vhost" "$unlock_dest"; then
     echo "==> wrote $unlock_dest (the /m/ unlock guard, copied from the vhost, mode 600)"
+    if "$here/signout-from-unlock.sh" "$unlock_dest" "$signout_dest"; then
+      echo "==> wrote $signout_dest (POST /m/session/end expires the session cookie)"
+    else
+      rm -f "$signout_dest"
+      echo "warning: no cookie name in the unlock guard's Set-Cookie; the app's sign-out" >&2
+      echo "         will clear the phone but cannot end the session." >&2
+    fi
   else
+    rm -f "$signout_dest"
     echo "warning: did not find exactly one 'if (\$arg_key = ...)' block with a Set-Cookie" >&2
     echo "         and a redirect in $vhost or the files it includes. /m/ will serve" >&2
     echo "         the shell, but the installed" >&2
@@ -45,10 +57,10 @@ install_unlock() {
   fi
 }
 
-# A broken unlock file must not be what stops the next reload of the gateway.
+# A broken unlock (or sign-out) file must not be what stops the next reload of the gateway.
 drop_unlock() {
-  rm -f "$unlock_dest"
-  echo "==> removed $unlock_dest" >&2
+  rm -f "$unlock_dest" "$signout_dest"
+  echo "==> removed $unlock_dest and $signout_dest" >&2
 }
 
 # Already wired up: just refresh the snippet contents and reload.
