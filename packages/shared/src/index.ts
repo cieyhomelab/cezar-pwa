@@ -1,8 +1,17 @@
 export {
-  ATTENTION_PRIORITY,
+  ATTENTION_RANK,
   deriveAttention,
-  needsAttention,
+  wantsAttention,
+  type Attention,
+  type AttentionBucket,
   type AttentionInput,
-  type AttentionReason,
+  type AttentionTone,
 } from './attention.ts'
+export {
+  canBeUnread,
+  isDoneItem,
+  isReadDoneItem,
+  isUnread,
+  type ReadStateInput,
+} from './read-state.ts'
 export type { RunActivity, RunStatus } from './types.ts'
