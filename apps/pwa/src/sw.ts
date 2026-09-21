@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { createHandlerBoundToURL, precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { NAVIGATE_MESSAGE, notificationFor, pickAppWindow, readPushPayload } from './pwa/push-message.ts'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -36,73 +37,42 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
-/** Payload written by the `cezar-push` sidecar (F-PUSH-4). */
-type PushPayload = {
-  title?: string
-  body?: string
-  projectId?: string
-  runId?: string
-  /** Number of runs needing attention, for the icon badge (F-PUSH-8). */
-  attentionCount?: number
-}
-
-function readPayload(event: PushEvent): PushPayload {
-  if (!event.data) return {}
-  try {
-    // Unknown fields are ignored on purpose — the vocabulary is append-only
-    // (CLAUDE.md rule 5).
-    return event.data.json() as PushPayload
-  } catch {
-    return { body: event.data.text() }
-  }
-}
-
+/**
+ * S-10. The `cezar-push` sidecar sends a structured payload; `push-message.ts` turns it into the
+ * notification — which task, which project, why, and nothing else (FR-038, FR-043).
+ */
 self.addEventListener('push', (event) => {
-  const payload = readPayload(event)
-  const url =
-    payload.projectId && payload.runId
-      ? `/m/run/${payload.projectId}/${payload.runId}`
-      : '/m/'
-
-  event.waitUntil(
-    (async () => {
-      await self.registration.showNotification(payload.title ?? 'Cezar', {
-        body: payload.body,
-        // One notification per run: a newer one replaces the previous
-        // (F-PUSH-7).
-        tag: payload.runId ?? 'cezar',
-        icon: '/m/icons/icon-192.png',
-        badge: '/m/icons/icon-192.png',
-        data: { url },
-      })
-
-      if (typeof payload.attentionCount === 'number' && 'setAppBadge' in self.navigator) {
-        await self.navigator.setAppBadge(payload.attentionCount).catch(() => {})
-      }
-    })(),
-  )
+  let raw: unknown
+  try {
+    raw = event.data?.json()
+  } catch {
+    // Not JSON: shown as a bare "needs attention", never as whatever text arrived.
+    raw = undefined
+  }
+  const { title, options } = notificationFor(readPushPayload(raw))
+  event.waitUntil(self.registration.showNotification(title, options))
 })
 
+/**
+ * FR-041: a tap opens that task's transcript, reusing an open window. The open window is told
+ * where to go rather than navigated, so it routes in place and keeps what it already loaded; with
+ * no window open, the task's URL is opened cold — the navigation route above serves the shell.
+ */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const target = (event.notification.data as { url?: string } | undefined)?.url ?? '/m/'
+  const target = (event.notification.data as { url?: unknown } | undefined)?.url
+  const url = typeof target === 'string' ? target : '/m/'
 
   event.waitUntil(
     (async () => {
-      const clients = await self.clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true,
-      })
-      // Focus an open window and route it, rather than opening a second one
-      // (F-PUSH-6).
-      for (const client of clients) {
-        if (new URL(client.url).pathname.startsWith('/m/')) {
-          await client.focus()
-          if ('navigate' in client) await client.navigate(target).catch(() => {})
-          return
-        }
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const existing = pickAppWindow(windows)
+      if (existing) {
+        const focused = await existing.focus().catch(() => existing)
+        focused.postMessage({ type: NAVIGATE_MESSAGE, url })
+        return
       }
-      await self.clients.openWindow(target)
+      await self.clients.openWindow(url)
     })(),
   )
 })

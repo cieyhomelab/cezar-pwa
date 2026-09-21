@@ -1,10 +1,11 @@
-import { Outlet } from 'react-router'
+import { Link, Outlet } from 'react-router'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { AuthGate } from './features/auth/AuthGate.tsx'
 import { pl } from './i18n/pl.ts'
 import { InstallHint } from './pwa/InstallHint.tsx'
 import { OfflineBanner } from './pwa/OfflineBanner.tsx'
 import { UpdatePrompt } from './pwa/UpdatePrompt.tsx'
+import { useNotificationNavigation } from './pwa/useNotificationNavigation.ts'
 import { useOnlineStatus } from './pwa/useOnlineStatus.ts'
 import { useStandalone } from './pwa/useStandalone.ts'
 
@@ -24,6 +25,8 @@ export default function App() {
   } = useRegisterSW()
   const online = useOnlineStatus()
   const standalone = useStandalone()
+  // S-10: a notification tapped while the app is open routes this window (FR-041).
+  useNotificationNavigation()
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-text">
@@ -51,12 +54,16 @@ export default function App() {
         </AuthGate>
       </main>
 
-      <footer className="border-t border-border px-4 py-3">
+      <footer className="flex flex-wrap items-center justify-between gap-x-4 border-t border-border px-4 py-3">
         {/* Same-origin link to the full cockpit — the PWA is deliberately a
             subset of it (REQUIREMENTS §1). */}
         <a className="touch-target inline-flex items-center text-sm text-accent" href="/">
           {pl.shell.openCockpit}
         </a>
+        {/* S-10: notifications are turned on in Settings (FR-036). */}
+        <Link className="touch-target inline-flex items-center text-sm text-accent" to="/settings">
+          {pl.settings.open}
+        </Link>
       </footer>
     </div>
   )

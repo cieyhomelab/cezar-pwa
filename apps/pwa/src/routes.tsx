@@ -3,13 +3,14 @@ import App from './App.tsx'
 import { DiffScreen } from './features/diff/DiffScreen.tsx'
 import { RunScreen } from './features/run/RunScreen.tsx'
 import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
+import { SettingsScreen } from './features/settings/SettingsScreen.tsx'
 
 /**
  * Every screen, relative to the router's `/m/` basename. `App` is the layout: its chrome and the
  * session gate wrap whichever screen matches.
  *
- * The task path is the one S-10's notifications will open (`/m/p/:projectId/runs/:runId`, see
- * `runPath`). Anything else lands on the list rather than on a 404.
+ * The task path is the one S-10's notifications open (`/m/p/:projectId/runs/:runId`, see `runPath`
+ * and `pwa/push-message.ts`). Anything else lands on the list rather than on a 404.
  */
 export function AppRoutes() {
   return (
@@ -18,6 +19,7 @@ export function AppRoutes() {
         <Route index element={<RunsListScreen />} />
         <Route path="p/:projectId/runs/:runId" element={<RunScreen />} />
         <Route path="p/:projectId/runs/:runId/diff" element={<DiffScreen />} />
+        <Route path="settings" element={<SettingsScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
