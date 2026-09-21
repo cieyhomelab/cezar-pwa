@@ -3,7 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FakeEventSource } from '../../../test/fake-event-source.ts'
 import fixture from '../../../test/fixtures/runs-index.json'
-import { jsonResponse, renderWithQuery, routeFetch } from '../../../test/query.tsx'
+import { jsonResponse, refusalResponse, renderWithQuery, routeFetch } from '../../../test/query.tsx'
 import { pl } from '../../i18n/pl.ts'
 import { RunsListScreen } from './RunsListScreen.tsx'
 
@@ -16,10 +16,15 @@ const runFrame = (over: Record<string, unknown>) => {
   return { ...rest, task: 'the prompt', steps: [], ...over, project: projectId }
 }
 
-function renderLive(runsIndex: () => Response = () => jsonResponse(index)) {
+const healthy = () =>
+  jsonResponse({ version: '0.11.0', projects: [{ id: 'cezar-pwa', name: 'Cezar PWA' }] })
+
+function renderLive(
+  runsIndex: () => Response = () => jsonResponse(index),
+  health: () => Response | Promise<Response> = healthy,
+) {
   const fetchMock = routeFetch({
-    '/api/v1/health': () =>
-      jsonResponse({ version: '0.11.0', projects: [{ id: 'cezar-pwa', name: 'Cezar PWA' }] }),
+    '/api/v1/health': health,
     '/api/v1/workspace/runs-index': runsIndex,
   })
   const calls = (path: string) =>
@@ -120,6 +125,39 @@ describe('connection health (FR-012)', () => {
     expect(liveStatus()).toHaveTextContent(pl.runs.live.reconnecting)
     expect(liveStatus()).toHaveTextContent(/lista z \d/)
     await waitFor(() => expect(calls('/api/v1/health')).toBe(probes + 1))
+  })
+
+  it('hands a refusal found on a drop to the gate', async () => {
+    let refused = false
+    const { calls } = renderLive(undefined, () => (refused ? refusalResponse() : healthy()))
+    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await goLive(calls)
+    const probes = calls('/api/v1/health')
+
+    refused = true
+    act(() => FakeEventSource.latest.fail())
+    // The probe, then the session query's own re-ask once the probe said "refused" — which is
+    // what hands the screen to AuthGate (rendered around this screen in the app, and in E2E).
+    await waitFor(() => expect(calls('/api/v1/health')).toBe(probes + 2))
+  })
+
+  it('keeps the list when the probe after a drop cannot reach Cezar', async () => {
+    let down = false
+    const { calls } = renderLive(undefined, () => {
+      if (down) throw new TypeError('Failed to fetch')
+      return healthy()
+    })
+    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await goLive(calls)
+    const probes = calls('/api/v1/health')
+
+    down = true
+    act(() => FakeEventSource.latest.fail())
+    await waitFor(() => expect(calls('/api/v1/health')).toBe(probes + 1))
+    // A network blip is not a lapsed session: the rows stay, marked as not live.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(screen.getByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeInTheDocument()
+    expect(liveStatus()).toHaveAttribute('data-live-state', 'reconnecting')
   })
 
   it('says lost at once when the phone goes offline', async () => {

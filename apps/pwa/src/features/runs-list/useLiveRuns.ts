@@ -1,7 +1,8 @@
 import type { RunsIndexResponse } from '@cezar-pwa/cezar-contract/contract'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { HEALTH_QUERY_KEY } from '../../api/health.ts'
+import { HEALTH_QUERY_KEY, fetchHealth } from '../../api/health.ts'
+import { AuthRequiredError } from '../../api/http.ts'
 import { RUNS_INDEX_QUERY_KEY } from '../../api/runs-index.ts'
 import { type LiveState, WorkspaceStream, workspaceJournal } from '../../api/workspace-events.ts'
 import { applyWorkspaceFrame, type WorkspaceFrame } from '../../domain/live-index.ts'
@@ -57,9 +58,16 @@ export function useLiveRuns(): LiveRuns {
       onFrame,
       // No replay on this stream, so every (re)open fills the gap with a fetch.
       onOpen: () => void queryClient.invalidateQueries({ queryKey: RUNS_INDEX_QUERY_KEY }),
-      // A lapsed session looks like any other drop from here; the probe tells them apart and
-      // hands the screen to AuthGate when it is that.
-      onDrop: () => void queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY }),
+      // A lapsed session looks like any other drop from here, so ask the probe — but hand its
+      // answer to the session query only when it is a refusal. Invalidating on every drop would
+      // let a network blip fail the session query and swap the whole list for "unreachable",
+      // where a failed refresh keeps the rows under a dated warning instead.
+      onDrop: () =>
+        void fetchHealth().catch((error: unknown) => {
+          if (error instanceof AuthRequiredError) {
+            void queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY })
+          }
+        }),
       onState: (state) => {
         // Taken now, not inside the updater: React runs that at render, which can be after the
         // gap-filling fetch has already landed — and a fetch older than `liveSince` never

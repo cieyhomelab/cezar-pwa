@@ -83,11 +83,12 @@ FR-010, FR-012, the 2-second NF, and Cezar's server at `v0.11.0`.
 
 ## Progress
 
-- [x] **Unit + component tests** — 269 passing (`npm test`), 46 of them new: the frame merge
+- [x] **Unit + component tests** — 271 passing (`npm test`), 48 of them new: the frame merge
       table (upsert, insert, delete, unchanged-returns-same-object, unknown and malformed
       frames), the stream's state machine under fake timers (backoff, watchdog, lost, offline,
       stop/start), the replay journal, and the screen going live, reconnecting, lost, hidden
-      and back, and refusing to say "live" before the gap-filling fetch lands.
+      and back, refusing to say "live" before the gap-filling fetch lands, and a drop's session
+      probe that hands on a refusal but not a network error.
 - [x] **Contract tests** — the live stream capture and a live run record, stamped as the
       server stamps it, validate against the vendored schemas; the projected row passes
       `runIndexEntrySchema.strict()`.
@@ -114,5 +115,9 @@ FR-010, FR-012, the 2-second NF, and Cezar's server at `v0.11.0`.
       the stream reached the real gateway through the preview proxy, was refused, and its
       drop re-probed the session, which could reach "Połącz z Cezarem" before the test clicked
       Odśwież. The app was right; the test now holds the stream silent.
+- **Re-probing the session on every drop could blank the list.** Invalidating the health query
+      on a drop let a network blip fail it, and `AuthGate` then swaps the whole list for
+      "unreachable" — the opposite of S-03's failed-refresh behaviour. Found in self-review;
+      the drop now probes directly and hands the answer on only when it is a refusal.
 - **Playwright's WebKit anchors scroll natively**; iOS Safari's support is not something to
       rely on, so the hook stays and the E2E tests both ways.
