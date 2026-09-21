@@ -49,6 +49,14 @@ describe('notificationFor', () => {
     expect(other.options.tag).not.toBe(first.options.tag)
   })
 
+  it('rings the replacement: a new transition of the same task is news (FR-039)', () => {
+    const spec = notificationFor({ kind: 'attention', projectId: 'p', runId: 'r1', reason: 'failed' })
+    expect(spec.options.renotify).toBe(true)
+    // `renotify` without a tag is a TypeError in the browser, and the worker would show nothing.
+    expect(spec.options.tag).toBeTruthy()
+    expect(notificationFor({ kind: 'attention' }).options.tag).toBeTruthy()
+  })
+
   it('degrades to the app and a generic reason when the payload names nothing', () => {
     const { title, options } = notificationFor({ kind: 'attention' })
     expect(title).toBe('Cezar')

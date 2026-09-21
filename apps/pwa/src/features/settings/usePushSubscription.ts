@@ -118,6 +118,8 @@ export function usePushSubscription(): PushSettings {
       let current = await registration.pushManager.getSubscription()
       if (current && !sameKey(current.options?.applicationServerKey, key)) {
         await current.unsubscribe()
+        // S-11: that endpoint is dead now; the sidecar should not keep it until a push bounces.
+        await deleteSubscription(current.endpoint).catch(() => {})
         current = null
       }
       const next = current ?? (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }))

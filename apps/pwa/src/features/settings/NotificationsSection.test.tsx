@@ -22,7 +22,7 @@ const json = (body: unknown, status = 200) =>
 function fakeSubscription() {
   return {
     endpoint: ENDPOINT,
-    options: { applicationServerKey: null },
+    options: { applicationServerKey: null as ArrayBuffer | null },
     toJSON: () => ({ endpoint: ENDPOINT, expirationTime: null, keys: { p256dh: 'p', auth: 'a' } }),
     unsubscribe: vi.fn(async () => true),
   }
@@ -139,6 +139,24 @@ describe('Settings → Powiadomienia', () => {
       path: '/m/push/subscription',
       body: { endpoint: ENDPOINT, expirationTime: null, keys: { p256dh: 'p', auth: 'a' } },
     })
+  })
+
+  it('a subscription made with an old key is dropped on the sidecar too, not left to bounce (S-11)', async () => {
+    install()
+    render()
+    const enable = await screen.findByRole('button', { name: 'Włącz powiadomienia' })
+    await waitFor(() => expect(calls.map((c) => c.path)).toContain('/m/push/vapid-public-key'))
+    const stale = { ...fakeSubscription(), endpoint: `${ENDPOINT}-old`, options: { applicationServerKey: new Uint8Array([1, 2, 3]).buffer } }
+    existing = stale
+    permission = 'granted'
+    fireEvent.click(enable)
+
+    await screen.findByText('Powiadomienia są włączone na tym urządzeniu.')
+    expect(stale.unsubscribe).toHaveBeenCalledOnce()
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([
+      { method: 'DELETE', path: '/m/push/subscription', body: { endpoint: `${ENDPOINT}-old` } },
+      { method: 'POST', path: '/m/push/subscription', body: { endpoint: ENDPOINT, expirationTime: null, keys: { p256dh: 'p', auth: 'a' } } },
+    ])
   })
 
   it('a dismissed prompt subscribes nothing and says why', async () => {

@@ -43,12 +43,15 @@ export function targetUrl(payload: PushPayload): string {
 
 export type NotificationSpec = {
   title: string
-  options: NotificationOptions & { data: { url: string } }
+  // `renotify` is in the Notifications spec but not in TypeScript's DOM lib.
+  options: NotificationOptions & { data: { url: string }; renotify?: boolean }
 }
 
 /**
  * Which task, which project, and why (FR-038) — nothing else (FR-043). The tag is per task, so a
- * newer notification about the same task replaces the one before it instead of stacking.
+ * newer notification about the same task replaces the one before it instead of stacking (FR-039).
+ * `renotify` makes that replacement ring: the sidecar only sends a new transition, and a task that
+ * went from "needs you" to "failed" is news, not a silent edit of a notification already seen.
  */
 export function notificationFor(payload: PushPayload): NotificationSpec {
   const icon = `${BASE}/icons/icon-192.png`
@@ -67,6 +70,7 @@ export function notificationFor(payload: PushPayload): NotificationSpec {
     options: {
       body: project ? `${project} · ${reason}` : reason,
       tag: payload.runId ? `cezar-run-${payload.projectId ?? ''}/${payload.runId}` : 'cezar',
+      renotify: true,
       icon,
       data: { url: targetUrl(payload) },
     },

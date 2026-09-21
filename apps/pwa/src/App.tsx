@@ -8,6 +8,7 @@ import { UpdatePrompt } from './pwa/UpdatePrompt.tsx'
 import { useNotificationNavigation } from './pwa/useNotificationNavigation.ts'
 import { useOnlineStatus } from './pwa/useOnlineStatus.ts'
 import { useStandalone } from './pwa/useStandalone.ts'
+import { useSubscriptionSync } from './pwa/useSubscriptionSync.ts'
 
 /**
  * App chrome, the safe-area layout and the three installation-slice
@@ -27,6 +28,8 @@ export default function App() {
   const standalone = useStandalone()
   // S-10: a notification tapped while the app is open routes this window (FR-041).
   useNotificationNavigation()
+  // S-11: the sidecar keeps knowing this device, even after the push service replaced it.
+  useSubscriptionSync(standalone)
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-text">

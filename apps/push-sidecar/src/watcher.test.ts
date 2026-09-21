@@ -241,3 +241,118 @@ describe('Watcher.run', () => {
     expect(watcher.state).toBe('stopped')
   })
 })
+
+/**
+ * S-11 (FR-039): the bookkeeping holds across what actually happens to the sidecar — the stream
+ * dropping and the service restarting. A fake Cezar whose truth moves on, and whose stream can be
+ * cut and re-sends the current record on reconnect, the way a running task re-sends its record.
+ */
+describe('one ring per transition, across a drop and a restart', () => {
+  function fakeCezar() {
+    const cezar = {
+      status: 'running',
+      streams: [] as ReadableStreamDefaultController<Uint8Array>[],
+      send(status: string) {
+        cezar.status = status
+        cezar.streams.at(-1)?.enqueue(new TextEncoder().encode(`event: run\ndata: ${runFrame({ status }).data}\n\n`))
+      },
+      drop() {
+        cezar.streams.at(-1)?.close()
+      },
+    }
+    const fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const path = new URL(String(url)).pathname
+      if (path === '/api/v1/workspace/events') {
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              cezar.streams.push(controller)
+              init?.signal?.addEventListener('abort', () => controller.error(init.signal?.reason))
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' } },
+        )
+      }
+      if (path === '/api/v1/workspace/runs-index') {
+        return Response.json(index([{ projectId: 'cezar-pwa', id: 'r1', status: cezar.status }]))
+      }
+      return Response.json(health)
+    }) as unknown as typeof globalThis.fetch
+    return { cezar, fetch }
+  }
+
+  /** A running watcher, and a way to wait until its latest connection has a baseline. */
+  function start(fetch: typeof globalThis.fetch, notify: (payload: PushPayload) => void) {
+    const watcher = new Watcher({ cezarUrl: CEZAR, notify, fetch, log: () => {}, backoffMs: [1] })
+    const running = watcher.run()
+    let seen = watcher.seededAt
+    const reseeded = async () => {
+      await vi.waitFor(() => expect(watcher.seededAt).not.toBe(seen))
+      seen = watcher.seededAt
+    }
+    return { watcher, running, reseeded }
+  }
+
+  it('does not ring again for a transition it already rang for when the stream comes back', async () => {
+    const { cezar, fetch } = fakeCezar()
+    const notify = vi.fn<(payload: PushPayload) => void>()
+    const { watcher, running, reseeded } = start(fetch, notify)
+    await reseeded()
+
+    cezar.send('waiting')
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledOnce())
+
+    cezar.drop()
+    await reseeded()
+    // Cezar's record, re-sent after the reconnect: the same transition, so no second ring.
+    cezar.send('waiting')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(notify).toHaveBeenCalledOnce()
+
+    // The operator answers, the agent asks again: that is a new transition, and it rings.
+    cezar.send('running')
+    cezar.send('waiting')
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledTimes(2))
+
+    watcher.stop()
+    await running
+  })
+
+  it('rings nothing after a restart for work that was already waiting, then the next transition once', async () => {
+    const { cezar, fetch } = fakeCezar()
+    const first = vi.fn<(payload: PushPayload) => void>()
+    const before = start(fetch, first)
+    await before.reseeded()
+    cezar.send('waiting')
+    await vi.waitFor(() => expect(first).toHaveBeenCalledOnce())
+    before.watcher.stop()
+    await before.running
+
+    // `systemctl --user restart cezar-push`: nothing is remembered, everything is first sight.
+    const second = vi.fn<(payload: PushPayload) => void>()
+    const after = start(fetch, second)
+    await after.reseeded()
+    cezar.send('waiting')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(second).not.toHaveBeenCalled()
+
+    cezar.send('failed')
+    await vi.waitFor(() => expect(second).toHaveBeenCalledOnce())
+    expect(second.mock.calls[0]?.[0].reason).toBe('failed')
+
+    after.watcher.stop()
+    await after.running
+  })
+
+  it('does not retry a push that failed, so a slow push service cannot cause a second ring', async () => {
+    const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'running' }])
+    notify.mockImplementation(() => {
+      throw new Error('push service down')
+    })
+    expect(() => watcher.handleFrame(runFrame({ status: 'waiting' }))).not.toThrow()
+    watcher.handleFrame(runFrame({ status: 'waiting' }))
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledOnce())
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(notify).toHaveBeenCalledOnce()
+  })
+})
