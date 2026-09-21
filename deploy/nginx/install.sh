@@ -38,7 +38,8 @@ install_unlock() {
     echo "==> wrote $unlock_dest (the /m/ unlock guard, copied from the vhost, mode 600)"
   else
     echo "warning: did not find exactly one 'if (\$arg_key = ...)' block with a Set-Cookie" >&2
-    echo "         and a redirect in $vhost. /m/ will serve the shell, but the installed" >&2
+    echo "         and a redirect in $vhost or the files it includes. /m/ will serve" >&2
+    echo "         the shell, but the installed" >&2
     echo "         app cannot unlock itself. Copy that block into $unlock_dest by hand" >&2
     echo "         (mode 600) and re-run." >&2
   fi
