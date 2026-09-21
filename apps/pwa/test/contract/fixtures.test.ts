@@ -1,6 +1,17 @@
-import { healthResponseSchema, runsIndexResponseSchema } from '@cezar-pwa/cezar-contract/contract'
+import {
+  apiRunSchema,
+  healthResponseSchema,
+  runEventSchema,
+  runHistoryContextSchema,
+  runHistoryPageSchema,
+  runsIndexResponseSchema,
+} from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
 import liveHealth from '../fixtures/health.live-0.11.0.json'
+import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
+import liveHistory from '../fixtures/history.live-0.11.0.json'
+import liveRun from '../fixtures/run.live-0.11.0.json'
+import recording from '../fixtures/transcript.ndjson?raw'
 import liveRunsIndex from '../fixtures/runs-index.live-0.11.0.json'
 import runsIndex from '../fixtures/runs-index.json'
 
@@ -26,8 +37,21 @@ describe('contract fixtures', () => {
     ['live health', healthResponseSchema, liveHealth],
     ['live runs-index', runsIndexResponseSchema, liveRunsIndex],
     ['hand-written runs-index', runsIndexResponseSchema, runsIndex],
+    ['live run', apiRunSchema, liveRun],
+    ['live history page', runHistoryPageSchema, liveHistory],
+    ['live history context', runHistoryContextSchema, liveHistoryContext],
   ] as const)('%s matches the vendored schema', (_name, schema, fixture) => {
     const result = schema.safeParse(fixture)
     expect(result.error?.issues ?? []).toEqual([])
+  })
+
+  // The transcript recording is lines, not a response: each one must carry the envelope the
+  // server writes (`runEventSchema` is open by design, so unknown types and fields pass).
+  it('every line of the hand-written transcript recording is a valid run event', () => {
+    const lines = recording.split('\n').filter((line) => line.trim() !== '')
+    for (const line of lines) {
+      const result = runEventSchema.safeParse(JSON.parse(line))
+      expect(result.error?.issues ?? [], line).toEqual([])
+    }
   })
 })
