@@ -5,6 +5,7 @@ import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
 import { ApiError, AuthRequiredError } from '../../api/http.ts'
 import { historyContextQueryOptions, historyQueryOptions, runQueryOptions } from '../../api/run.ts'
 import { composerOpen, openAsk } from '../../domain/answer.ts'
+import { cockpitTaskPath } from '../../domain/cockpit-link.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
@@ -30,7 +31,11 @@ export function RunScreen() {
   return <RunScreenFor key={`${projectId}\0${runId}`} projectId={projectId} runId={runId} />
 }
 
-function BackBar({ children }: { children?: ReactNode }) {
+/**
+ * Back to the list, and across to the same task in the full cockpit (S-12, FR-048). A plain link,
+ * not a router one: the cockpit is the site at `/`, outside this app.
+ */
+function BackBar({ projectId, runId, children }: { projectId: string; runId: string; children?: ReactNode }) {
   return (
     <div className="sticky top-0 z-20 border-b border-border bg-surface">
       <div className="flex items-center justify-between gap-3 px-2">
@@ -38,6 +43,14 @@ function BackBar({ children }: { children?: ReactNode }) {
           <span aria-hidden="true">‹&nbsp;</span>
           {pl.run.back}
         </Link>
+        <a
+          href={cockpitTaskPath(projectId, runId)}
+          aria-label={pl.shell.openTaskInCockpitLabel}
+          className="touch-target inline-flex items-center px-2 text-sm text-accent"
+        >
+          {pl.shell.openTaskInCockpit}
+          <span aria-hidden="true">&nbsp;↗</span>
+        </a>
       </div>
       {children}
     </div>
@@ -108,7 +121,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
       const notFound = run.error instanceof ApiError && run.error.status === 404
       return (
         <div className="flex flex-1 flex-col">
-          <BackBar />
+          <BackBar projectId={projectId} runId={runId} />
           <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
             <p>{notFound ? pl.run.notFound : pl.run.loadFailed}</p>
             {!notFound && run.error instanceof ApiError ? (
@@ -130,7 +143,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
     }
     return (
       <div className="flex flex-1 flex-col">
-        <BackBar />
+        <BackBar projectId={projectId} runId={runId} />
         <p role="status" className="flex flex-1 items-center justify-center px-6 text-text-muted">
           {pl.run.loading}
         </p>
@@ -159,7 +172,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
 
   return (
     <div className="flex flex-1 flex-col">
-      <BackBar>
+      <BackBar projectId={projectId} runId={runId}>
         <PlanPanel entries={plan} />
       </BackBar>
 
@@ -193,6 +206,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             transcript={transcript}
             task={run.data.task ?? ''}
             hasOlder={history.data.hasOlder}
+            olderHref={cockpitTaskPath(projectId, runId)}
             footer={transcriptFooter(run.data.status, run.data.error)}
             answering={{ delivery, ...(ask !== undefined ? { openAskId: ask.id } : {}) }}
           />

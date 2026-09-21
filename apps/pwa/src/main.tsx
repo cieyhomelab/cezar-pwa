@@ -3,7 +3,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import './index.css'
+import { applyTheme, readThemePreference } from './pwa/theme.ts'
 import { AppRoutes } from './routes.tsx'
+
+// S-12: a forced theme is in place before the first render, so the system's does not flash first.
+applyTheme(readThemePreference())
 
 // Server state lives here and nowhere else; SSE will update it through
 // queryClient.setQueryData (CLAUDE.md → "Konwencje kodu").
