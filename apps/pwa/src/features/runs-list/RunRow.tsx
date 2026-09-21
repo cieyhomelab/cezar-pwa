@@ -1,5 +1,7 @@
 import type { RunIndexEntry } from '@cezar-pwa/cezar-contract/contract'
 import { deriveAttention, isReadDoneItem, isUnread } from '@cezar-pwa/shared'
+import { Link } from 'react-router'
+import { runPath } from '../../domain/run-header.ts'
 import { pl } from '../../i18n/pl.ts'
 import {
   formatCost,
@@ -29,11 +31,8 @@ function timingText(timing: RunTiming): string {
 
 /**
  * One task, readable without opening it (FR-009): status, title, project, timing, cost,
- * unread marker and PR/issue number.
- *
- * Not a link yet — the task screen is S-05, and a row that navigates nowhere is worse than
- * one that plainly does not navigate. The reference is text for the same reason: a nested
- * link inside what will become a tappable row would fight it for the tap.
+ * unread marker and PR/issue number. The whole row is the link to the task (S-05). The
+ * reference stays text: a nested link inside a tappable row would fight it for the tap.
  */
 export function RunRow({
   run,
@@ -60,29 +59,31 @@ export function RunRow({
     <li
       data-run-id={run.id}
       data-run-key={`${run.projectId}/${run.id}`}
-      className={`border-b border-border px-4 py-3 ${isReadDoneItem(run) ? 'opacity-70' : ''}`}
+      className={`border-b border-border ${isReadDoneItem(run) ? 'opacity-70' : ''}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <StatusBadge attention={attention} status={run.status} />
-        {reference ? (
-          <span className="shrink-0 rounded border border-border px-1.5 text-xs text-text-muted">
-            {pl.runs.reference[reference.kind](reference.number)}
-          </span>
-        ) : null}
-      </div>
-      <p className={`mt-1 line-clamp-2 break-words ${unread ? 'font-semibold' : ''}`}>
-        {displayTitle}
-        {unread ? (
-          <>
-            {' '}
-            <span aria-hidden="true" className="text-violet">
-              ●
+      <Link to={runPath(run.projectId, run.id)} className="block px-4 py-3 active:bg-surface-raised">
+        <div className="flex items-center justify-between gap-3">
+          <StatusBadge attention={attention} status={run.status} />
+          {reference ? (
+            <span className="shrink-0 rounded border border-border px-1.5 text-xs text-text-muted">
+              {pl.runs.reference[reference.kind](reference.number)}
             </span>
-            <span className="sr-only">({pl.runs.unread})</span>
-          </>
-        ) : null}
-      </p>
-      <p className="mt-0.5 text-sm text-text-muted">{meta.join(' · ')}</p>
+          ) : null}
+        </div>
+        <p className={`mt-1 line-clamp-2 break-words ${unread ? 'font-semibold' : ''}`}>
+          {displayTitle}
+          {unread ? (
+            <>
+              {' '}
+              <span aria-hidden="true" className="text-violet">
+                ●
+              </span>
+              <span className="sr-only">({pl.runs.unread})</span>
+            </>
+          ) : null}
+        </p>
+        <p className="mt-0.5 text-sm text-text-muted">{meta.join(' · ')}</p>
+      </Link>
     </li>
   )
 }

@@ -1,0 +1,105 @@
+{
+  "contextEvents": [
+    {
+      "type": "turn.started",
+      "turnId": "turn_1",
+      "stepId": "task",
+      "seq": 6,
+      "ts": "2026-09-20T19:32:01.623Z"
+    },
+    {
+      "type": "turn.completed",
+      "turnId": "turn_1",
+      "stopReason": "end_turn",
+      "usage": {
+        "input": 14,
+        "output": 3013,
+        "total": 312500,
+        "cacheRead": 275145,
+        "cacheWrite": 34328
+      },
+      "costUsd": 0.5562475,
+      "stepId": "task",
+      "seq": 34,
+      "ts": "2026-09-20T19:32:43.284Z"
+    },
+    {
+      "type": "user-message",
+      "stepId": "task",
+      "text": "there was .ai folder not commited",
+      "imageCount": 0,
+      "images": [],
+      "seq": 39,
+      "ts": "2026-09-20T19:33:26.017Z"
+    },
+    {
+      "type": "turn.started",
+      "turnId": "turn_2",
+      "stepId": "task",
+      "seq": 40,
+      "ts": "2026-09-20T19:33:26.018Z"
+    },
+    {
+      "type": "turn.completed",
+      "turnId": "turn_2",
+      "stopReason": "end_turn",
+      "usage": {
+        "input": 22,
+        "output": 5316,
+        "total": 559916,
+        "cacheRead": 546996,
+        "cacheWrite": 7582
+      },
+      "costUsd": 1.0385755,
+      "stepId": "task",
+      "seq": 88,
+      "ts": "2026-09-20T19:34:37.791Z"
+    },
+    {
+      "type": "session.ended",
+      "reason": "end_turn",
+      "stepId": "task",
+      "seq": 95,
+      "ts": "2026-09-20T19:34:38.126Z"
+    },
+    {
+      "type": "user-message",
+      "stepId": "continue-1",
+      "text": "push and PR after CI finishe merge PR and pull origin main then remove local branch",
+      "imageCount": 0,
+      "seq": 99,
+      "ts": "2026-09-20T19:36:37.761Z"
+    },
+    {
+      "type": "turn.started",
+      "turnId": "turn_1",
+      "stepId": "continue-1",
+      "seq": 101,
+      "ts": "2026-09-20T19:36:39.154Z"
+    },
+    {
+      "type": "turn.completed",
+      "turnId": "turn_1",
+      "stopReason": "end_turn",
+      "usage": {
+        "input": 16,
+        "output": 5447,
+        "total": 503780,
+        "cacheRead": 486572,
+        "cacheWrite": 11745
+      },
+      "costUsd": 1.5355665,
+      "stepId": "continue-1",
+      "seq": 139,
+      "ts": "2026-09-20T19:37:59.364Z"
+    },
+    {
+      "type": "session.ended",
+      "reason": "end_turn",
+      "stepId": "continue-1",
+      "seq": 146,
+      "ts": "2026-09-20T19:37:59.664Z"
+    }
+  ],
+  "asOfSeq": 148
+}
