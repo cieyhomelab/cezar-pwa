@@ -1,5 +1,7 @@
 import type {
   ApiRun,
+  ContinueResponse,
+  MessageResponse,
   RunEvent,
   RunHistoryContext,
   RunHistoryPage,
@@ -127,6 +129,48 @@ export function historyContextQueryOptions(projectId: string, runId: string) {
 /** `POST …/read` (FR-020). Bodyless. It answers with the whole record. */
 export async function markRunRead(projectId: string, runId: string): Promise<ApiRun> {
   return apiFetch<ApiRun>(`${runBase(projectId, runId)}/read`, { method: 'POST' })
+}
+
+/**
+ * `POST …/messages` (S-07): text into the run's session. The server answers `delivered` (a live
+ * session took it), `queued` (folded into a queued run's prompt) or `deferred` (buffered while
+ * the session starts). A closed session is `409 session closed`.
+ *
+ * The timeout is longer than a read's: the server checks the provider before delivering, and a
+ * timed-out write may still have landed, which the operator is told rather than a retry being
+ * made for them.
+ */
+export async function sendRunMessage(projectId: string, runId: string, text: string): Promise<MessageResponse> {
+  return apiFetch<MessageResponse>(`${runBase(projectId, runId)}/messages`, {
+    method: 'POST',
+    body: { text },
+    timeoutMs: WRITE_TIMEOUT_MS,
+  })
+}
+
+/**
+ * `POST …/continue` with the text as the opening prompt (S-07): the route an answer takes once
+ * the session that asked has closed. No runner or model rides along, so the server reopens the
+ * run on its own engine, as the cockpit's ask card does.
+ */
+export async function continueRunWith(projectId: string, runId: string, text: string): Promise<ContinueResponse> {
+  return apiFetch<ContinueResponse>(`${runBase(projectId, runId)}/continue`, {
+    method: 'POST',
+    body: { text },
+    timeoutMs: WRITE_TIMEOUT_MS,
+  })
+}
+
+export const WRITE_TIMEOUT_MS = 20_000
+
+/** After a write, every read of this run and the list are out of date. */
+export function invalidateRun(queryClient: QueryClient, projectId: string, runId: string): Promise<unknown> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: runQueryKey(projectId, runId) }),
+    // Prefix match: the page and its context.
+    queryClient.invalidateQueries({ queryKey: historyQueryKey(projectId, runId) }),
+    queryClient.invalidateQueries({ queryKey: RUNS_INDEX_QUERY_KEY }),
+  ])
 }
 
 /**

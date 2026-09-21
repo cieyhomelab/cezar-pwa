@@ -4,14 +4,17 @@ import { Link, useParams } from 'react-router'
 import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
 import { ApiError, AuthRequiredError } from '../../api/http.ts'
 import { historyContextQueryOptions, historyQueryOptions, runQueryOptions } from '../../api/run.ts'
+import { composerOpen, openAsk } from '../../domain/answer.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
 import { pl } from '../../i18n/pl.ts'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
+import { Composer } from './Composer.tsx'
 import { PlanPanel } from './PlanPanel.tsx'
 import { RunHeader } from './RunHeader.tsx'
 import { TranscriptView } from './TranscriptView.tsx'
+import { useDeliver } from './useDeliver.ts'
 import { useMarkRead } from './useMarkRead.ts'
 
 /** The route: `/m/p/:projectId/runs/:runId`, the same shape S-10's notifications will open. */
@@ -37,7 +40,8 @@ function BackBar({ children }: { children?: ReactNode }) {
 
 /**
  * S-05: one task's header, its plan and the newest stretch of its transcript (US-01, FR-014,
- * FR-015, FR-017, FR-018, FR-020). Rendered behind `AuthGate`.
+ * FR-015, FR-017, FR-018, FR-020). S-07: the agent's open question is answerable in place and
+ * a docked composer messages the task (FR-022, FR-023, FR-032). Rendered behind `AuthGate`.
  *
  * Three reads, one screen. The record is authoritative for the header. The newest history page
  * is the transcript body. The history context adds the latest plan snapshot when it is older
@@ -53,6 +57,8 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   const now = useNow()
 
   useMarkRead(projectId, runId, run.data)
+  // S-07: one delivery for the question card and the composer alike.
+  const delivery = useDeliver(projectId, runId, run.data)
 
   // A refusal means the session lapsed since the probe. Re-asking it hands the screen to
   // `AuthGate`, exactly as the list does.
@@ -66,6 +72,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
     () => reduceTranscript(history.data?.events ?? [], { activeTurn: status === 'running' }),
     [history.data, status],
   )
+  const ask = useMemo(() => openAsk(transcript), [transcript])
   const plan = useMemo(
     () => latestPlan(reduceTranscript(mergeBySeq(context.data?.contextEvents ?? [], history.data?.events ?? []))),
     [context.data, history.data],
@@ -168,6 +175,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             task={run.data.task ?? ''}
             hasOlder={history.data.hasOlder}
             footer={transcriptFooter(run.data.status, run.data.error)}
+            answering={{ delivery, ...(ask !== undefined ? { openAskId: ask.id } : {}) }}
           />
         ) : history.isError && !(history.error instanceof AuthRequiredError) ? (
           <section className="flex flex-col items-center gap-3 px-6 py-10 text-center">
@@ -190,6 +198,15 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
           </p>
         )}
       </div>
+
+      {history.data !== undefined && composerOpen(run.data, ask) ? (
+        <Composer
+          status={run.data.status}
+          delivery={delivery}
+          {...(ask !== undefined ? { openAskId: ask.id } : {})}
+          queuedMessages={run.data.queuedMessages ?? []}
+        />
+      ) : null}
     </div>
   )
 }
