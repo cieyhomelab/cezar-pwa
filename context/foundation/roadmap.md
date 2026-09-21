@@ -359,7 +359,7 @@ do NOT re-scaffold them.
   prompt, and a 409 from a stale record turns into a resume rather than a lost answer. Every
   send shows it is in flight. On failure the draft stays and Cezar's own reason is shown.
   A timed-out write is reported, never resent, because it may have landed. Plain Continue on
-  a finished task stays with S-08. Verified with 429 unit and 41 E2E tests (WebKit), in both
+  a finished task stays with S-08. Verified with 430 unit and 41 E2E tests (WebKit), in both
   themes at 390×844. Nothing was posted to the live instance: no live run held a question,
   and a send would reach a real agent. Answering a real question from the installed app is
   the last check.

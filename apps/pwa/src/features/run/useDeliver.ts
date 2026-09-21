@@ -86,7 +86,13 @@ export function useDeliver(projectId: string, runId: string, run: DeliveryRun | 
           } catch (sendError) {
             if (!(sendError instanceof ApiError && sendError.status === 409)) throw sendError
             if (lastSessionId(current) === undefined) throw sendError
-            await resume()
+            try {
+              await resume()
+            } catch {
+              // The fallback was a guess about a stale record. When it fails too, the refusal
+              // worth reading is the one for what the operator actually did.
+              throw sendError
+            }
           }
         }
         if (answer !== undefined && 'deferred' in answer) setNotice(pl.run.compose.deferred)

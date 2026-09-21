@@ -169,6 +169,18 @@ describe('answering a question (FR-022)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('when the resume fallback fails too, the reason shown is the one for the send', async () => {
+    serve({
+      run: runAs('waiting'),
+      history: () => askPage(),
+      messages: () => jsonResponse({ error: 'provider claude is not connected' }, 409),
+      continue: () => jsonResponse({ error: 'no agent session to resume' }, 409),
+    })
+    const card = within(await askCard())
+    fireEvent.click(card.getByRole('button', { name: 'dev' }))
+    expect(await card.findByRole('alert')).toHaveTextContent('Cezar odmówił: provider claude is not connected')
+  })
+
   it('a question whose session closed says so, and answering it reopens the session', async () => {
     const { writesTo } = serve({ run: runAs('done'), history: () => askPage() })
     const card = within(await askCard())

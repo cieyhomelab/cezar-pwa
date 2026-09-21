@@ -65,7 +65,7 @@ Cezar's cockpit source at `v0.11.0`. See `change.md`.
 
 ## Progress
 
-- [x] **Unit + component tests**: 429 passing (`npm test`), 61 of them new. The table tests pin
+- [x] **Unit + component tests**: 430 passing (`npm test`), 62 of them new. The table tests pin
       the delivery mode and composer rule per status, the answer format, the open-question
       rule and the retry schedule. The component tests drive the screen end to end: one-tap
       answer, then resolution after the refetch. They cover the combined multi-question send,
