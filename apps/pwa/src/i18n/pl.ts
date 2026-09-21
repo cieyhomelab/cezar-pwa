@@ -139,6 +139,10 @@ export const pl = {
     refresh: 'Odśwież',
     refreshing: 'Odświeżam…',
     updatedAt: (time: string) => `Zaktualizowano ${time}`,
+    /** S-06, when the task's stream is not live: how old the screen is. */
+    stateFrom: (time: string) => `stan z ${time}`,
+    /** FR-019: scrolled up while the agent wrote more. */
+    newMessages: 'Nowe wiadomości',
     /** Guardrail: a stale status is never presented as current. */
     refreshFailed: (time: string) => `Nie udało się odświeżyć. Stan z ${time}.`,
     header: {

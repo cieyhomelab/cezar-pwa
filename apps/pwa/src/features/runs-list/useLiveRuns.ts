@@ -1,8 +1,8 @@
 import type { RunsIndexResponse } from '@cezar-pwa/cezar-contract/contract'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { HEALTH_QUERY_KEY, fetchHealth } from '../../api/health.ts'
-import { AuthRequiredError } from '../../api/http.ts'
+import { HEALTH_QUERY_KEY, reprobeSession } from '../../api/health.ts'
+import { bindLifecycle } from '../../api/live-stream.ts'
 import { RUNS_INDEX_QUERY_KEY } from '../../api/runs-index.ts'
 import { type LiveState, WorkspaceStream, workspaceJournal } from '../../api/workspace-events.ts'
 import { applyWorkspaceFrame, type WorkspaceFrame } from '../../domain/live-index.ts'
@@ -25,8 +25,7 @@ export type LiveRuns = {
  * that is happening (FR-012). Server state stays in TanStack Query — frames land through
  * `setQueryData`, never a store of their own (CLAUDE.md → "Konwencje kodu").
  *
- * The stream is closed while the page is hidden and reopened when it is shown: iOS freezes a
- * backgrounded app, and a connection it froze is not one to trust on waking.
+ * The stream is closed while the page is hidden and reopened when it is shown (`bindLifecycle`).
  */
 export function useLiveRuns(): LiveRuns {
   const queryClient = useQueryClient()
@@ -58,16 +57,7 @@ export function useLiveRuns(): LiveRuns {
       onFrame,
       // No replay on this stream, so every (re)open fills the gap with a fetch.
       onOpen: () => void queryClient.invalidateQueries({ queryKey: RUNS_INDEX_QUERY_KEY }),
-      // A lapsed session looks like any other drop from here, so ask the probe — but hand its
-      // answer to the session query only when it is a refusal. Invalidating on every drop would
-      // let a network blip fail the session query and swap the whole list for "unreachable",
-      // where a failed refresh keeps the rows under a dated warning instead.
-      onDrop: () =>
-        void fetchHealth().catch((error: unknown) => {
-          if (error instanceof AuthRequiredError) {
-            void queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY })
-          }
-        }),
+      onDrop: () => reprobeSession(queryClient),
       onState: (state) => {
         // Taken now, not inside the updater: React runs that at render, which can be after the
         // gap-filling fetch has already landed — and a fetch older than `liveSince` never
@@ -82,24 +72,7 @@ export function useLiveRuns(): LiveRuns {
       },
     })
 
-    const onVisibility = () => {
-      stream.stop()
-      if (document.visibilityState === 'visible') stream.start()
-    }
-    const onOnline = () => stream.setOnline(true)
-    const onOffline = () => stream.setOnline(false)
-
-    stream.setOnline(navigator.onLine)
-    if (document.visibilityState !== 'hidden') stream.start()
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('online', onOnline)
-    window.addEventListener('offline', onOffline)
-    return () => {
-      stream.stop()
-      document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('online', onOnline)
-      window.removeEventListener('offline', onOffline)
-    }
+    return bindLifecycle(stream)
   }, [queryClient])
 
   return live

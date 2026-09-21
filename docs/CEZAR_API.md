@@ -92,9 +92,10 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 `task, steps[{id,name,kind:'agent'|'check',status,…}], currentStepId, diffStat, model, runner, autonomous, queuedMessages[], tokensUsed, inputTokens, outputTokens, error, worktreePath, groupId, variant, pinned`
 
 ### Ekran zadania w PWA (S-05) — jak czytamy rekord i transkrypt
-- Trzy odczyty równolegle: rekord (`['run', projectId, runId]`), najnowsza strona historii bez kursora (`['history', projectId, runId]`) i kontekst (`['history', projectId, runId, 'context']`). Odświeżanie jak listy przed S-04: przy powrocie na pierwszy plan, co 30 s gdy widoczny, przyciskiem; bez cichych ponowień. Odpowiedź starsza niż 60 s w trakcie odświeżania jest przygaszona (guardrail: nieaktualny stan nigdy nie udaje bieżącego).
+- Trzy odczyty równolegle: rekord (`['run', projectId, runId]`), najnowsza strona historii bez kursora (`['history', projectId, runId]`) i kontekst (`['history', projectId, runId, 'context']`). Od S-06 ekran jest na żywo ze strumienia zadania (§ 3b); gdy strumień nie działa — odświeżanie jak listy przed S-04: przy powrocie na pierwszy plan, co 30 s gdy widoczny, przyciskiem; bez cichych ponowień. Odpowiedź starsza niż 60 s w trakcie odświeżania jest przygaszona (guardrail: nieaktualny stan nigdy nie udaje bieżącego).
 - **Strona historii to surowy plik, nie sam protokół v2.** Zdarzenia v2 (`item.*`, `turn.*`, `plan.updated`) leżą przemieszane ze swoimi bliźniakami v1 (`text`, `tool-call`, `tool-result`) i z liniami tylko-v1 (`user-message` — wiadomości operatora istnieją **wyłącznie** w v1 — `note`, `lifecycle`, `check-output`, `image`, nieudany `step-end`). Zmierzone na żywej stronie: każde wywołanie narzędzia jest w pliku dwa razy. Stąd `apps/pwa/src/domain/transcript.ts` to port `reduceThread()` z `web/src/routes/task-thread/thread-state.ts` razem z regułami deduplikacji (w obrębie tury v2 wygrywa dla narzędzi; proza v1 znika tylko wtedy, gdy wiadomość v2 tej samej tury ma ten sam tekst).
-- `item.delta` **nie występuje** w historii (delty są efemeryczne, tylko w strumieniu na żywo). Reducer i tak je obsługuje — S-06 dołoży zdarzenia z `…/events?afterSeq=<asOfSeq>` do tego samego złożenia.
+- `item.delta` **nie występuje** w historii (delty są efemeryczne, tylko w strumieniu na żywo). Reducer i tak je obsługuje — S-06 dokłada zdarzenia ze strumienia (§ 3b) do tego samego złożenia.
+- Przewijanie (FR-019, S-06): ekran podąża za nową treścią tylko, gdy czytelnik jest ≤ 96 px od końca; wyżej zostaje na miejscu i pokazuje przycisk „Nowe wiadomości”. „Na końcu” liczone synchronicznie względem wysokości treści sprzed zmiany — WebKit wysyła `scroll` dopiero z następną klatką.
 - Nieznany `type`, `item.*` z nieznanym `kind` albo bez `id` — pominięte, nic nie rzuca (reguła 5; PRD dopuszcza „renderuje ogólnie albo pomija”).
 - **Plan przypięty nad transkryptem** składany jest z kontekstu ∪ strony (odpowiednik `currentEvents` z cockpitu), bo najnowszy `plan.updated` może leżeć przed pierwszą linią strony. Treść transkryptu — tylko ze strony. Błąd kontekstu nie psuje ekranu (plan wtedy tylko ze strony).
 - Gdy `hasOlder`, na górze transkryptu jest odnośnik do cockpitu — starsze strony (FR-049) są odłożone.
@@ -131,12 +132,22 @@ Nie ma linii `id:` — **przy reconnect nie ma replay**, po wznowieniu **zawsze*
 - Lista jest „na żywo” dopiero, gdy strumień jest otwarty **i** po otwarciu dotarł refetch; wcześniej pokazuje „lista z HH:MM”. Polling: 30 s, gdy nie jest na żywo; 5 min jako siatka bezpieczeństwa, gdy jest.
 
 ### 3b. `GET /api/v1/p/:projectId/runs/:id/events` — jedno zadanie (ekran szczegółów)
-- Parametry wznowienia: `?afterSeq=<n>` lub nagłówek `Last-Event-ID` (EventSource wysyła go sam), opcjonalnie `?cursor=<liveCursor>` z `/history`.
-- Najpierw replay zdarzeń po `afterSeq`, potem live.
-- event `run` — aktualny `RunRecord`
-- event `ui-event` — zdarzenie protokołu v2 (poniżej), `data` = `{ seq, ts, stepId?, type, …payload }`
-- event `run-event` — stare zdarzenia v1 (starsze nagrania); renderuj jako surowy wpis
-- event `ping`
+Odczytane z `server/server.js` i `runs/ui-event-sink.js` @ `v0.11.0`:
+- Parametry wznowienia: `?cursor=<liveCursor>` (z `/history` — offset w pliku, serwer czyta tylko ogon) i `?afterSeq=<n>`; nagłówek `Last-Event-ID` działa jak `afterSeq`. Serwer odtwarza każdą **utrwaloną** linię z `seq > max(afterSeq, granica kursora)`, potem przechodzi na żywo. Kursor nieważny (plik się skrócił) → `409` jeszcze przed strumieniem.
+- Każda ramka zdarzenia ma `id: <seq>`.
+- event `ui-event` — linia protokołu v2 (typ z kropką), utrwalona **albo** efemeryczna
+- event `run-event` — linia v1 (bez kropki). Strona historii ma obie, więc słuchamy obu.
+- event `run` — cały `RunRecord` po każdej zmianie i raz po zakończeniu replayu
+- event `ping` — co 15 s
+- **`item.delta` nigdy nie trafia do pliku.** Delty są scalane co ~40 ms i idą tylko na żywo, z własnym `seq` — replay ich nie odtworzy. `item.updated` z samym przyrostem treści też bywa tylko na żywo. `item.completed` zawsze niesie stan końcowy.
+
+**Jak korzysta z tego PWA (S-06, `apps/pwa/src/features/run/useLiveTranscript.ts`):**
+- Strumień startuje, gdy jest pierwsza strona historii: `cursor=page.liveCursor`, `afterSeq=page.asOfSeq` — tak samo łączy się cockpit.
+- Linie trafiają do `['history', projectId, runId]` przez `setQueryData` (`appendLiveEvent` w `src/domain/live-transcript.ts`). `asOfSeq` strony to znacznik: rośnie z każdą linią, linia z `seq <= asOfSeq` jest odrzucana (**nic dwa razy** — liczy się dla linii v1, które nie mają id). Każde połączenie prosi o `afterSeq = asOfSeq` (**nic nie ginie**).
+- Delta trafia tylko do elementu, którego ostatni snapshot przyszedł **po** starcie bieżącego połączenia. Element złapany w połowie przez zamrożenie zostaje z tekstem sprzed przerwy, aż dojdzie jego snapshot — nigdy nie jest sklejany z dziurą w środku. Kolejne delty tego samego elementu i pola scalają się w jedną linię, a snapshot usuwa delty swojego elementu.
+- `run` → `['run', …]` (scalone, zachowuje pola tylko-API jak `usage`) i wiersz w `['runs-index']`.
+- Stan i cykl życia jak w § 3a (wspólne `src/api/live-stream.ts`): backoff, watchdog, zamknięcie przy `hidden`, ponowne otwarcie przy `visible` — to jest wznowienie po zamrożeniu przez iOS. Zerwanie → sonda `health`. Próba, która się nie otworzyła → następna **bez** kursora (409 wyglądałby jak każdy inny błąd, w nieskończoność).
+- Na żywo: rekord odpytywany co 5 min jako siatka, strona i kontekst wcale (replay je pokrywa). Bez strumienia: jak w S-05 (30 s, przy powrocie). Refetch strony, który wyląduje w trakcie, dostaje z powrotem linie nowsze od siebie (`carryOver`).
 
 ### 3c. Protokół zdarzeń agenta (`ui-event`, `type`)
 `session.started | session.ended | session.error | turn.started | turn.completed (usage, costUsd) | item.started | item.delta (field: text|reasoning|output, delta) | item.updated | item.completed | plan.updated (entries[]) | permission.requested | permission.resolved | ask.requested (questions[]) | usage.updated`
