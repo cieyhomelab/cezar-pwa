@@ -56,7 +56,11 @@ export function RunRow({
   const meta = [projectName, timing, cost].filter(Boolean)
 
   return (
-    <li data-run-id={run.id} className={`border-b border-border ${isReadDoneItem(run) ? 'opacity-70' : ''}`}>
+    <li
+      data-run-id={run.id}
+      data-run-key={`${run.projectId}/${run.id}`}
+      className={`border-b border-border ${isReadDoneItem(run) ? 'opacity-70' : ''}`}
+    >
       <Link to={runPath(run.projectId, run.id)} className="block px-4 py-3 active:bg-surface-raised">
         <div className="flex items-center justify-between gap-3">
           <StatusBadge attention={attention} status={run.status} />

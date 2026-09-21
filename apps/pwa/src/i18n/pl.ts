@@ -108,9 +108,18 @@ export const pl = {
       Issue: (n: number) => `#${n}`,
     },
     showOlder: (count: number) => `Pokaż starsze (${count})`,
+    /** FR-012: the live connection's state, always in words. */
+    live: {
+      live: 'Na żywo',
+      connecting: 'Łączę…',
+      reconnecting: 'Łączę ponownie…',
+      lost: 'Brak połączenia na żywo',
+    } as Record<string, string>,
+    /** When not live: how old the list on screen is. */
+    listFrom: (time: string) => `lista z ${time}`,
+    refreshingInline: 'odświeżam…',
     refresh: 'Odśwież',
     refreshing: 'Odświeżam…',
-    updatedAt: (time: string) => `Zaktualizowano ${time}`,
     pull: 'Pociągnij, aby odświeżyć',
     release: 'Puść, aby odświeżyć',
     /** Guardrail: a stale status is never presented as current. */

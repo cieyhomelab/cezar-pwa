@@ -47,7 +47,7 @@ attention rule → a readable phone screen.
 | S-01 | `install-to-home-screen`   | install to the home screen, launch full-screen, update on purpose | F-01          | FR-001, FR-002, FR-003                       | implemented (PR #10), device pass pending |
 | S-02 | `connect-to-cezar`         | see they are not authorized and re-unlock the app                 | F-01          | FR-004, FR-005                               | done (verified live) |
 | S-03 | `task-list`                | see every task across projects, attention first                   | F-02, S-02    | US-02, FR-007, FR-008, FR-009, FR-011, FR-013 | implemented (PR #15), device pass pending |
-| S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | proposed |
+| S-04 | `live-status`              | watch status change without refreshing, and trust it              | S-03          | US-02, FR-010, FR-012                        | implemented (PR #16), device pass pending |
 | S-05 | `read-transcript`          | read a task's header and its most recent transcript               | S-03, F-02    | US-01, FR-014, FR-015, FR-017, FR-018, FR-020 | implemented (PR #17), device pass pending |
 | S-06 | `transcript-stays-live`    | watch the transcript live and resume it after the phone freezes   | S-04, S-05    | US-01, FR-016, FR-019, FR-021                | proposed |
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | proposed |
@@ -83,8 +83,8 @@ do NOT re-scaffold them.
 - **Backend / API client:** ~~absent — no `apps/pwa/src/api/`; no HTTP wrapper, no event-stream manager.~~
   **present as of 2026-09-21**. `apps/pwa/src/api/http.ts` is the single door. `runs-index.ts`
   serves the list, and `run.ts` serves the record, the newest history page, `history-context`
-  and the read receipt. The workspace event stream is S-04's (PR #16). The per-run stream is
-  S-06's.
+  and the read receipt. `workspace-events.ts` carries the list's live stream (S-04, PR #16). The per-run
+  stream is S-06's.
 - **Domain rule:** present — the attention rule and its table tests live in
   `packages/shared/src/attention.ts`. This is the product's central rule and it is done.
 - **Contract:** ~~partial — `packages/cezar-contract/` exists as a slot; `src/` is empty
@@ -269,7 +269,20 @@ do NOT re-scaffold them.
   indicator is what stops a stale list being mistaken for a quiet one. Sequenced right
   after the list because the guardrail it serves — never presenting a stale status as
   current — is the one the PRD calls the worst failure mode, since it is silent.
-- **Status:** proposed
+- **Status:** implemented 2026-09-21 via PR #16 (`context/changes/live-status/`); device pass pending
+- **Note (2026-09-21):** the list now updates from `GET /api/v1/workspace/events`. A `run`
+  frame is projected to the exact row `runs-index` serves, and frames that arrive while a
+  refetch is in flight are replayed onto it. The header says `Na żywo` / `Łączę ponownie…` /
+  `Brak połączenia na żywo` in words, and shows the list's age whenever it isn't live. It only
+  counts as live once a fetch has landed after the stream opened, because the stream has no
+  replay. A live change above the reader no longer moves their rows. Verified in WebKit on the
+  real `EventSource` (30 E2E) and against the live instance over loopback (live in under 1 s).
+  Two findings: `docs/CEZAR_API.md` had the frame stamp wrong (`project`, not `projectId`),
+  and every stream drop now re-checks the session, so a lapsed session reaches
+  "Połącz z Cezarem" with nothing pressed. Left as implemented rather than Done: the
+  indicator across a lock/unlock and Airplane Mode on the phone, and a cockpit status flip
+  arriving on the installed app, still need the device. The live transport S-06 and S-10
+  build on is in place.
 
 ### S-05: Read a task's transcript
 
@@ -299,7 +312,7 @@ do NOT re-scaffold them.
   link back to the list resolved to `/m`, outside the service worker and outside nginx's
   `/m/` location. The basename is now `/m/`. Verified with 320 unit and 30 E2E tests (WebKit)
   and against a live run. Opening a task on the installed app is the last check. S-07,
-  S-08, S-09 and S-10 have their task screen. S-06 still waits on S-04's stream (PR #16).
+  S-08, S-09 and S-10 have their task screen, and with S-04 merged S-06 can start.
 
 ### S-06: The transcript stays live and survives suspension
 
@@ -431,13 +444,13 @@ do NOT re-scaffold them.
 | S-01       | `install-to-home-screen`    | Install to the home screen and update on purpose        | n/a                   | Implemented — PR #10; device pass pending         |
 | S-02       | `connect-to-cezar`          | Detect a missing session and offer re-unlocking         | n/a                   | Done — PR #12–#14, verified live                  |
 | S-03       | `task-list`                 | Task list across projects, attention first              | n/a                   | Implemented — PR #15; device pass pending         |
-| S-04       | `live-status`               | Live status updates and connection health               | no                    | Needs S-03                                        |
+| S-04       | `live-status`               | Live status updates and connection health               | n/a                   | Implemented — PR #16; device pass pending         |
 | S-05       | `read-transcript`           | Task header and most recent transcript                  | n/a                   | Implemented — PR #17; device pass pending         |
-| S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | no                    | Needs S-04 (PR #16) and S-05 (PR #17) merged      |
-| S-07       | `answer-the-agent`          | Answer a question or message a task                     | yes                   | Once S-05 (PR #17) merges                         |
-| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | yes                   | Once S-05 (PR #17) merges                         |
-| S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | Once S-05 (PR #17) merges                         |
-| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | Once S-05 (PR #17) merges; deep-link path exists  |
+| S-06       | `transcript-stays-live`     | Live transcript that survives suspension                | yes                   | S-04 (PR #16) and S-05 (PR #17) merged            |
+| S-07       | `answer-the-agent`          | Answer a question or message a task                     | yes                   | S-05 merged (PR #17)                              |
+| S-08       | `act-on-a-task`             | Cancel, finish, continue, draft PR, pin, archive        | yes                   | S-05 merged (PR #17)                              |
+| S-09       | `read-the-diff`             | Read-only diff, file by file                            | yes                   | S-05 merged (PR #17)                              |
+| S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | yes                   | S-05 merged (PR #17); deep-link path exists       |
 | S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | no                    | Needs S-10                                        |
 | S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | no                    | Needs S-03, S-10                                  |
 

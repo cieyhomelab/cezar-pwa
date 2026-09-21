@@ -1,14 +1,22 @@
 import type { RunsIndexResponse } from '@cezar-pwa/cezar-contract/contract'
 import { ApiError, apiFetch } from './http.ts'
+import { workspaceJournal } from './workspace-events.ts'
 
 /** Query key, per CLAUDE.md → "Klucze query". */
 export const RUNS_INDEX_QUERY_KEY = ['runs-index'] as const
 
 /**
- * Until S-04 brings the event stream, the list re-asks this often while it is on screen.
- * TanStack pauses the interval while the page is hidden, so a phone in a pocket costs nothing.
+ * While the event stream is NOT live, the list falls back to re-asking this often. TanStack
+ * pauses the interval while the page is hidden, so a phone in a pocket costs nothing.
  */
 export const RUNS_INDEX_REFETCH_MS = 30_000
+
+/**
+ * While the stream IS live it carries every change, so polling drops to a slow safety net — for
+ * a project whose context the server had not built when the stream attached, or anything else
+ * the stream cannot say.
+ */
+export const RUNS_INDEX_LIVE_REFETCH_MS = 5 * 60_000
 
 /**
  * Every task across every registered project (FR-007): `GET /api/v1/workspace/runs-index`,
@@ -38,15 +46,29 @@ export async function fetchRunsIndex(options?: {
   }
 }
 
-export function runsIndexQueryOptions() {
+/**
+ * The fetch, with every stream frame that arrived while it travelled replayed onto its answer
+ * (`FrameJournal` — otherwise a slow refetch could land an older status over a newer one).
+ */
+async function fetchRunsIndexLive(signal: AbortSignal): Promise<RunsIndexResponse> {
+  const mark = workspaceJournal.begin()
+  try {
+    return workspaceJournal.settle(mark, await fetchRunsIndex({ signal }))
+  } catch (error) {
+    workspaceJournal.discard(mark)
+    throw error
+  }
+}
+
+export function runsIndexQueryOptions({ live = false }: { live?: boolean } = {}) {
   return {
     queryKey: RUNS_INDEX_QUERY_KEY,
-    queryFn: ({ signal }: { signal: AbortSignal }) => fetchRunsIndex({ signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) => fetchRunsIndexLive(signal),
     // FR-011: coming back to the app always re-asks, however fresh the cache thinks it is —
     // iOS may have frozen the app for hours, and the answer it holds is from before that.
     refetchOnWindowFocus: 'always' as const,
     refetchOnReconnect: 'always' as const,
-    refetchInterval: RUNS_INDEX_REFETCH_MS,
+    refetchInterval: live ? RUNS_INDEX_LIVE_REFETCH_MS : RUNS_INDEX_REFETCH_MS,
     // No silent retries: a refusal is a stable answer, and a failed refresh must reach the
     // screen as "this list is from HH:MM" at once rather than after a hidden second attempt.
     // The interval above and the retry button are the recovery.

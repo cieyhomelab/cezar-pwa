@@ -1,0 +1,53 @@
+{
+  "id": "bafa07d6-b794-45c5-8cca-67ae99bb99f5",
+  "title": "/om-auto-implement-spec From @context/foundation/roadmap.md implement S-04 live…",
+  "workflow": "(planned)",
+  "task": "(prompt elided from the fixture)",
+  "model": "opus[1m]",
+  "runner": "claude",
+  "generateFollowups": false,
+  "autonomous": true,
+  "status": "running",
+  "createdAt": "2026-09-21T06:56:47.311Z",
+  "tokensUsed": 0,
+  "archived": false,
+  "steps": [
+    {
+      "id": "task",
+      "name": "om-auto-implement-spec",
+      "kind": "agent",
+      "status": "running",
+      "iterations": 1,
+      "tokensUsed": 0,
+      "startedAt": "2026-09-21T06:56:47.467Z",
+      "sessionId": "e7ce358f-0b0f-4542-a537-1890eec9835e",
+      "backend": "claude",
+      "profileId": "default",
+      "usageInvocationEpoch": 1,
+      "usageInvocationsStarted": 1,
+      "usageTurnsStarted": 1,
+      "usageInvocationsObserved": 1
+    }
+  ],
+  "workflowDef": {
+    "name": "(planned)",
+    "source": "built-in",
+    "steps": [
+      {
+        "id": "task",
+        "name": "om-auto-implement-spec",
+        "prompt": "{{task}}",
+        "skill": "om-auto-implement-spec"
+      }
+    ]
+  },
+  "startedAt": "2026-09-21T06:56:47.338Z",
+  "modelIdentity": "anthropic/opus[1m]",
+  "worktreePath": "/home/ubuntu/cezar/projects/cezar-pwa/.ai/cezar/worktrees/…",
+  "branch": "cez/bafa07d6",
+  "baseBranch": "main",
+  "currentStepId": "task",
+  "titleSummary": "implementing s-04 live-status",
+  "titleOrigin": "auto",
+  "project": "cezar-pwa"
+}
