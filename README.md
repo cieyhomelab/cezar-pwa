@@ -161,6 +161,15 @@ Before the first real deploy, run the workflow manually from the Actions tab
 with **dry run** checked: it connects, diffs and writes nothing. `DEPLOY_DRY_RUN=1
 npm run deploy` does the same locally.
 
+The sync writes into the live directory, so it runs in two passes to keep every
+client on a complete build. Pass 1 uploads everything except the entry points
+(`index.html`, `sw.js`, `manifest.webmanifest`) and deletes nothing, so the new
+hashed assets sit next to the old ones. Pass 2 syncs everything with
+`--delay-updates --delete-after`: the entry points are renamed into place together
+at the end, and the previous build's assets are pruned only after that. The CI
+key's `rrsync` accepts both flags. In a dry run, pass 2 lists the assets again
+because pass 1 wrote nothing.
+
 Three steps remain manual and one-off, all run **on the VPS**:
 
 1. Wire up nginx:
