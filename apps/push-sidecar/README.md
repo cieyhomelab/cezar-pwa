@@ -25,7 +25,10 @@ Served on `127.0.0.1:4330` under `/m/push/`; nginx forwards them only past the c
 
 `~/.cezar-push/` (mode 0700): `vapid.json` (the key pair, created once by `init`, never rotated)
 and `subscriptions.json` (atomic writes). Both 0600, neither in the repo. A device the push
-service reports gone (404/410), or whose `expirationTime` has passed, is dropped.
+service reports gone (404/410), or whose `expirationTime` has passed, is dropped. An entry that
+no longer validates at start (a hand edit, a tightened push-host allowlist) is skipped and set
+aside in `subscriptions.rejected.json` (0600); the journal logs only the count. A file that is not
+JSON or not `{ "subscriptions": [...] }` still stops the service rather than being wiped.
 
 ## One ring per transition (S-11)
 

@@ -30,7 +30,8 @@ async function main(argv: string[]): Promise<void> {
 
   const vapid = await loadVapid(vapidFile)
   const store = new SubscriptionStore(join(config.stateDir, 'subscriptions.json'))
-  await store.load()
+  const rejected = await store.load()
+  if (rejected > 0) log(`set aside ${rejected} invalid subscriptions in ${store.rejectedFile}`)
   const pusher = new Pusher({ store, vapid, subject: config.subject, log })
   const watcher = new Watcher({
     cezarUrl: config.cezarUrl,

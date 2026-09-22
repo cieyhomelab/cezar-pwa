@@ -39,7 +39,10 @@ export type Subscription = z.infer<typeof subscriptionSchema>
 
 type Stored = Subscription & { createdAt: string }
 
-const fileSchema = z.object({ subscriptions: z.array(subscriptionSchema.extend({ createdAt: z.string() })) })
+const storedSchema = subscriptionSchema.extend({ createdAt: z.string() })
+
+/** Only the top-level shape: each entry is checked on its own, so one bad entry cannot stop the service. */
+const fileSchema = z.object({ subscriptions: z.array(z.unknown()) })
 
 /**
  * One operator, a handful of devices. The cap keeps a misbehaving client from growing the file
@@ -54,23 +57,40 @@ export const MAX_SUBSCRIPTIONS = 20
  */
 export class SubscriptionStore {
   private readonly file: string
+  /** Where `load()` sets aside entries that no longer validate. */
+  readonly rejectedFile: string
   private subscriptions: Stored[] = []
   private writing: Promise<void> = Promise.resolve()
 
   constructor(file: string) {
     this.file = file
+    this.rejectedFile = `${file.replace(/\.json$/, '')}.rejected.json`
   }
 
-  /** A missing file is an empty store; an unreadable one is an error — never silently wiped. */
-  async load(): Promise<void> {
+  /**
+   * A missing file is an empty store; an unreadable one is an error — never silently wiped. An
+   * entry that no longer validates (a hand edit, a tightened push-host allowlist) is set aside in
+   * `rejectedFile` and skipped, so the other devices keep their notifications.
+   * @returns how many entries were set aside.
+   */
+  async load(): Promise<number> {
     let raw: string
     try {
       raw = await readFile(this.file, 'utf8')
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0
       throw error
     }
-    this.subscriptions = fileSchema.parse(JSON.parse(raw)).subscriptions
+    const valid: Stored[] = []
+    const rejected: unknown[] = []
+    for (const entry of fileSchema.parse(JSON.parse(raw)).subscriptions) {
+      const parsed = storedSchema.safeParse(entry)
+      if (parsed.success) valid.push(parsed.data)
+      else rejected.push(entry)
+    }
+    if (rejected.length > 0) await this.setAside(rejected)
+    this.subscriptions = valid
+    return rejected.length
   }
 
   list(): readonly Subscription[] {
@@ -98,15 +118,34 @@ export class SubscriptionStore {
     return true
   }
 
+  /**
+   * Serialised: two quick writes must land in order, and the last one wins. A failed write rejects
+   * only its own caller; memory stays ahead of the disk until the next save writes all of it.
+   */
   private save(): Promise<void> {
     const body = `${JSON.stringify({ subscriptions: this.subscriptions }, null, 2)}\n`
-    // Serialised: two quick writes must land in order, and the last one wins.
-    this.writing = this.writing.then(async () => {
-      await mkdir(dirname(this.file), { recursive: true, mode: 0o700 })
-      const temp = `${this.file}.${process.pid}.tmp`
-      await writeFile(temp, body, { mode: 0o600 })
-      await rename(temp, this.file)
-    })
+    this.writing = this.writing.catch(() => {}).then(() => writeAtomic(this.file, body))
     return this.writing
   }
+
+  /** Merged into what an earlier start set aside, so nothing rejected is ever lost. */
+  private async setAside(entries: unknown[]): Promise<void> {
+    let kept: unknown[] = []
+    try {
+      kept = z.array(z.unknown()).parse(JSON.parse(await readFile(this.rejectedFile, 'utf8')))
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    const seen = new Set(kept.map((entry) => JSON.stringify(entry)))
+    const added = entries.filter((entry) => !seen.has(JSON.stringify(entry)))
+    if (added.length > 0) await writeAtomic(this.rejectedFile, `${JSON.stringify([...kept, ...added], null, 2)}\n`)
+  }
+}
+
+/** Temp file renamed over the old one, so a crash mid-write leaves the previous file whole. */
+async function writeAtomic(file: string, body: string): Promise<void> {
+  await mkdir(dirname(file), { recursive: true, mode: 0o700 })
+  const temp = `${file}.${process.pid}.tmp`
+  await writeFile(temp, body, { mode: 0o600 })
+  await rename(temp, file)
 }

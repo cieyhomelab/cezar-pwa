@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { isPushServiceEndpoint, MAX_SUBSCRIPTIONS, SubscriptionStore, subscriptionSchema } from './store.ts'
 import { APPLE, subscription } from './testing.ts'
@@ -86,5 +86,44 @@ describe('SubscriptionStore', () => {
     await writeFile(file, '{ not json')
     await expect(new SubscriptionStore(file).load()).rejects.toThrow()
     expect(await readFile(file, 'utf8')).toBe('{ not json')
+  })
+
+  it('refuses to start over a file with the wrong top-level shape', async () => {
+    await new SubscriptionStore(file).upsert(subscription())
+    await writeFile(file, '[]')
+    await expect(new SubscriptionStore(file).load()).rejects.toThrow()
+  })
+
+  it('recovers after a failed write, and the next save brings the file level with memory', async () => {
+    // The state directory is a regular file, so the first write cannot create it.
+    await writeFile(dirname(file), '')
+    const store = new SubscriptionStore(file)
+    await expect(store.upsert(subscription(`${APPLE}a`))).rejects.toThrow()
+
+    await rm(dirname(file))
+    await store.upsert(subscription(`${APPLE}b`))
+    const reloaded = new SubscriptionStore(file)
+    await reloaded.load()
+    expect(reloaded.list()).toEqual(store.list())
+    expect(reloaded.list().map((entry) => entry.endpoint)).toEqual([`${APPLE}a`, `${APPLE}b`])
+  })
+
+  it('loads the valid entries and sets the invalid ones aside, without rewriting the file', async () => {
+    const good = { ...subscription(), createdAt: '2026-09-22T00:00:00.000Z' }
+    const bad = { ...subscription('https://push.example/abc'), createdAt: '2026-09-22T00:00:00.000Z' }
+    await mkdir(dirname(file), { recursive: true })
+    const raw = JSON.stringify({ subscriptions: [bad, good] })
+    await writeFile(file, raw)
+
+    const store = new SubscriptionStore(file)
+    expect(await store.load()).toBe(1)
+    expect(store.list()).toEqual([good])
+    expect(await readFile(file, 'utf8')).toBe(raw)
+    expect(JSON.parse(await readFile(store.rejectedFile, 'utf8'))).toEqual([bad])
+    expect((await stat(store.rejectedFile)).mode & 0o777).toBe(0o600)
+
+    // A second start adds nothing twice.
+    expect(await new SubscriptionStore(file).load()).toBe(1)
+    expect(JSON.parse(await readFile(store.rejectedFile, 'utf8'))).toEqual([bad])
   })
 })
