@@ -106,18 +106,21 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     // frozen and nothing here may reach for it.
     throw new Error(`API path must start with ${API_PREFIX}: ${path}`)
   }
-  return request<T>(path, options)
+  return request<T>(path, options, 'auth')
 }
 
 /**
  * The same judgements for the push sidecar's `/m/push/…`. It sits behind the same gate and
  * answers errors in Cezar's `{ error }` shape, so a lapsed session reads the same way here.
+ * One difference: a 200 that is HTML here is nginx's SPA fallback answering for a sidecar that is
+ * not routed (#31) — the gate already let the request through, so it is "unavailable", reported
+ * like nginx's own 502, not "no session".
  */
 export async function pushFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   if (!path.startsWith(PUSH_PREFIX)) {
     throw new Error(`push path must start with ${PUSH_PREFIX}: ${path}`)
   }
-  return request<T>(path, options)
+  return request<T>(path, options, 'unavailable')
 }
 
 /** The perimeter's own paths (`deploy/nginx/`): nginx answers them, not Cezar or the sidecar. */
@@ -137,7 +140,12 @@ export async function perimeterPost(path: string, timeoutMs = DEFAULT_TIMEOUT_MS
   return response.status
 }
 
-async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
+async function request<T>(
+  path: string,
+  options: ApiFetchOptions,
+  /** What a 200 that is not JSON means on this surface. */
+  notJson: 'auth' | 'unavailable',
+): Promise<T> {
   const { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = options
 
   const response = await send(
@@ -168,6 +176,7 @@ async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
   // a login page, a captive portal, a cached shell. Treat it as no session
   // rather than as data (CLAUDE.md → "odpowiedź HTML zamiast JSON").
   if (!isJson(response)) {
+    if (notJson === 'unavailable') throw new ApiError(`HTTP ${response.status} (not JSON)`, 502)
     throw new AuthRequiredError(response.status)
   }
 

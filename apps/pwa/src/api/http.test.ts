@@ -5,6 +5,7 @@ import {
   NetworkError,
   TimeoutError,
   apiFetch,
+  pushFetch,
 } from './http.ts'
 
 /** The gateway's refusal, reproduced from `docs/CEZAR_API.md` § 1a. */
@@ -151,5 +152,25 @@ describe('apiFetch', () => {
     expect(init?.method).toBe('POST')
     expect(init?.body).toBe('{"text":"hi"}')
     expect(new Headers(init?.headers).get('content-type')).toBe('application/json')
+  })
+})
+
+describe('pushFetch', () => {
+  // #31: an unrouted sidecar lets nginx's SPA fallback answer with the app shell. The gate let the
+  // request through, so that is "unavailable" (reported like nginx's 502), not "no session".
+  it.each([
+    { status: 200, error: new ApiError('HTTP 200 (not JSON)', 502) },
+    { status: 403, error: new AuthRequiredError(403) },
+  ])('classifies an HTML $status as $error.name', async ({ status, error }) => {
+    mockFetch(
+      async () =>
+        new Response('<!doctype html><title>Cezar</title>', {
+          status,
+          headers: { 'content-type': 'text/html' },
+        }),
+    )
+    const caught = await pushFetch('/m/push/vapid-public-key').catch((e: unknown) => e)
+    expect(caught).toBeInstanceOf(error.constructor)
+    expect(caught).toMatchObject({ status: error.status, message: error.message })
   })
 })
