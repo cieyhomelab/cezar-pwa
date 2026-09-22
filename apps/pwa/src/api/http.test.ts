@@ -5,6 +5,7 @@ import {
   NetworkError,
   TimeoutError,
   apiFetch,
+  pushFetch,
 } from './http.ts'
 
 /** The gateway's refusal, reproduced from `docs/CEZAR_API.md` § 1a. */
@@ -151,5 +152,36 @@ describe('apiFetch', () => {
     expect(init?.method).toBe('POST')
     expect(init?.body).toBe('{"text":"hi"}')
     expect(new Headers(init?.headers).get('content-type')).toBe('application/json')
+  })
+})
+
+describe('pushFetch', () => {
+  const shell = () =>
+    new Response('<!doctype html><title>Cezar</title>', {
+      status: 200,
+      headers: { 'content-type': 'text/html' },
+    })
+
+  it.each([
+    // An unrouted /m/push/ falls into the SPA fallback: a missing sidecar, not a lapsed session (#31).
+    { answer: shell, error: ApiError, status: 502, message: 'HTTP 200 (not JSON)' },
+    // The gate's refusal still means no session.
+    { answer: bareRefusal, error: AuthRequiredError, status: 403, message: undefined },
+    { answer: () => json({ error: 'unknown subscription' }, 404), error: ApiError, status: 404, message: 'unknown subscription' },
+  ])('turns $status into $error.name', async ({ answer, error: kind, status, message }) => {
+    mockFetch(async () => answer())
+    const error = await pushFetch('/m/push/vapid-public-key').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(kind)
+    expect((error as ApiError).status).toBe(status)
+    if (message) expect((error as ApiError).message).toBe(message)
+  })
+
+  it('returns the sidecar’s JSON', async () => {
+    mockFetch(async () => json({ publicKey: 'k' }))
+    await expect(pushFetch('/m/push/vapid-public-key')).resolves.toEqual({ publicKey: 'k' })
+  })
+
+  it('refuses a path outside the sidecar', async () => {
+    await expect(pushFetch('/api/v1/health')).rejects.toThrow(/must start with \/m\/push\//)
   })
 })

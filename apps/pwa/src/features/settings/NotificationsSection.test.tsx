@@ -191,6 +191,20 @@ describe('Settings → Powiadomienia', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Serwer powiadomień nie odpowiada')
   })
 
+  it('says the notification server is down, not that the session expired, when the app shell answers for it (#31)', async () => {
+    install()
+    permission = 'granted'
+    // /m/push/ not routed to the sidecar: the SPA fallback serves index.html with a 200.
+    answers['GET /m/push/vapid-public-key'] = () =>
+      new Response('<!doctype html><title>Cezar</title>', { status: 200, headers: { 'content-type': 'text/html' } })
+    render()
+    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Serwer powiadomień nie odpowiada')
+    expect(alert).not.toHaveTextContent('Sesja z Cezarem wygasła')
+    expect(pushManager.subscribe).not.toHaveBeenCalled()
+  })
+
   describe('when this device is subscribed', () => {
     beforeEach(() => {
       install()
