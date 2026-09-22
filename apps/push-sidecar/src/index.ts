@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server'
 import { createApp } from './app.ts'
 import { readConfig } from './config.ts'
 import { Pusher } from './push.ts'
-import { SubscriptionStore } from './store.ts'
+import { rejectedFileOf, SubscriptionStore } from './store.ts'
 import { initVapid, loadVapid } from './vapid.ts'
 import { Watcher } from './watcher.ts'
 
@@ -29,8 +29,10 @@ async function main(argv: string[]): Promise<void> {
   }
 
   const vapid = await loadVapid(vapidFile)
-  const store = new SubscriptionStore(join(config.stateDir, 'subscriptions.json'))
-  await store.load()
+  const subscriptionsFile = join(config.stateDir, 'subscriptions.json')
+  const store = new SubscriptionStore(subscriptionsFile)
+  const { rejected } = await store.load()
+  if (rejected > 0) log(`set aside ${rejected} invalid subscriptions in ${rejectedFileOf(subscriptionsFile)}`)
   const pusher = new Pusher({ store, vapid, subject: config.subject, log })
   const watcher = new Watcher({
     cezarUrl: config.cezarUrl,
