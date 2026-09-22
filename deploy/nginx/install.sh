@@ -6,9 +6,10 @@
 # Safe by construction: the vhost and every file this script writes are backed
 # up first, `nginx -t` gates the reload, and a config that fails the test is
 # rolled back — on a first install and on a refresh alike — so nothing invalid
-# is left for a later reload to pick up. Re-running is a no-op apart from refreshing the snippet, the
-# unlock guard (see extract-unlock.sh) and the sign-out derived from it
-# (signout-from-unlock.sh) — so re-run it after rotating the key.
+# is left for a later reload to pick up. Re-running is a no-op apart from
+# refreshing the snippet, the unlock guard (see extract-unlock.sh) and the
+# sign-out derived from it (signout-from-unlock.sh) — so re-run it after
+# rotating the key.
 set -euo pipefail
 
 die() { echo "error: $*" >&2; exit 1; }
