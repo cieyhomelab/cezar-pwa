@@ -82,7 +82,7 @@ packages/shared/          # attention rule + types shared by app and sidecar
 packages/cezar-contract/  # vendored zod contract, pinned at Cezar v0.11.0
 deploy/nginx/             # /m/ snippet, installer, rehearsal
 deploy/push/              # sidecar installer
-deploy/systemd/           # cezar-push user unit
+deploy/systemd/           # cezar-push user unit, /m/ include ensure units
 scripts/                  # deploy, contract sync, icon generation
 context/                  # PRD, roadmap and one folder per change
 ```
@@ -161,7 +161,7 @@ Before the first real deploy, run the workflow manually from the Actions tab
 with **dry run** checked: it connects, diffs and writes nothing. `DEPLOY_DRY_RUN=1
 npm run deploy` does the same locally.
 
-Two steps remain manual and one-off, both run **on the VPS**:
+Three steps remain manual and one-off, all run **on the VPS**:
 
 1. Wire up nginx:
 
@@ -203,7 +203,7 @@ Two steps remain manual and one-off, both run **on the VPS**:
    example `PUBLIC_ORIGIN=https://cezar.ciey.studio`, the only origin that may
    subscribe.
 
-Both steps were applied on the production VPS on 2026-09-22 (#30). To check a
+Steps 1 and 2 were applied on the production VPS on 2026-09-22 (#30). To check a
 host:
 
 ```bash
@@ -212,5 +212,29 @@ curl -s -o /dev/null -w '%{http_code}\n' https://cezar.ciey.studio/m/push/vapid-
 curl -s -o /dev/null -w '%{http_code}\n' -X POST https://cezar.ciey.studio/m/session/end   # 403: no same-origin Origin header
 ```
 
-**After any `cezar server-install`, re-run step 1.** Cezar's installer rewrites
-the vhost, and `/m/` falls behind the gate until the include is back.
+3. Keep the include in place across `cezar server-install`, as root, once:
+
+   ```bash
+   sudo install -o root -g root -m 755 deploy/nginx/install.sh /usr/local/sbin/cezar-mobile-nginx-ensure
+   sudo cp deploy/systemd/cezar-mobile-nginx-ensure.{path,service,timer} /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now cezar-mobile-nginx-ensure.path cezar-mobile-nginx-ensure.timer
+   ```
+
+   Cezar's installer rewrites the vhost and drops the include, and `/m/` then
+   falls behind the gate. The path unit fires when the vhost changes. The timer
+   re-checks every 10 minutes, for rewrites that replace the file instead of
+   modifying it. Both run `install.sh --ensure`, which is a silent no-op while
+   the include is there. When it is gone, the script puts back only that line,
+   with the same backup and `nginx -t` gate as step 1. The snippet files live in
+   `/etc/nginx/snippets/` and survive the rewrite. It shares
+   `cezar-gate-ensure`'s lock, so the two never edit the vhost at the same time.
+   A failed run shows in `systemctl --failed` and
+   `journalctl -u cezar-mobile-nginx-ensure`. The units hard-code the vhost
+   path, `/etc/nginx/sites-available/cezar-cezar-ciey-studio`, like the gate's
+   units. Root runs a root-owned copy of the script, never the checkout, so
+   re-run the `install` line after pulling a change to `install.sh`.
+
+   To see it work, delete the `include` line from the vhost and wait a few
+   seconds: `journalctl -u cezar-mobile-nginx-ensure` reports it restored, and
+   `/m/` answers 200 without a cookie again.

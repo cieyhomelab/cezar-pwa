@@ -10,21 +10,51 @@
 # refreshing the snippet, the unlock guard (see extract-unlock.sh) and the
 # sign-out derived from it (signout-from-unlock.sh) — so re-run it after
 # rotating the key.
+#
+#   install.sh --ensure <path-to-vhost>
+#
+# The unattended mode behind deploy/systemd/cezar-mobile-nginx-ensure.*, run
+# when `cezar server-install` rewrites the vhost and drops the include. It only
+# puts the `include` line back, through the same backup, `nginx -t` gate and
+# rollback: the snippet files live outside the vhost and survive the rewrite,
+# so it neither needs nor reads the repo. When the include is present it
+# writes nothing and does not reload — its own write re-triggers the path
+# unit, and that second run must be a no-op.
 set -euo pipefail
 
 die() { echo "error: $*" >&2; exit 1; }
 
+ensure=0
+if [[ "${1:-}" == --ensure ]]; then ensure=1; shift; fi
+
 vhost="${1:-}"
-[[ -n "$vhost" ]] || die "usage: $0 <path-to-vhost>  (e.g. /etc/nginx/sites-available/cezar.ciey.studio)"
+[[ -n "$vhost" ]] || die "usage: $0 [--ensure] <path-to-vhost>  (e.g. /etc/nginx/sites-available/cezar.ciey.studio)"
+if [[ "$ensure" == 1 && ! -e "$vhost" ]]; then
+  # Mid-rewrite, or Cezar is not installed: nothing to restore yet. The timer
+  # comes back.
+  echo "==> $vhost is absent, nothing to ensure"
+  exit 0
+fi
 [[ -f "$vhost" ]] || die "no such vhost file: $vhost"
 [[ -w "$vhost" ]] || die "cannot write $vhost — run with sudo"
 command -v nginx >/dev/null || die "nginx not found on PATH"
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 src="$here/cezar-mobile.conf"
-[[ -f "$src" ]] || die "snippet not found next to this script: $src"
 # Overridable so the install can be rehearsed against a scratch tree.
 dest="${CEZAR_SNIPPET_DEST:-/etc/nginx/snippets/cezar-mobile.conf}"
+
+if [[ "$ensure" == 1 ]]; then
+  # cezar-gate-ensure rewrites the same vhost on the same trigger. Taking its
+  # lock keeps the two from reading the file before the other's write lands.
+  exec 9>"${CEZAR_ENSURE_LOCK:-/run/cezar-gate-ensure.lock}"
+  flock 9
+  grep -qF "$dest" "$vhost" && exit 0
+  [[ -f "$dest" ]] || die "$dest is missing — run the full install ($0 <vhost>) from the repo first"
+  echo "==> the vhost lost 'include $dest;' (cezar server-install?), putting it back"
+else
+  [[ -f "$src" ]] || die "snippet not found next to this script: $src"
+fi
 # Must match the `include` glob in cezar-mobile.conf.
 unlock_dest="${CEZAR_UNLOCK_DEST:-/etc/nginx/snippets/cezar-mobile-unlock.conf}"
 # Likewise, for the sign-out endpoint (S-12).
@@ -71,7 +101,9 @@ for i in "${!written[@]}"; do
 done
 
 # Puts every written file back as it was, removing the ones that did not exist.
+# The ensure mode writes none of them, so it has nothing to put back.
 restore_written() {
+  [[ "$ensure" == 0 ]] || return 0
   for i in "${!written[@]}"; do
     if [[ -e "$stash/$i" ]]; then cp -a "$stash/$i" "${written[$i]}"; else rm -f "${written[$i]}"; fi
   done
@@ -103,8 +135,10 @@ backup="$vhost.bak.$(date +%Y%m%d-%H%M%S)"
 cp -a "$vhost" "$backup"
 echo "==> backed up to $backup"
 
-install_snippet
-install_unlock
+if [[ "$ensure" == 0 ]]; then
+  install_snippet
+  install_unlock
+fi
 
 # Placed just above `location /` so the file reads in priority order. nginx
 # does not need it there — `^~ /m/` wins on its own — but a human reading the
@@ -125,5 +159,9 @@ if ! nginx -t; then
 fi
 
 systemctl reload nginx
+if [[ "$ensure" == 1 ]]; then
+  echo "==> include restored and nginx reloaded; previous vhost in $backup"
+  exit 0
+fi
 echo "==> done. https://cezar.ciey.studio/m/ now serves the shell."
 echo "    Rollback: cp -a $backup $vhost && nginx -t && systemctl reload nginx"

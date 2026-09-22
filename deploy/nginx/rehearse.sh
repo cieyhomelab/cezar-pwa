@@ -46,8 +46,9 @@ if (\$cezar_gate_ok = 0) {
 }
 GATE
 
-cat >"$T/vhost.conf" <<VHOST
-# Stands in for cezar-push on the next port.
+# Stands in for cezar-push on the next port. Outside the vhost, which — like
+# the live one — has a single `location /`, the shape install.sh edits.
+cat >"$T/sidecar.conf" <<SIDECAR
 server {
     listen 127.0.0.1:$((port + 1));
     location / {
@@ -55,7 +56,9 @@ server {
         return 200 '{"sidecar":"\$request_uri"}';
     }
 }
+SIDECAR
 
+cat >"$T/vhost.conf" <<VHOST
 server {
     listen 127.0.0.1:$port;
     include $T/snippets/cezar-mobile.conf;
@@ -84,6 +87,7 @@ http {
         default 0;
         "$KEY" 1;
     }
+    include $T/sidecar.conf;
     include $T/vhost.conf;
 }
 CONF
@@ -237,5 +241,72 @@ out=$(run_install) && fail "install.sh exited 0 with a snippet that fails nginx 
 cmp -s "$T/good/cezar-mobile.conf" "$T/snippets/cezar-mobile.conf" || fail "a failed refresh left the broken snippet on disk"
 ng -t 2>/dev/null || fail "nginx -t fails after a failed refresh with no unlock file"
 pass "a failed refresh removes the unlock and sign-out files it created, and nothing else changes"
+
+# install.sh --ensure (#29): what the cezar-mobile-nginx-ensure units run when
+# `cezar server-install` rewrites the vhost. A lone copy stands in for the
+# root-owned one in /usr/local/sbin: the ensure mode must not need the repo.
+mkdir -p "$T/sbin"
+cp "$here/install.sh" "$T/sbin/cezar-mobile-nginx-ensure"
+run_ensure() {
+  PATH="$T/bin:$PATH" CEZAR_SNIPPET_DEST="$T/snippets/cezar-mobile.conf" \
+    CEZAR_UNLOCK_DEST="$T/snippets/cezar-mobile-unlock.conf" \
+    CEZAR_SIGNOUT_DEST="$T/snippets/cezar-mobile-signout.conf" CEZAR_ENSURE_LOCK="$T/ensure.lock" \
+    "$T/sbin/cezar-mobile-nginx-ensure" --ensure "$1" 2>&1
+}
+include_line="include $T/snippets/cezar-mobile.conf;"
+strip_include() { sed -i "\#$include_line#d" "$T/vhost.conf"; }
+
+# Back to the good tree the failed refreshes above left behind.
+for f in cezar-mobile.conf cezar-mobile-unlock.conf cezar-mobile-signout.conf; do cp -a "$T/good/$f" "$T/snippets/$f"; done
+ng -s reload
+cp -a "$T/vhost.conf" "$T/good/vhost.conf"
+before=$(reloads)
+
+out=$(run_ensure "$T/vhost.conf") || fail "ensure failed with the include present: $out"
+[[ -z "$out" && "$(reloads)" == "$before" ]] || fail "ensure with the include present printed or reloaded: $out"
+cmp -s "$T/good/vhost.conf" "$T/vhost.conf" || fail "ensure with the include present changed the vhost"
+pass "ensure with the include present is a silent no-op: nothing written, no reload"
+
+strip_include
+ng -s reload
+sleep 0.3
+[[ "$(probe "$base/m/" | cut -d' ' -f1)" == 403 ]] || fail "with the include stripped, /m/ did not fall behind the gate"
+pass "a server-install-style rewrite without the include puts /m/ behind the gate (403)"
+
+out=$(run_ensure "$T/vhost.conf") || fail "ensure could not restore the include: $out"
+[[ "$(grep -cF "$include_line" "$T/vhost.conf")" == 1 ]] || fail "ensure did not put back exactly one include: $out"
+[[ "$(reloads)" == $((before + 1)) ]] || fail "ensure did not reload exactly once: $out"
+[[ "$out" == *"$KEY"* ]] && fail "ensure printed the secret"
+ng -t 2>/dev/null || fail "nginx -t fails after ensure restored the include"
+for f in cezar-mobile.conf cezar-mobile-unlock.conf cezar-mobile-signout.conf; do
+  cmp -s "$T/good/$f" "$T/snippets/$f" || fail "ensure rewrote $f — it must only touch the vhost"
+done
+sleep 0.3
+read -r status location cookie _ < <(probe "$base/m/?key=$KEY")
+[[ "$status" == 302 && "$cookie" == yes ]] || fail "after ensure /m/ does not unlock: $status $location cookie=$cookie"
+[[ "$(probe "$base/" | cut -d' ' -f1)" == 403 ]] || fail "after ensure the cockpit is no longer gated"
+pass "ensure puts one include back, nginx -t passes, one reload, /m/ unlocks again, the cockpit stays gated"
+
+out=$(run_ensure "$T/vhost.conf") || fail "a second ensure failed: $out"
+[[ -z "$out" && "$(reloads)" == $((before + 1)) ]] || fail "the second ensure (its own write re-firing the path unit) was not a no-op: $out"
+pass "the run its own write triggers is a no-op, so the path unit cannot loop"
+
+strip_include
+cp -a "$T/vhost.conf" "$T/good/stripped.conf"
+echo 'not_a_directive on;' >>"$T/snippets/cezar-mobile.conf"
+out=$(run_ensure "$T/vhost.conf") && fail "ensure exited 0 with a snippet that fails nginx -t"
+cmp -s "$T/good/stripped.conf" "$T/vhost.conf" || fail "a failed ensure left the edited vhost on disk"
+[[ "$(reloads)" == $((before + 1)) ]] || fail "a failed ensure reloaded nginx"
+ng -t 2>/dev/null || fail "nginx -t fails after a failed ensure — the next reload would take the gateway down"
+pass "ensure with a snippet that fails nginx -t rolls the vhost back and does not reload"
+
+cp -a "$T/good/cezar-mobile.conf" "$T/snippets/cezar-mobile.conf"
+out=$(run_ensure "$T/absent.conf") || fail "ensure with no vhost failed: $out"
+mv "$T/snippets/cezar-mobile.conf" "$T/snippets/moved.conf"
+out=$(run_ensure "$T/vhost.conf") && fail "ensure exited 0 with the snippet itself missing"
+[[ "$out" == *"run the full install"* ]] || fail "ensure with no snippet did not point at the full install: $out"
+cmp -s "$T/good/stripped.conf" "$T/vhost.conf" || fail "ensure with no snippet touched the vhost"
+mv "$T/snippets/moved.conf" "$T/snippets/cezar-mobile.conf"
+pass "ensure with no vhost exits 0; with no installed snippet it refuses and leaves the vhost alone"
 
 echo "all expectations met"
