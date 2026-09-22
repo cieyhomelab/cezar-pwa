@@ -53,9 +53,9 @@ attention rule → a readable phone screen.
 | S-07 | `answer-the-agent`         | answer an agent's question or send it a message                   | S-05          | US-01, FR-022, FR-023, FR-032                | done (PR #18, device-verified) |
 | S-08 | `act-on-a-task`            | cancel, finish, continue, open a draft PR, pin and archive        | S-05          | FR-025, FR-026, FR-027, FR-028, FR-029       | done (PR #20, device-verified) |
 | S-09 | `read-the-diff`            | read what the agent changed, file by file                         | S-05          | FR-031                                       | done (PR #21, device-verified) |
-| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | done (PR #22), device-tested per the operator; sidecar not installed on the host |
-| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | done (PR #23), device-tested per the operator; sidecar not installed on the host |
-| S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | done (PR #24), device-tested per the operator; nginx re-install not applied on the host |
+| S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | done (PR #22), device-tested per the operator; sidecar installed on the host 2026-09-22 (#30) |
+| S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | done (PR #23), device-tested per the operator; sidecar installed on the host 2026-09-22 (#30) |
+| S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | done (PR #24), device-tested per the operator; nginx re-install applied on the host 2026-09-22 (#30) |
 
 ## Streams
 
@@ -68,7 +68,7 @@ parallel tracks.
 | A      | Getting on the phone  | `F-01` → `S-01` / `S-02`                       | Mostly operator-side server work; runs in parallel with Stream B.                      |
 | B      | Awareness             | `F-02` → `S-03` → `S-04`                       | Carries the north star. `S-03` joins Stream A at `S-02`.                               |
 | C      | The loop              | `S-05` → `S-06` / `S-07` / `S-08` / `S-09`     | Four independent branches off `S-05`; the smallest goal is `S-07`. All four done (PR #18–#21), device-verified 2026-09-21. |
-| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. All three done per the operator (PR #22–#24), reported tested on the device 2026-09-21. What the host still lacks: `cezar-push` installed and the nginx installer re-run (it also writes the sign-out). |
+| D      | Being told, and settling | `S-10` → `S-11` → `S-12`                    | `S-10` joins Stream C at `S-05`; it is the headline value but needs a task screen first. All three done per the operator (PR #22–#24), reported tested on the device 2026-09-21. Since 2026-09-22 (#30) the host has both: `cezar-push` is running and the nginx installer has been re-run, which also wrote the sign-out. |
 
 ## Baseline
 
@@ -107,7 +107,7 @@ do NOT re-scaffold them.
   `apps/pwa/src/features/auth/` (the gate, the screen, the unlock). S-03 renders inside the
   gate rather than adding one. Since S-12 (PR #24) the app can also sign out: the perimeter ends the
   session at `POST /m/session/end`, which `deploy/nginx/install.sh` generates on the host
-  (`signout-from-unlock.sh`). It is not on the live host yet.
+  (`signout-from-unlock.sh`). Live on the host since 2026-09-22 (#30).
 - **Notifications:** ~~partial — the service worker carries `push` and `notificationclick`
   handlers; the sidecar is still a placeholder that serves "Hello Hono!".~~ **present in the
   repo as of 2026-09-21 (S-10, PR #22)** — `apps/push-sidecar` is a real service and
@@ -116,8 +116,9 @@ do NOT re-scaffold them.
   subscription on launch. Not yet installed on the VPS (`deploy/push/install.sh`): on
   2026-09-21 the host had no `cezar-push` unit and `/m/push/` was still commented out in the
   live snippet. Re-checked at the end of the S-12 run (2026-09-21): still no system or user unit,
-  nothing listening on :4330. Since S-12, sign-out turns this device's notifications off
-  (FR-006).
+  nothing listening on :4330. **Installed 2026-09-22 (#30):** `cezar-push` is active on
+  :4330, and the live `/m/push/` route reaches it behind the gate. Since S-12, sign-out turns this device's
+  notifications off (FR-006).
 - **Deploy / infra:** ~~present but **not applied** — CI, deploy-on-merge, an nginx snippet
   with a guarded installer, and a systemd unit all exist in the repo. None of it has
   touched the live host: `/m/` currently answers 403 from the gate.~~
@@ -510,6 +511,14 @@ do NOT re-scaffold them.
   had the `/m/push/` proxy commented out. Settings and the deep link can be checked without the
   sidecar. A real push cannot. Re-run the plan's device checklist after the install.
 
+- **Note (2026-09-22, host install, #30):** `deploy/push/install.sh` ran on the VPS as `ubuntu`.
+  `cezar-push` is an enabled `--user` unit (linger on) and `systemctl --user is-active cezar-push` →
+  `active`. Its health reported the live stream seeded with 20 runs and 0 subscriptions. The VAPID pair
+  was created in `~/.cezar-push` (0700, files 0600), and `PUBLIC_ORIGIN=https://cezar.ciey.studio` is
+  set in `~/.cezar-push/env` ahead of #27. After `deploy/nginx/install.sh`, `GET /m/push/vapid-public-key`
+  returns 403 without the gate cookie and `{"publicKey":…}` (the installed key) with it, never
+  `index.html`. The earlier caveats are closed. Still for the operator: turn notifications on in
+  Settings and confirm that the test notification (FR-045) arrives on the device.
 ### S-11: Notifications stay honest
 
 - **Outcome:** Operator is not notified twice about the same transition, a newer
@@ -556,6 +565,10 @@ do NOT re-scaffold them.
   `/m/push/` still commented out in the live snippet. This caveat, and the one on S-10, can go once
   `deploy/push/install.sh` and `deploy/nginx/install.sh` have run on the VPS.
 
+- **Note (2026-09-22, host install, #30):** both installers have now run on the VPS (see S-10's
+  note of the same date). The caveats above are closed on the host side. The plan's device checks
+  on replacement, restarts and dropping a deleted app are still for the operator, now that there is
+  a sidecar to check them against.
 ### S-12: Settings and sign-out
 
 - **Outcome:** Operator can choose the theme, see both the product's version and the Cezar
@@ -596,6 +609,12 @@ do NOT re-scaffold them.
   clears the phone but reports the session as still open. Re-run `deploy/nginx/install.sh` on the VPS
   to close that.
 
+- **Note (2026-09-22, host install, #30):** `deploy/nginx/install.sh` re-ran on the VPS. `nginx -t`
+  passed and nginx reloaded. The live `cezar-mobile.conf` now matches the repo, and
+  `cezar-mobile-signout.conf` exists. Checked against production: `GET /m/session/end` → 405, a
+  cross-origin `POST` → 403, a same-origin `POST` → 204 with a `Set-Cookie` that expires the gate
+  cookie (`Max-Age=0; Secure; HttpOnly`). The caveat above is closed. Still for the operator: sign out on
+  the phone once and confirm that the cockpit asks for the key again.
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                                  | Ready for `/10x-plan` | Notes                                             |
