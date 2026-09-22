@@ -48,9 +48,14 @@ export function useSession(): Session {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
   }, [refetch])
 
+  // A failed refetch puts the query in `error` while keeping the last answer in
+  // `data`. Once a session has been confirmed, only a refusal takes it away: a
+  // network blip on waking the phone must not swap the whole app (and a reply
+  // being typed) for "unreachable" — the offline banner reports it instead.
+  // The same rule as `reprobeSession`.
   let status: SessionStatus = 'checking'
-  if (query.isSuccess) status = 'connected'
-  else if (query.error instanceof AuthRequiredError) status = 'unauthorized'
+  if (query.error instanceof AuthRequiredError) status = 'unauthorized'
+  else if (query.data !== undefined) status = 'connected'
   else if (query.error) status = 'unreachable'
 
   return {

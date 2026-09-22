@@ -88,4 +88,59 @@ describe('AuthGate', () => {
 
     await waitFor(() => expect(screen.getByText(TASKS)).toBeInTheDocument())
   })
+
+  describe('once a session has been confirmed', () => {
+    const DRAFT = 'odpowiedź w trakcie pisania'
+
+    function renderGateWithDraft() {
+      return renderWithQuery(
+        <AuthGate>
+          <label>
+            {TASKS}
+            <input />
+          </label>
+        </AuthGate>,
+      )
+    }
+
+    it('keeps what it guards mounted — and the typed reply — when a re-probe hits a dead network', async () => {
+      // The phone wakes before its radio does: the visibility re-probe fails.
+      let online = true
+      const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        if (online) return healthResponse()
+        throw new TypeError('Failed to fetch')
+      })
+      const { client } = renderGateWithDraft()
+      const input = await screen.findByLabelText(TASKS)
+      fireEvent.change(input, { target: { value: DRAFT } })
+
+      online = false
+      document.dispatchEvent(new Event('visibilitychange'))
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+      await waitFor(() =>
+        expect(client.getQueryCache().getAll()[0]?.state.status).toBe('error'),
+      )
+
+      expect(
+        screen.queryByRole('heading', { name: pl.auth.unreachable.title }),
+      ).not.toBeInTheDocument()
+      expect(screen.getByLabelText(TASKS)).toBe(input)
+      expect(input).toHaveValue(DRAFT)
+    })
+
+    it('still offers "Connect to Cezar" when a re-probe is refused', async () => {
+      let authorized = true
+      stubFetch(() => (authorized ? healthResponse() : refusalResponse()))
+      renderGateWithDraft()
+      await screen.findByLabelText(TASKS)
+
+      authorized = false
+      document.dispatchEvent(new Event('visibilitychange'))
+
+      expect(
+        await screen.findByRole('heading', { name: pl.auth.title }),
+      ).toBeInTheDocument()
+      expect(screen.queryByLabelText(TASKS)).not.toBeInTheDocument()
+    })
+  })
 })
