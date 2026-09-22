@@ -230,6 +230,31 @@ describe('FrameJournal', () => {
     expect(result.runs.find((row) => row.id === running.id)?.status).toBe('waiting')
   })
 
+  // Two requests begun with no frame in between share a mark: the focus refetch cancelled by the
+  // stream-open invalidation on an iOS wake (#32). Ending one must not end the other.
+  it.each([
+    ['discarded', (journal: FrameJournal, mark: number) => journal.discard(mark)],
+    ['settled', (journal: FrameJournal, mark: number) => void journal.settle(mark, index)],
+  ])('keeps frames for a request sharing its mark with one %s before them', (_, end) => {
+    const journal = new FrameJournal()
+    const first = journal.begin()
+    const second = journal.begin()
+    end(journal, first)
+    journal.record(toWaiting)
+    const result = journal.settle(second, index)
+    expect(result.runs.find((row) => row.id === running.id)?.status).toBe('waiting')
+  })
+
+  it('holds nothing once every request sharing a mark has ended', () => {
+    const journal = new FrameJournal()
+    const first = journal.begin()
+    const second = journal.begin()
+    journal.discard(first)
+    journal.discard(second)
+    journal.record(toWaiting)
+    expect(journal.settle(journal.begin(), index)).toBe(index)
+  })
+
   it('holds nothing once no request is in flight', () => {
     const journal = new FrameJournal()
     journal.discard(journal.begin())

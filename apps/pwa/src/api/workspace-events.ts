@@ -42,7 +42,11 @@ export class WorkspaceStream extends LiveStream {
  */
 export class FrameJournal {
   private sequence = 0
-  private readonly marks = new Set<number>()
+  /**
+   * Open marks, counted: two requests begun with no frame in between share a mark (a focus
+   * refetch cancelled by the stream-open invalidation), and ending one must not end the other.
+   */
+  private readonly marks = new Map<number, number>()
   private frames: { at: number; frame: WorkspaceFrame }[] = []
 
   record(frame: WorkspaceFrame): void {
@@ -52,7 +56,7 @@ export class FrameJournal {
 
   /** Call before the request; pass the returned mark to `settle` or `discard`. */
   begin(): number {
-    this.marks.add(this.sequence)
+    this.marks.set(this.sequence, (this.marks.get(this.sequence) ?? 0) + 1)
     return this.sequence
   }
 
@@ -65,8 +69,10 @@ export class FrameJournal {
   }
 
   discard(mark: number): void {
-    this.marks.delete(mark)
-    const oldest = Math.min(...this.marks)
+    const open = this.marks.get(mark) ?? 0
+    if (open > 1) this.marks.set(mark, open - 1)
+    else this.marks.delete(mark)
+    const oldest = Math.min(...this.marks.keys())
     this.frames = this.marks.size === 0 ? [] : this.frames.filter((entry) => entry.at > oldest)
   }
 }
