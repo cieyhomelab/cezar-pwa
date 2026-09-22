@@ -16,7 +16,9 @@ command -v nginx >/dev/null || { echo "nginx not on PATH" >&2; exit 2; }
 
 T=$(mktemp -d)
 ng() { nginx -e "$T/logs/error.log" -p "$T" -c "$T/nginx.conf" "$@"; }
-cleanup() { ng -s stop 2>/dev/null || true; rm -rf "$T"; }
+# By pid, not `nginx -s stop`: that re-parses the config, so a failed
+# expectation that left a broken snippet behind would orphan the nginx.
+cleanup() { if [[ -s "$T/nginx.pid" ]]; then kill "$(cat "$T/nginx.pid")" 2>/dev/null || true; fi; rm -rf "$T"; }
 trap cleanup EXIT
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
@@ -181,5 +183,59 @@ gated=$(curl -s -o /dev/null -b "$jar" -w '%{http_code}' "$base/m/push/vapid-pub
 shell=$(curl -s -o /dev/null -b "$jar" -w '%{http_code}' "$base/m/")
 [[ "$shell" == 200 ]] || fail "after signing out the shell is gone: $shell (want 200 — it shows Connect to Cezar)"
 pass "after signing out the session is gone: cockpit and sidecar 403, the shell still loads"
+
+# install.sh's refresh path, run for real against this tree. It calls `nginx`
+# and `systemctl` by name, so shims on PATH point both at the scratch nginx;
+# a copy of the installer next to the scratch snippet stands in for the repo.
+real_nginx=$(command -v nginx)
+mkdir -p "$T/bin" "$T/installer" "$T/good"
+cat >"$T/bin/nginx" <<SHIM
+#!/usr/bin/env bash
+exec "$real_nginx" -e "$T/logs/error.log" -p "$T" -c "$T/nginx.conf" "\$@"
+SHIM
+cat >"$T/bin/systemctl" <<SHIM
+#!/usr/bin/env bash
+echo "\$*" >>"$T/reloads"
+exec "$real_nginx" -e "$T/logs/error.log" -p "$T" -c "$T/nginx.conf" -s reload
+SHIM
+chmod +x "$T/bin/nginx" "$T/bin/systemctl"
+cp "$here/install.sh" "$here/extract-unlock.sh" "$here/signout-from-unlock.sh" "$T/installer/"
+cp "$T/snippets/cezar-mobile.conf" "$T/installer/cezar-mobile.conf"
+
+run_install() {
+  PATH="$T/bin:$PATH" CEZAR_SNIPPET_DEST="$T/snippets/cezar-mobile.conf" \
+    CEZAR_UNLOCK_DEST="$T/snippets/cezar-mobile-unlock.conf" \
+    CEZAR_SIGNOUT_DEST="$T/snippets/cezar-mobile-signout.conf" \
+    "$T/installer/install.sh" "$T/vhost.conf" 2>&1
+}
+reloads() { if [[ -f "$T/reloads" ]]; then wc -l <"$T/reloads"; else echo 0; fi; }
+
+out=$(run_install) || fail "refreshing with a good snippet failed: $out"
+[[ "$out" == *"refreshing it"* && "$(reloads)" == 1 ]] || fail "a good refresh did not take the refresh path and reload once: $out"
+[[ "$out" == *"$KEY"* ]] && fail "install.sh printed the secret"
+for f in cezar-mobile.conf cezar-mobile-unlock.conf cezar-mobile-signout.conf; do cp -a "$T/snippets/$f" "$T/good/$f"; done
+[[ "$(probe "$base/m/?key=$KEY" | cut -d' ' -f1)" == 302 ]] || fail "after a good refresh /m/ no longer unlocks"
+pass "a refresh with a good snippet writes the three files and reloads once"
+
+echo 'not_a_directive on;' >>"$T/installer/cezar-mobile.conf"
+out=$(run_install) && fail "install.sh exited 0 with a snippet that fails nginx -t"
+[[ "$out" == *"nginx -t passes again"* ]] || fail "a failed refresh did not confirm nginx -t passes again: $out"
+[[ "$out" == *"$KEY"* ]] && fail "install.sh printed the secret on the failure path"
+for f in cezar-mobile.conf cezar-mobile-unlock.conf cezar-mobile-signout.conf; do
+  cmp -s "$T/good/$f" "$T/snippets/$f" || fail "a failed refresh left a different $f on disk"
+done
+[[ "$(stat -c %a "$T/snippets/cezar-mobile-unlock.conf")" == 600 ]] || fail "the restored unlock file is not mode 600"
+ng -t 2>/dev/null || fail "nginx -t fails after a failed refresh — the next reload would take the gateway down"
+[[ "$(reloads)" == 1 ]] || fail "a failed refresh reloaded nginx"
+[[ "$(probe "$base/m/?key=$KEY" | cut -d' ' -f1)" == 302 ]] || fail "after a failed refresh /m/ no longer unlocks"
+pass "a refresh with a broken snippet restores the good snippet, unlock and sign-out; nginx -t passes; no reload"
+
+rm "$T/snippets/cezar-mobile-unlock.conf" "$T/snippets/cezar-mobile-signout.conf"
+out=$(run_install) && fail "install.sh exited 0 with a snippet that fails nginx -t"
+[[ ! -e "$T/snippets/cezar-mobile-unlock.conf" && ! -e "$T/snippets/cezar-mobile-signout.conf" ]] ||
+  fail "a failed refresh left unlock or sign-out files that were not there before"
+cmp -s "$T/good/cezar-mobile.conf" "$T/snippets/cezar-mobile.conf" || fail "a failed refresh left the broken snippet on disk"
+ng -t 2>/dev/null || fail "nginx -t fails after a failed refresh with no unlock file"
+pass "a failed refresh removes the unlock and sign-out files it created, and nothing else changes"
 
 echo "all expectations met"
