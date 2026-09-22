@@ -45,7 +45,8 @@ function describe(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) return pl.push.errors.unknownDevice
     if (error.status === 410) return pl.push.errors.gone
-    // nginx's own answer while the sidecar is down, not the sidecar's.
+    // nginx's own answer while the sidecar is down, not the sidecar's — or the app shell answering
+    // for an unrouted /m/push/, which pushFetch reports the same way (#31).
     if (error.status === 502 && error.message.startsWith('HTTP ')) return pl.push.errors.unavailable
     if (error.status === 503 || error.status === 504) return pl.push.errors.unavailable
     return pl.push.errors.failed(error.message)

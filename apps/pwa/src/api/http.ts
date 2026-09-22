@@ -106,18 +106,24 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     // frozen and nothing here may reach for it.
     throw new Error(`API path must start with ${API_PREFIX}: ${path}`)
   }
-  return request<T>(path, options)
+  return request<T>(path, options, 'no-session')
 }
 
 /**
  * The same judgements for the push sidecar's `/m/push/…`. It sits behind the same gate and
  * answers errors in Cezar's `{ error }` shape, so a lapsed session reads the same way here.
+ *
+ * One difference: a 2xx that is not JSON is not the gate. Past the gate, a `/m/push/` that is
+ * not routed to the sidecar falls into `location ^~ /m/`'s SPA fallback and gets our own
+ * `index.html` with a 200 (#31). That is a missing sidecar, so it reads as nginx's 502 would.
+ *
+ * @throws {ApiError} status 502 when the answer was not the sidecar's JSON
  */
 export async function pushFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   if (!path.startsWith(PUSH_PREFIX)) {
     throw new Error(`push path must start with ${PUSH_PREFIX}: ${path}`)
   }
-  return request<T>(path, options)
+  return request<T>(path, options, 'not-routed')
 }
 
 /** The perimeter's own paths (`deploy/nginx/`): nginx answers them, not Cezar or the sidecar. */
@@ -137,7 +143,10 @@ export async function perimeterPost(path: string, timeoutMs = DEFAULT_TIMEOUT_MS
   return response.status
 }
 
-async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
+/** What a 2xx that is not JSON means on a surface: the gate's page, or the app shell. */
+type NotJson = 'no-session' | 'not-routed'
+
+async function request<T>(path: string, options: ApiFetchOptions, notJson: NotJson): Promise<T> {
   const { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = options
 
   const response = await send(
@@ -168,6 +177,7 @@ async function request<T>(path: string, options: ApiFetchOptions): Promise<T> {
   // a login page, a captive portal, a cached shell. Treat it as no session
   // rather than as data (CLAUDE.md → "odpowiedź HTML zamiast JSON").
   if (!isJson(response)) {
+    if (notJson === 'not-routed') throw new ApiError(`HTTP ${response.status} (not JSON)`, 502)
     throw new AuthRequiredError(response.status)
   }
 
