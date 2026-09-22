@@ -29,7 +29,7 @@ npm run build -w @cezar-pwa/pwa
 dist="$repo_root/apps/pwa/dist"
 [[ -f "$dist/index.html" ]] || { echo "build produced no index.html at $dist" >&2; exit 1; }
 
-rsync_flags=(-az --delete)
+rsync_flags=(-az)
 
 # macOS ships openrsync, which advertises --chmod but rejects the D/F spec that
 # GNU rsync 3.x accepts. Probe rather than assume, so the same script works on
@@ -44,10 +44,26 @@ if [[ "${DEPLOY_DRY_RUN:-}" == "1" ]]; then
   echo "==> DRY RUN: nothing will be written"
 fi
 
-echo "==> syncing $dist -> $DEPLOY_HOST:$DEPLOY_PATH"
-# --delete prunes the previous build's hashed assets. The trailing slash on the
-# source is load-bearing: without it rsync would nest dist/ inside the target.
-rsync "${rsync_flags[@]}" "$dist/" "$DEPLOY_HOST:$DEPLOY_PATH/"
+# The target is live, so the sync runs in two passes. A client must never see an
+# entry point that references assets which are not there yet, nor lose the
+# assets of the entry point it already has.
+#   1. Everything except the entry points, deleting nothing. The new hashed
+#      assets land next to the old ones; the old index.html and sw.js still
+#      serve the old build, whose files are all still present.
+#   2. Everything, with --delay-updates so the entry points are renamed into
+#      place together at the end, and --delete-after so the previous build's
+#      assets are pruned only once the new entry points are live.
+# rrsync (the CI key's forced command) allows both flags. The trailing slash on
+# the source is load-bearing: without it rsync would nest dist/ inside the target.
+entry_points=(index.html sw.js manifest.webmanifest)
+assets_flags=()
+for f in "${entry_points[@]}"; do assets_flags+=("--exclude=/$f"); done
+
+echo "==> syncing $dist -> $DEPLOY_HOST:$DEPLOY_PATH (1/2: assets, no deletes)"
+rsync "${rsync_flags[@]}" "${assets_flags[@]}" "$dist/" "$DEPLOY_HOST:$DEPLOY_PATH/"
+
+echo "==> syncing $dist -> $DEPLOY_HOST:$DEPLOY_PATH (2/2: entry points, then prune)"
+rsync "${rsync_flags[@]}" --delay-updates --delete-after "$dist/" "$DEPLOY_HOST:$DEPLOY_PATH/"
 
 if [[ "${DEPLOY_DRY_RUN:-}" == "1" ]]; then
   echo "==> dry run finished. Nothing was written."
