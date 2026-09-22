@@ -16,7 +16,9 @@ command -v nginx >/dev/null || { echo "nginx not on PATH" >&2; exit 2; }
 
 T=$(mktemp -d)
 ng() { nginx -e "$T/logs/error.log" -p "$T" -c "$T/nginx.conf" "$@"; }
-cleanup() { ng -s stop 2>/dev/null || true; rm -rf "$T"; }
+# By pid, not `nginx -s stop`: that re-parses the config, so a failed
+# expectation that left a broken snippet behind would orphan the nginx.
+cleanup() { if [[ -s "$T/nginx.pid" ]]; then kill "$(cat "$T/nginx.pid")" 2>/dev/null || true; fi; rm -rf "$T"; }
 trap cleanup EXIT
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
