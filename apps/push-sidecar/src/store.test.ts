@@ -1,8 +1,14 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { isPushServiceEndpoint, MAX_SUBSCRIPTIONS, SubscriptionStore, subscriptionSchema } from './store.ts'
+import {
+  isPushServiceEndpoint,
+  MAX_SUBSCRIPTIONS,
+  rejectedFileOf,
+  SubscriptionStore,
+  subscriptionSchema,
+} from './store.ts'
 import { APPLE, subscription } from './testing.ts'
 
 describe('isPushServiceEndpoint', () => {
@@ -86,5 +92,50 @@ describe('SubscriptionStore', () => {
     await writeFile(file, '{ not json')
     await expect(new SubscriptionStore(file).load()).rejects.toThrow()
     expect(await readFile(file, 'utf8')).toBe('{ not json')
+  })
+
+  it('refuses to start over a file of the wrong shape', async () => {
+    await mkdir(dirname(file), { recursive: true })
+    await writeFile(file, JSON.stringify([subscription()]))
+    await expect(new SubscriptionStore(file).load()).rejects.toThrow()
+  })
+
+  it('recovers after a failed write: the next save lands and the file matches memory', async () => {
+    // A regular file where the state directory should be makes the first write fail (ENOTDIR).
+    await writeFile(join(dir, 'state'), '')
+    const store = new SubscriptionStore(file)
+    await expect(store.upsert(subscription(`${APPLE}a`))).rejects.toThrow()
+
+    await rm(join(dir, 'state'))
+    await store.upsert(subscription(`${APPLE}b`))
+    expect(store.list().map((entry) => entry.endpoint)).toEqual([`${APPLE}a`, `${APPLE}b`])
+
+    const reloaded = new SubscriptionStore(file)
+    await reloaded.load()
+    expect(reloaded.list()).toEqual(store.list())
+  })
+
+  it('loads the valid entries and sets the invalid ones aside, leaving the file as it was', async () => {
+    const good = { ...subscription(), createdAt: '2026-09-01T00:00:00.000Z' }
+    const bad = { ...subscription('https://push.example.com/abc'), createdAt: '2026-09-01T00:00:00.000Z' }
+    const raw = JSON.stringify({ subscriptions: [bad, good] })
+    await mkdir(dirname(file), { recursive: true })
+    await writeFile(file, raw)
+
+    const store = new SubscriptionStore(file)
+    expect(await store.load()).toEqual({ rejected: 1 })
+    expect(store.list()).toEqual([good])
+    expect(await readFile(file, 'utf8')).toBe(raw)
+
+    const aside = rejectedFileOf(file)
+    expect(aside).toBe(join(dir, 'state', 'subscriptions.rejected.json'))
+    expect(JSON.parse(await readFile(aside, 'utf8'))).toEqual({ subscriptions: [bad] })
+    expect((await stat(aside)).mode & 0o777).toBe(0o600)
+
+    // A second start with the same bad entry does not duplicate it; a new one is added, not swapped in.
+    const other = { ...bad, endpoint: 'https://push.example.com/other' }
+    await writeFile(file, JSON.stringify({ subscriptions: [bad, other, good] }))
+    expect(await new SubscriptionStore(file).load()).toEqual({ rejected: 2 })
+    expect(JSON.parse(await readFile(aside, 'utf8'))).toEqual({ subscriptions: [bad, other] })
   })
 })

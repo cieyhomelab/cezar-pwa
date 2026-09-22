@@ -39,7 +39,15 @@ export type Subscription = z.infer<typeof subscriptionSchema>
 
 type Stored = Subscription & { createdAt: string }
 
-const fileSchema = z.object({ subscriptions: z.array(subscriptionSchema.extend({ createdAt: z.string() })) })
+const storedSchema = subscriptionSchema.extend({ createdAt: z.string() })
+
+/** Only the top-level shape; entries are checked one by one so a bad one cannot sink the rest. */
+const fileSchema = z.object({ subscriptions: z.array(z.unknown()) })
+
+/** Where `load()` sets aside entries that no longer validate: `subscriptions.json` → `subscriptions.rejected.json`. */
+export function rejectedFileOf(file: string): string {
+  return file.endsWith('.json') ? `${file.slice(0, -'.json'.length)}.rejected.json` : `${file}.rejected`
+}
 
 /**
  * One operator, a handful of devices. The cap keeps a misbehaving client from growing the file
@@ -61,16 +69,32 @@ export class SubscriptionStore {
     this.file = file
   }
 
-  /** A missing file is an empty store; an unreadable one is an error — never silently wiped. */
-  async load(): Promise<void> {
+  /**
+   * A missing file is an empty store; one that is not JSON or not `{ subscriptions: [] }` is an
+   * error — never silently wiped. An entry that no longer validates (a hand edit, a push host
+   * dropped from the allowlist) is copied to {@link rejectedFileOf} before anything can rewrite
+   * the file, and the rest load: one bad device must not keep every other one from being served.
+   *
+   * @returns how many entries were set aside — a count, never the entries (CLAUDE.md rule 6).
+   */
+  async load(): Promise<{ rejected: number }> {
     let raw: string
     try {
       raw = await readFile(this.file, 'utf8')
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { rejected: 0 }
       throw error
     }
-    this.subscriptions = fileSchema.parse(JSON.parse(raw)).subscriptions
+    const valid: Stored[] = []
+    const rejected: unknown[] = []
+    for (const entry of fileSchema.parse(JSON.parse(raw)).subscriptions) {
+      const parsed = storedSchema.safeParse(entry)
+      if (parsed.success) valid.push(parsed.data)
+      else rejected.push(entry)
+    }
+    if (rejected.length > 0) await this.setAside(rejected)
+    this.subscriptions = valid
+    return { rejected: rejected.length }
   }
 
   list(): readonly Subscription[] {
@@ -98,15 +122,40 @@ export class SubscriptionStore {
     return true
   }
 
+  /**
+   * Every write is the whole list, so a failed one is repaired by the next: memory keeps the
+   * change, the caller sees the error, and the next save lands both. The chain swallows the
+   * failure for the writes queued behind it — otherwise one ENOSPC would reject every later save.
+   */
   private save(): Promise<void> {
     const body = `${JSON.stringify({ subscriptions: this.subscriptions }, null, 2)}\n`
     // Serialised: two quick writes must land in order, and the last one wins.
-    this.writing = this.writing.then(async () => {
-      await mkdir(dirname(this.file), { recursive: true, mode: 0o700 })
-      const temp = `${this.file}.${process.pid}.tmp`
-      await writeFile(temp, body, { mode: 0o600 })
-      await rename(temp, this.file)
-    })
-    return this.writing
+    const write = this.writing.catch(() => {}).then(() => this.write(this.file, body))
+    this.writing = write
+    return write
+  }
+
+  /**
+   * Merged into what an earlier start set aside, so a second rejection does not overwrite the
+   * first. An existing side file that does not parse is an error, like the main one.
+   */
+  private async setAside(entries: unknown[]): Promise<void> {
+    const file = rejectedFileOf(this.file)
+    let kept: unknown[] = []
+    try {
+      kept = fileSchema.parse(JSON.parse(await readFile(file, 'utf8'))).subscriptions
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    const seen = new Set(kept.map((entry) => JSON.stringify(entry)))
+    const merged = [...kept, ...entries.filter((entry) => !seen.has(JSON.stringify(entry)))]
+    await this.write(file, `${JSON.stringify({ subscriptions: merged }, null, 2)}\n`)
+  }
+
+  private async write(file: string, body: string): Promise<void> {
+    await mkdir(dirname(file), { recursive: true, mode: 0o700 })
+    const temp = `${file}.${process.pid}.tmp`
+    await writeFile(temp, body, { mode: 0o600 })
+    await rename(temp, file)
   }
 }
