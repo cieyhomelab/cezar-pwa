@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch the Cezar nginx vhost for server-install rewrites that drop /m/
+
+[Path]
+PathModified=/etc/nginx/sites-available/cezar-cezar-ciey-studio
+Unit=cezar-mobile-nginx-ensure.service
+
+[Install]
+WantedBy=multi-user.target

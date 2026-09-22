@@ -1,0 +1,11 @@
+[Unit]
+Description=Backstop sweep for the Cezar Mobile /m/ include (catches rewrites the path unit misses)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+AccuracySec=30s
+Unit=cezar-mobile-nginx-ensure.service
+
+[Install]
+WantedBy=timers.target

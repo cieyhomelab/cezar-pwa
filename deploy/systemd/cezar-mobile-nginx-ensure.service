@@ -1,0 +1,15 @@
+# System unit (root: it writes the nginx vhost). Puts the /m/ include back
+# after `cezar server-install` rewrites the vhost. See README §deploy for the
+# install; the vhost path matches cezar-gate-ensure.service on the same host.
+[Unit]
+Description=Re-assert the Cezar Mobile /m/ include on the managed nginx vhost
+After=nginx.service cezar-gate-ensure.service
+ConditionPathExists=/etc/nginx/sites-available/cezar-cezar-ciey-studio
+
+[Service]
+Type=oneshot
+# A root-owned copy of deploy/nginx/install.sh, never the checkout: root must
+# not run a script the unprivileged user can edit. No-op while the include is
+# present; otherwise backs up, inserts, reloads only if `nginx -t` passes, and
+# rolls back if it does not.
+ExecStart=/usr/local/sbin/cezar-mobile-nginx-ensure --ensure /etc/nginx/sites-available/cezar-cezar-ciey-studio

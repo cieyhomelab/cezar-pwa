@@ -659,7 +659,9 @@ do NOT re-scaffold them.
    **ANSWERED 2026-09-21:** Cezar's installer generates the vhost and rewrites it on
    reinstall; `cezar-gate-ensure` re-asserts only the gate's include, not ours. After any
    `cezar server-install`, re-run `deploy/nginx/install.sh`, or `/m/` falls behind the gate
-   and FR-004 has nowhere to render. Automating that is a candidate follow-up.
+   and FR-004 has nowhere to render. Automated by #29: `cezar-mobile-nginx-ensure.path`
+   and `.timer` run `install.sh --ensure`, which puts the include back (README §Deploying,
+   step 3).
 3. **Does an icon badge work in an installed web app on this phone?** Should be verified on
    the device before any work goes into it. — Owner: operator. Block: nothing; FR-042 is
    parked. *(PRD Open Question 4.)*
