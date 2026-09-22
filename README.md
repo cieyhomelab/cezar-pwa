@@ -199,5 +199,18 @@ Two steps remain manual and one-off, both run **on the VPS**:
    the gate's `$cezar_gate_ok`, so it holds no secret. On a host without the
    gate, `nginx -t` fails and the installer rolls back.
 
+   The unit reads optional settings from `~/.cezar-push/env` (mode 600), for
+   example `PUBLIC_ORIGIN=https://cezar.ciey.studio`, the only origin that may
+   subscribe.
+
+Both steps were applied on the production VPS on 2026-09-22 (#30). To check a
+host:
+
+```bash
+systemctl --user is-active cezar-push                                   # active
+curl -s -o /dev/null -w '%{http_code}\n' https://cezar.ciey.studio/m/push/vapid-public-key  # 403 without the cookie, JSON with it, never index.html
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://cezar.ciey.studio/m/session/end   # 403: no same-origin Origin header
+```
+
 **After any `cezar server-install`, re-run step 1.** Cezar's installer rewrites
 the vhost, and `/m/` falls behind the gate until the include is back.
