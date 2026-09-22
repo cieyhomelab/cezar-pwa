@@ -3,9 +3,10 @@
 #
 #   sudo deploy/nginx/install.sh /etc/nginx/sites-available/cezar.ciey.studio
 #
-# Safe by construction: the vhost is backed up first, `nginx -t` gates the
-# reload, and a config that fails the test is rolled back before nginx ever
-# sees it. Re-running is a no-op apart from refreshing the snippet, the
+# Safe by construction: the vhost and every file this script writes are backed
+# up first, `nginx -t` gates the reload, and a config that fails the test is
+# rolled back — on a first install and on a refresh alike — so nothing invalid
+# is left for a later reload to pick up. Re-running is a no-op apart from refreshing the snippet, the
 # unlock guard (see extract-unlock.sh) and the sign-out derived from it
 # (signout-from-unlock.sh) — so re-run it after rotating the key.
 set -euo pipefail
@@ -57,10 +58,23 @@ install_unlock() {
   fi
 }
 
-# A broken unlock (or sign-out) file must not be what stops the next reload of the gateway.
-drop_unlock() {
-  rm -f "$unlock_dest" "$signout_dest"
-  echo "==> removed $unlock_dest and $signout_dest" >&2
+# The files this script writes, saved before it writes them. A config that
+# fails `nginx -t` must not stay on disk: the next reload — a reboot, a certbot
+# hook, `cezar server-install` — would pick it up and take the gateway down.
+# The stash lives in a mode-700 mktemp dir; `cp -a` keeps the unlock file 600.
+written=("$dest" "$unlock_dest" "$signout_dest")
+stash=$(mktemp -d)
+trap 'rm -rf "$stash"' EXIT
+for i in "${!written[@]}"; do
+  if [[ -e "${written[$i]}" ]]; then cp -a "${written[$i]}" "$stash/$i"; fi
+done
+
+# Puts every written file back as it was, removing the ones that did not exist.
+restore_written() {
+  for i in "${!written[@]}"; do
+    if [[ -e "$stash/$i" ]]; then cp -a "$stash/$i" "${written[$i]}"; else rm -f "${written[$i]}"; fi
+  done
+  echo "==> restored the previous $dest, $unlock_dest and $signout_dest" >&2
 }
 
 # Already wired up: just refresh the snippet contents and reload.
@@ -68,7 +82,12 @@ if grep -qF "$dest" "$vhost"; then
   echo "==> vhost already includes the snippet, refreshing it"
   install_snippet
   install_unlock
-  nginx -t || { drop_unlock; die "nginx -t failed with the new snippet; $dest is updated but NOT loaded"; }
+  if ! nginx -t; then
+    restore_written
+    nginx -t >/dev/null 2>&1 ||
+      die "nginx -t failed with the new snippet, and STILL fails with the previous files restored — do not reload nginx until that is fixed"
+    die "nginx -t failed with the new snippet; the previous files are restored, nginx -t passes again, nothing was reloaded"
+  fi
   systemctl reload nginx
   echo "==> reloaded"
   exit 0
@@ -94,11 +113,11 @@ awk -v inc="    include $dest;" '
   { print }
 ' "$backup" > "$vhost"
 
-grep -qF "$dest" "$vhost" || { cp -a "$backup" "$vhost"; die "insertion produced no include line; vhost restored"; }
+grep -qF "$dest" "$vhost" || { cp -a "$backup" "$vhost"; restore_written; die "insertion produced no include line; vhost restored"; }
 
 if ! nginx -t; then
   cp -a "$backup" "$vhost"
-  drop_unlock
+  restore_written
   echo "==> vhost restored from $backup" >&2
   nginx -t >/dev/null 2>&1 || echo "warning: the ORIGINAL vhost also fails nginx -t" >&2
   die "nginx -t failed; nothing was reloaded"
