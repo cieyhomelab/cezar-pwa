@@ -67,6 +67,8 @@ export function createApp(deps: AppDeps): Hono {
     const delivery = await deps.pusher.sendTo(subscription, TEST_PAYLOAD)
     if (delivery === 'sent') return c.json({ sent: true })
     if (delivery === 'gone') return c.json({ error: 'push service reports the subscription gone' }, 410)
+    // A stall is the gateway's fault, not the device's: 504, which the app reads as "try later".
+    if (delivery === 'timeout') return c.json({ error: 'push service did not answer in time' }, 504)
     return c.json({ error: 'push service refused the notification' }, 502)
   })
 

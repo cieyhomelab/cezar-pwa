@@ -18,14 +18,16 @@ Served on `127.0.0.1:4330` under `/m/push/`; nginx forwards them only past the c
 | `GET` | `/m/push/vapid-public-key` | `{ publicKey }` for `pushManager.subscribe` |
 | `POST` | `/m/push/subscription` | `PushSubscription.toJSON()`; only Apple/Google/Mozilla/Microsoft push endpoints |
 | `DELETE` | `/m/push/subscription` | `{ endpoint }` → `{ removed }` |
-| `POST` | `/m/push/test` | `{ endpoint }` → a test push to that device only; 404 unknown, 410 gone |
+| `POST` | `/m/push/test` | `{ endpoint }` → a test push to that device only; 404 unknown, 410 gone, 502 refused, 504 the push service never answered |
 | `GET` | `/m/push/health` | stream state, baseline time, counts — never a task |
 
 ## State
 
 `~/.cezar-push/` (mode 0700): `vapid.json` (the key pair, created once by `init`, never rotated)
 and `subscriptions.json` (atomic writes). Both 0600, neither in the repo. A device the push
-service reports gone (404/410), or whose `expirationTime` has passed, is dropped.
+service reports gone (404/410), or whose `expirationTime` has passed, is dropped. A send that runs
+past its ten-second deadline is given up on and logged as a timeout; the device stays, because a
+push service that stalls says nothing about it.
 
 ## One ring per transition (S-11)
 
