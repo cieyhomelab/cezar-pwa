@@ -1,4 +1,5 @@
 import type { RunIndexEntry } from '@cezar-pwa/cezar-contract/contract'
+import { pl } from '../i18n/pl.ts'
 
 /**
  * What a list row says about a run (FR-009): its title, its PR/issue number, its cost and its
@@ -113,20 +114,19 @@ export function formatCost(usd: number | undefined): string {
 // ---- timing -----------------------------------------------------------------------------
 
 /**
- * Compact age in Polish — `4 s` / `26 min` / `2 godz.` / `3 dni`. One unit, never rounded up,
- * like the cockpit's `shortAge`. Empty for a missing or unparseable stamp: an empty slot is
- * honest, `NaN min` is not. Clamped at zero against clock skew.
+ * Compact age — `4 s` / `26 min` / `2 godz.` / `3 dni`, worded by `pl.age`. One unit, never
+ * rounded up, like the cockpit's `shortAge`. Empty for a missing or unparseable stamp: an empty
+ * slot is honest, `NaN min` is not. Clamped at zero against clock skew.
  */
 export function shortAge(iso: string | undefined, now: number): string {
   if (!iso) return ''
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
   const seconds = Math.max(0, (now - then) / 1000)
-  if (seconds < 60) return `${Math.floor(seconds)} s`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
-  if (seconds < 86_400) return `${Math.floor(seconds / 3600)} godz.`
-  const days = Math.floor(seconds / 86_400)
-  return days === 1 ? '1 dzień' : `${days} dni`
+  if (seconds < 60) return pl.age.seconds(Math.floor(seconds))
+  if (seconds < 3600) return pl.age.minutes(Math.floor(seconds / 60))
+  if (seconds < 86_400) return pl.age.hours(Math.floor(seconds / 3600))
+  return pl.age.days(Math.floor(seconds / 86_400))
 }
 
 /**

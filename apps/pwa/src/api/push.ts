@@ -11,7 +11,7 @@ export const VAPID_KEY_QUERY_KEY = ['push-vapid-key'] as const
 export async function fetchVapidKey(options?: { signal?: AbortSignal }): Promise<string> {
   const body = await pushFetch<{ publicKey?: unknown }>('/m/push/vapid-public-key', { signal: options?.signal })
   if (typeof body?.publicKey !== 'string' || body.publicKey === '') {
-    throw new ApiError('Serwer powiadomień odpowiedział w nieznanym formacie', 200)
+    throw new ApiError('unexpected sidecar response shape', 200, 'unexpected-shape')
   }
   return body.publicKey
 }

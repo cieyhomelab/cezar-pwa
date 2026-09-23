@@ -60,7 +60,7 @@ function envelopes(events: unknown[]): RunEvent[] {
 export async function fetchRun(projectId: string, runId: string, signal?: AbortSignal): Promise<ApiRun> {
   const body = await apiFetch<unknown>(runBase(projectId, runId), { signal })
   if (!isRecord(body) || typeof body.id !== 'string' || typeof body.status !== 'string') {
-    throw new ApiError('Cezar odpowiedział w nieznanym formacie', 200)
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
   }
   return body as ApiRun
 }
@@ -73,7 +73,7 @@ export async function fetchHistory(
 ): Promise<RunHistoryPage> {
   const body = await apiFetch<unknown>(`${runBase(projectId, runId)}/history`, { signal })
   if (!isRecord(body) || !Array.isArray(body.events)) {
-    throw new ApiError('Cezar odpowiedział w nieznanym formacie', 200)
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
   }
   return {
     ...(body as RunHistoryPage),
@@ -93,7 +93,7 @@ export async function fetchHistoryContext(
 ): Promise<RunHistoryContext> {
   const body = await apiFetch<unknown>(`${runBase(projectId, runId)}/history-context`, { signal })
   if (!isRecord(body) || !Array.isArray(body.contextEvents)) {
-    throw new ApiError('Cezar odpowiedział w nieznanym formacie', 200)
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
   }
   return {
     contextEvents: envelopes(body.contextEvents),

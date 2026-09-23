@@ -13,6 +13,7 @@ import {
   setRunPinned,
 } from '../../api/run.ts'
 import type { ActionRun, RunActionId } from '../../domain/run-actions.ts'
+import { apiErrorDetail } from '../../i18n/errors.ts'
 import { pl } from '../../i18n/pl.ts'
 
 export interface RunActions {
@@ -35,7 +36,8 @@ export function actionFailureMessage(error: unknown): string {
   if (error instanceof AuthRequiredError) return failed.auth
   if (error instanceof TimeoutError) return failed.timeout
   if (error instanceof NetworkError) return failed.network
-  if (error instanceof ApiError) return failed.refused(error.message)
+  // A coded error carries no words of Cezar's, so its reason comes from `pl` (see `errors.ts`).
+  if (error instanceof ApiError) return failed.refused(apiErrorDetail(error) ?? `HTTP ${error.status}`)
   return failed.refused(error instanceof Error ? error.message : String(error))
 }
 

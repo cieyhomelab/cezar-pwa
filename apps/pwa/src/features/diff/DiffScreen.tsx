@@ -10,6 +10,7 @@ import { cockpitChangesPath } from '../../domain/cockpit-link.ts'
 import { openByDefault } from '../../domain/diff.ts'
 import { clockTime, runTitle } from '../../domain/run-display.ts'
 import { runPath } from '../../domain/run-header.ts'
+import { apiErrorDetail } from '../../i18n/errors.ts'
 import { pl } from '../../i18n/pl.ts'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
@@ -107,8 +108,9 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
                   ? pl.run.notFound
                   : pl.run.diff.loadFailed}
             </p>
-            {error instanceof ApiError && error.status !== 404 ? (
-              <p className="text-sm break-words text-text-muted">{error.message}</p>
+            {/* A 404's heading already says it all; anything else adds what the answer gave. */}
+            {error instanceof ApiError && error.status !== 404 && apiErrorDetail(error) ? (
+              <p className="text-sm break-words text-text-muted">{apiErrorDetail(error)}</p>
             ) : null}
           </section>
         ) : (

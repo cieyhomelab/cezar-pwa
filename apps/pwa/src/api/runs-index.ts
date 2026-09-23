@@ -36,7 +36,7 @@ export async function fetchRunsIndex(options?: {
   // failed parse. Only the container is checked, and a missing one is an ERROR rather than an
   // empty list: an empty list would say "nothing is waiting", which nobody can vouch for.
   if (!Array.isArray(body?.runs)) {
-    throw new ApiError('Cezar odpowiedział w nieznanym formacie', 200)
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
   }
   return {
     runs: body.runs,

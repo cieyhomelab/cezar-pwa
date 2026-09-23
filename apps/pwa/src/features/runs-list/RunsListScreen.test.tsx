@@ -117,6 +117,10 @@ describe('RunsListScreen', () => {
     renderList(() => jsonResponse({ unexpected: true }))
     expect(await screen.findByText(pl.runs.loadFailed)).toBeInTheDocument()
     expect(screen.queryByText(pl.runs.summary.none)).toBeNull()
+    // The detail line is the app's own judgement, so it is said in Polish rather than as the
+    // developer-facing `ApiError.message` the code travels with.
+    expect(screen.getByText(pl.apiError['unexpected-shape'])).toBeInTheDocument()
+    expect(screen.queryByText('unexpected response shape')).toBeNull()
   })
 
   it('caps finished history behind a button', async () => {
