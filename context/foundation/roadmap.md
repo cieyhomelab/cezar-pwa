@@ -674,6 +674,9 @@ do NOT re-scaffold them.
    than the cuts. — Owner: operator. Block: nothing, but they should go before a slice
    reaches for one out of habit. *(2026-09-21: S-09 did not use `virtua` for long diffs. It
    pages them instead. Neither package is imported anywhere yet.)*
+   **ANSWERED 2026-09-23 (#28):** both packages are gone from `apps/pwa/package.json`, and
+   CLAUDE.md §Stack now states the two Non-Goals instead of naming the libraries, so the
+   rules file can no longer invite the habit.
 
 ## Parked
 
