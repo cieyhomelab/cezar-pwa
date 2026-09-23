@@ -82,3 +82,38 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # The shell and nginx side. Everything under deploy/ goes live on the gateway
+  # by hand, as root, so this is the only gate between a broken snippet or
+  # installer and `nginx -t` failing on the VPS (#34 was that class of bug).
+  # No Node in this job — nothing here touches the app.
+  infra:
+    name: shellcheck · nginx rehearsal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # nginx-core, not nginx-light: the gateway runs the `nginx` metapackage,
+      # and a rehearsal on a narrower module set could pass on a snippet the
+      # real host rejects. shellcheck comes from apt too rather than from
+      # whatever the runner image happens to ship.
+      - name: Install nginx and shellcheck
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx-core shellcheck
+          nginx -v
+          shellcheck --version
+
+      # Every tracked script, so a new one is covered the moment it is added.
+      # A finding that is wrong for us gets a `# shellcheck disable=` with a
+      # reason next to it, never a blanket severity filter.
+      - name: shellcheck
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck
+
+      # Needs neither root nor /etc/nginx: it builds a scratch tree with a
+      # representative vhost and a stub `$cezar_gate_ok` map, and drives the
+      # installers against it over loopback.
+      - name: nginx rehearsal
+        run: deploy/nginx/rehearse.sh

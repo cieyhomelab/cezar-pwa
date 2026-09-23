@@ -35,6 +35,7 @@ rsync_flags=(-az)
 # GNU rsync 3.x accepts. Probe rather than assume, so the same script works on
 # the dev laptop and on the CI runner.
 if rsync --chmod=D755,F644 --version >/dev/null 2>&1; then
+  # shellcheck disable=SC2054  # the commas are rsync's own --chmod syntax, one element
   rsync_flags+=(--chmod=D755,F644)
 else
   echo "note: this rsync does not support --chmod=D755,F644; local file modes are preserved instead" >&2
