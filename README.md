@@ -210,7 +210,17 @@ Three steps remain manual and one-off, all run **on the VPS**:
 
    The unit reads optional settings from `~/.cezar-push/env` (mode 600), for
    example `PUBLIC_ORIGIN=https://cezar.ciey.studio`, the only origin that may
-   subscribe.
+   subscribe. `PORT=` there moves the sidecar off 4330 — systemd applies the
+   file over the unit's own `Environment=`, and the installer's health probe
+   reads whichever wins, so it checks the port the service is really on.
+
+   `CEZAR_PUSH_HOME` and `STATE_DIR` move the bundle and the state off
+   `~/cezar-push` and `~/.cezar-push`. The installer renders the unit with
+   whatever they resolve to, so the service goes looking where the keys and
+   the bundle actually are; a path it cannot put in a unit file (relative, or
+   carrying a space, a quote or a `%` specifier) is refused rather than
+   quietly ignored. `deploy/push/rehearse.sh` checks all of this in a scratch
+   `$HOME`, no VPS needed.
 
 Steps 1 and 2 were applied on the production VPS on 2026-09-22 (#30). To check a
 host:
