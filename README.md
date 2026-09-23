@@ -130,6 +130,12 @@ Merging to `main` ships the shell: `.github/workflows/deploy.yml` runs the CI
 gates on that commit and then rsyncs the build to the VPS. It runs the same
 `scripts/deploy.sh` a human runs, so there is one deploy path rather than two.
 
+Those gates cover the gateway too. CI's `infra` job runs `shellcheck` over every
+tracked `*.sh` and replays `deploy/nginx/rehearse.sh` on a scratch nginx, so a
+snippet or installer that would fail `nginx -t` on the VPS cannot merge — the
+files under `deploy/` are applied there by hand, as root, and CI is the only
+thing standing in front of them.
+
 It needs three repository secrets. Until all three exist the job stays green and
 posts a warning instead of shipping:
 
