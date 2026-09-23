@@ -11,14 +11,51 @@ export type SendNotification = (
   options: webpush.RequestOptions,
 ) => Promise<unknown>
 
-/** What happened to one delivery. `gone` means the push service no longer knows the device. */
-export type Delivery = 'sent' | 'gone' | 'failed'
+/**
+ * What happened to one delivery. `gone` means the push service no longer knows the device;
+ * `timeout` means it never answered, which says nothing about the device.
+ */
+export type Delivery = 'sent' | 'gone' | 'failed' | 'timeout'
 
 /**
  * A day: a phone that is off overnight still gets told in the morning. Anything older is noise —
  * the list says it better by then.
  */
 export const PUSH_TTL_SECONDS = 24 * 60 * 60
+
+/**
+ * How long one send may take. A push service that accepts the connection and then stalls would
+ * otherwise hold the promise — and, under the watcher, one per device per status change — for as
+ * long as it likes. Ten seconds is far past a healthy APNs or FCM answer and still inside nginx's
+ * read timeout, so `/m/push/test` answers the operator rather than the proxy answering for it.
+ */
+export const PUSH_TIMEOUT_MS = 10_000
+
+/** Raised by `withDeadline` only: the send is still out there, nobody is waiting for it. */
+class PushTimeout extends Error {}
+
+/**
+ * Settle as a timeout when `promise` has not settled within `ms`.
+ *
+ * web-push's own `timeout` option is a *socket* timeout — inactivity, not a total deadline — and it
+ * cannot bound an injected `send` at all, so the deadline lives here and the option below is what
+ * makes the abandoned request let go of its socket.
+ */
+async function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  // Past the deadline nobody is listening, and a late rejection must not crash the process.
+  promise.catch(() => {})
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new PushTimeout('push timed out')), ms)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 /** 404 and 410 are the push service saying the subscription is dead (RFC 8030 § 7.3). */
 const isGone = (error: unknown) => {
@@ -65,7 +102,9 @@ export class Pusher {
 
   /**
    * Deliver to one device. A device the push service reports gone, or whose subscription has
-   * expired, is dropped from the store (FR-044), so nothing keeps targeting it.
+   * expired, is dropped from the store (FR-044), so nothing keeps targeting it. A send that runs
+   * past `PUSH_TIMEOUT_MS` is a transient fault of the service, not of the device: it is given up
+   * on, and the subscription stays.
    */
   async sendTo(subscription: Subscription, payload: PushPayload): Promise<Delivery> {
     const { vapid, subject, store, log } = this.options
@@ -76,15 +115,24 @@ export class Pusher {
     }
     const topic = topicFor(payload)
     try {
-      await this.send(subscription, JSON.stringify(payload), {
-        vapidDetails: { subject, publicKey: vapid.publicKey, privateKey: vapid.privateKey },
-        TTL: PUSH_TTL_SECONDS,
-        // The whole point is reaching a locked phone; `high` asks the service not to batch it.
-        urgency: 'high',
-        ...(topic ? { topic } : {}),
-      })
+      await withDeadline(
+        this.send(subscription, JSON.stringify(payload), {
+          vapidDetails: { subject, publicKey: vapid.publicKey, privateKey: vapid.privateKey },
+          TTL: PUSH_TTL_SECONDS,
+          // The whole point is reaching a locked phone; `high` asks the service not to batch it.
+          urgency: 'high',
+          timeout: PUSH_TIMEOUT_MS,
+          ...(topic ? { topic } : {}),
+        }),
+        PUSH_TIMEOUT_MS,
+      )
       return 'sent'
     } catch (error) {
+      if (error instanceof PushTimeout) {
+        // How long, never where: the endpoint names the device (CLAUDE.md rule 6).
+        log?.(`push timed out after ${PUSH_TIMEOUT_MS} ms`)
+        return 'timeout'
+      }
       if (isGone(error)) {
         await store.remove(subscription.endpoint)
         log?.('dropped a subscription the push service reports gone')

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { PushPayload } from '@cezar-pwa/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.ts'
-import { Pusher, PUSH_TTL_SECONDS, topicFor, type SendNotification } from './push.ts'
+import { Pusher, PUSH_TIMEOUT_MS, PUSH_TTL_SECONDS, topicFor, type SendNotification } from './push.ts'
 import { SubscriptionStore } from './store.ts'
 import { APPLE, subscription } from './testing.ts'
 
@@ -73,7 +73,13 @@ describe('the /m/push/ surface', () => {
     const [target, payload, options] = send.mock.calls[0]!
     expect(target.endpoint).toBe(APPLE)
     expect(JSON.parse(payload) as PushPayload).toEqual({ kind: 'test' })
-    expect(options).toMatchObject({ TTL: PUSH_TTL_SECONDS, urgency: 'high', vapidDetails: { subject: ORIGIN } })
+    expect(options).toMatchObject({
+      TTL: PUSH_TTL_SECONDS,
+      urgency: 'high',
+      // So the real web-push request lets go of a silent socket too, not just the promise.
+      timeout: PUSH_TIMEOUT_MS,
+      vapidDetails: { subject: ORIGIN },
+    })
   })
 
   it('says when the device is unknown, so the app can offer to re-enable', async () => {
@@ -117,6 +123,44 @@ describe('Pusher.sendToAll', () => {
     expect(store.list().map((entry) => entry.endpoint)).toEqual([APPLE, `${APPLE}-3`])
     // The status only: the push service's body can echo the payload.
     expect(log.mock.calls.flat().join(' ')).not.toContain('payload')
+  })
+})
+
+describe('a push service that accepts the connection and then stalls (#37)', () => {
+  /** The push service that answers neither yes nor no. */
+  const stall = () => new Promise<never>(() => {})
+
+  beforeEach(async () => {
+    await store.upsert(subscription())
+    send.mockImplementation(stall)
+    vi.useFakeTimers()
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('gives up on the send at the deadline and keeps the device', async () => {
+    const log = vi.fn()
+    const pusher = new Pusher({ store, vapid, subject: ORIGIN, send, log })
+    const delivery = pusher.sendTo(store.list()[0]!, { kind: 'test' })
+    await vi.advanceTimersByTimeAsync(PUSH_TIMEOUT_MS)
+    expect(await delivery).toBe('timeout')
+    // A stalled service says nothing about the device: it is still ours to push to.
+    expect(store.list()).toHaveLength(1)
+    // How long, never where.
+    expect(log.mock.calls.flat().join(' ')).not.toContain(APPLE)
+  })
+
+  it('stays pending right up to the deadline, rather than giving up early', async () => {
+    const settled = vi.fn()
+    void new Pusher({ store, vapid, subject: ORIGIN, send }).sendTo(store.list()[0]!, { kind: 'test' }).then(settled)
+    await vi.advanceTimersByTimeAsync(PUSH_TIMEOUT_MS - 1)
+    expect(settled).not.toHaveBeenCalled()
+  })
+
+  it('answers a test push with 504, which the app reads as "the push service is unavailable"', async () => {
+    const response = call('POST', '/test', { endpoint: APPLE })
+    await vi.advanceTimersByTimeAsync(PUSH_TIMEOUT_MS)
+    expect((await response).status).toBe(504)
+    expect(store.find(APPLE)).toBeDefined()
   })
 })
 
