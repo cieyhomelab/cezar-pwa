@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FakeEventSource } from '../../../test/fake-event-source.ts'
 import fixture from '../../../test/fixtures/runs-index.json'
 import { jsonResponse, refusalResponse, renderWithQuery, routeFetch } from '../../../test/query.tsx'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { RunsListScreen } from './RunsListScreen.tsx'
 
 const index = fixture as RunsIndexResponse
@@ -40,7 +40,7 @@ async function goLive(calls: (path: string) => number) {
   const before = calls('runs-index')
   act(() => FakeEventSource.latest.open())
   await waitFor(() => expect(calls('runs-index')).toBe(before + 1))
-  await waitFor(() => expect(liveStatus()).toHaveTextContent(new RegExp(`^.?${pl.runs.live.live}$`)))
+  await waitFor(() => expect(liveStatus()).toHaveTextContent(new RegExp(`^.?${en.runs.live.live}$`)))
 }
 
 beforeEach(() => {
@@ -60,21 +60,21 @@ afterEach(() => {
 describe('live status (FR-010)', () => {
   it('moves a task into "Wymaga uwagi" the moment its status changes, without refetching', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: '3 zadania wymagają uwagi' })
+    await screen.findByRole('heading', { name: '3 tasks need attention' })
     await goLive(calls)
     const fetched = calls('runs-index')
 
     act(() => FakeEventSource.latest.emit('run', runFrame({ status: 'waiting', activity: undefined })))
 
     // TanStack notifies observers on its own tick, so the render lands just after the frame.
-    expect(await screen.findByRole('heading', { name: '4 zadania wymagają uwagi' })).toBeInTheDocument()
-    expect(within(row(running.id)).getByText('czeka na Ciebie')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '4 tasks need attention' })).toBeInTheDocument()
+    expect(within(row(running.id)).getByText('waiting for you')).toBeInTheDocument()
     expect(calls('runs-index')).toBe(fetched)
   })
 
   it('shows a new task and drops a deleted one', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
 
     act(() =>
@@ -88,7 +88,7 @@ describe('live status (FR-010)', () => {
 
   it('shrugs off frames it cannot read', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
 
     act(() => {
@@ -96,18 +96,18 @@ describe('live status (FR-010)', () => {
       FakeEventSource.latest.emit('run', { nothing: 'useful' })
       FakeEventSource.latest.emit('usage', { project: 'cezar-pwa', usage: {} })
     })
-    expect(screen.getByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '3 tasks need attention' })).toBeInTheDocument()
   })
 })
 
 describe('connection health (FR-012)', () => {
   it('says it is connecting, then live — and while live, claims no age', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     expect(liveStatus()).toHaveAttribute('data-live-state', 'connecting')
-    expect(liveStatus()).toHaveTextContent(pl.runs.live.connecting)
+    expect(liveStatus()).toHaveTextContent(en.runs.live.connecting)
     // Not live yet: the list says how old it is.
-    expect(liveStatus()).toHaveTextContent(/lista z \d/)
+    expect(liveStatus()).toHaveTextContent(/list from \d/)
 
     await goLive(calls)
     expect(liveStatus()).not.toHaveTextContent(/lista z/)
@@ -115,22 +115,22 @@ describe('connection health (FR-012)', () => {
 
   it('on a drop, says reconnecting, keeps the age visible, and re-asks the session', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
     const probes = calls('/api/v1/health')
 
     act(() => FakeEventSource.latest.fail())
 
     await waitFor(() => expect(liveStatus()).toHaveAttribute('data-live-state', 'reconnecting'))
-    expect(liveStatus()).toHaveTextContent(pl.runs.live.reconnecting)
-    expect(liveStatus()).toHaveTextContent(/lista z \d/)
+    expect(liveStatus()).toHaveTextContent(en.runs.live.reconnecting)
+    expect(liveStatus()).toHaveTextContent(/list from \d/)
     await waitFor(() => expect(calls('/api/v1/health')).toBe(probes + 1))
   })
 
   it('hands a refusal found on a drop to the gate', async () => {
     let refused = false
     const { calls } = renderLive(undefined, () => (refused ? refusalResponse() : healthy()))
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
     const probes = calls('/api/v1/health')
 
@@ -147,7 +147,7 @@ describe('connection health (FR-012)', () => {
       if (down) throw new TypeError('Failed to fetch')
       return healthy()
     })
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
     const probes = calls('/api/v1/health')
 
@@ -156,25 +156,25 @@ describe('connection health (FR-012)', () => {
     await waitFor(() => expect(calls('/api/v1/health')).toBe(probes + 1))
     // A network blip is not a lapsed session: the rows stay, marked as not live.
     await new Promise((resolve) => setTimeout(resolve, 20))
-    expect(screen.getByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '3 tasks need attention' })).toBeInTheDocument()
     expect(liveStatus()).toHaveAttribute('data-live-state', 'reconnecting')
   })
 
   it('says lost at once when the phone goes offline', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
 
     act(() => {
       window.dispatchEvent(new Event('offline'))
     })
     await waitFor(() => expect(liveStatus()).toHaveAttribute('data-live-state', 'lost'))
-    expect(liveStatus()).toHaveTextContent(pl.runs.live.lost)
+    expect(liveStatus()).toHaveTextContent(en.runs.live.lost)
   })
 
   it('closes the stream when hidden and opens a fresh one when shown', async () => {
     const { calls } = renderLive()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     await goLive(calls)
     const first = FakeEventSource.latest
 
@@ -205,15 +205,15 @@ describe('connection health (FR-012)', () => {
         hold = resolve
       }) as unknown as Response
     })
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     act(() => FakeEventSource.latest.open())
     await waitFor(() => expect(count('runs-index')).toBe(2))
 
     await waitFor(() => expect(liveStatus()).toHaveAttribute('data-live-state', 'live'))
-    expect(liveStatus()).toHaveTextContent(pl.runs.refreshingInline)
+    expect(liveStatus()).toHaveTextContent(en.runs.refreshingInline)
 
     act(() => hold!(jsonResponse(index)))
-    await waitFor(() => expect(liveStatus()).not.toHaveTextContent(pl.runs.refreshingInline))
+    await waitFor(() => expect(liveStatus()).not.toHaveTextContent(en.runs.refreshingInline))
     expect(liveStatus()).not.toHaveTextContent(/lista z/)
   })
 })

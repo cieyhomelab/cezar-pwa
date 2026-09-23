@@ -38,7 +38,7 @@ apps/pwa/                 # aplikacja PWA
   src/features/settings/
   src/features/auth/      # wykrywanie braku auth, ekran „Połącz z Cezarem”
   src/sw.ts               # service worker
-  src/i18n/pl.ts
+  src/i18n/en.ts
   public/icons/
 apps/push-sidecar/        # cezar-push
 packages/shared/          # attention.ts, typy wspólne dla PWA i sidecara
@@ -67,7 +67,7 @@ Bez dostępu do VPS: lokalnie `CEZ_DRY_RUN=1 npx cezar-cli` (mock agenta) i `CEZ
 
 ## Konwencje kodu
 
-- Kod, identyfikatory, commity po angielsku; teksty UI po polsku, wyłącznie przez `src/i18n/pl.ts`.
+- Kod, identyfikatory, commity po angielsku; teksty UI po angielsku, wyłącznie przez `src/i18n/en.ts` (aplikacja jest jednojęzyczna).
 - Komponenty funkcyjne, bez klas; logika domenowa jako czyste funkcje w `src/domain/` z testami tablicowymi.
 - Stan serwera tylko w TanStack Query; SSE aktualizuje cache przez `queryClient.setQueryData`, nie przez osobny store.
 - Klucze query: `['runs-index']`, `['run', projectId, runId]`, `['history', projectId, runId]`, `['changes', projectId, runId]`, `['health']`.

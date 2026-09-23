@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, type Route, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-04 acceptance in mobile Safari: status changes arrive over the workspace event stream
@@ -79,16 +80,16 @@ test.describe('Live status', () => {
   test('a status change appears without refreshing (FR-010)', async ({ page }) => {
     const { deliver } = await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.runs.summary.some(3) })).toBeVisible()
     await expect(liveStatus(page)).toHaveAttribute('data-live-state', 'connecting')
 
     await deliver(runFrame('run-running', { status: 'waiting' }))
 
-    await expect(page.getByRole('heading', { name: '4 zadania wymagają uwagi' })).toBeVisible({
+    await expect(page.getByRole('heading', { name: en.runs.summary.some(4) })).toBeVisible({
       timeout: 2_000, // the NF: visible within 2 s of the server saying so
     })
     await expect(
-      page.locator('[data-run-id="run-running"]').getByText('czeka na Ciebie'),
+      page.locator('[data-run-id="run-running"]').getByText(en.runs.status['needs you']),
     ).toBeVisible()
   })
 
@@ -97,19 +98,19 @@ test.describe('Live status', () => {
   }) => {
     const { counts, deliver } = await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
     await deliver()
     await expect(liveStatus(page)).toHaveAttribute('data-live-state', 'reconnecting')
-    await expect(liveStatus(page)).toContainText('Łączę ponownie…')
-    await expect(liveStatus(page)).toContainText(/lista z \d/)
+    await expect(liveStatus(page)).toContainText(en.runs.live.reconnecting)
+    await expect(liveStatus(page)).toContainText(/list from \d/)
     await expect.poll(() => counts.streams).toBe(2)
   })
 
   test('every reconnect refetches the list, because the stream has no replay', async ({ page }) => {
     const { counts, deliver } = await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
     const before = counts.runsIndex
 
     await deliver()
@@ -123,23 +124,23 @@ test.describe('Live status', () => {
   }) => {
     const { deliver, session } = await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
     // The gateway refuses a stream the same way it refuses everything; EventSource cannot see
     // the status, so the drop re-asks the session probe.
     session.authorized = false
     await deliver()
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
   })
 
   test('says lost at once when the phone goes offline', async ({ page, context }) => {
     await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
     await context.setOffline(true)
     await expect(liveStatus(page)).toHaveAttribute('data-live-state', 'lost')
-    await expect(liveStatus(page)).toContainText('Brak połączenia na żywo')
+    await expect(liveStatus(page)).toContainText(en.runs.live.lost)
     await context.setOffline(false)
   })
 
@@ -151,7 +152,7 @@ test.describe('Live status', () => {
     test(`a task appearing above does not move what the operator is reading (${name})`, async ({
       page,
     }) => {
-      // Enough finished work to scroll: the reader is deep in "Zakończone" when a new task queues.
+      // Enough finished work to scroll: the reader is deep in "Finished" when a new task queues.
       const finished = Array.from({ length: 15 }, (_, i) => ({
         ...index.runs.find((run) => run.id === 'run-done-read')!,
         id: `run-old-${i}`,
@@ -160,7 +161,7 @@ test.describe('Live status', () => {
       }))
       const { deliver } = await serveCezar(page, [...index.runs, ...finished])
       await page.goto('.')
-      await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
       if (!native) await page.addStyleTag({ content: '* { overflow-anchor: none !important }' })
       const reading = page.locator('[data-run-id="run-old-10"]')

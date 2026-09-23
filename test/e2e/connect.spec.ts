@@ -1,8 +1,9 @@
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-02 acceptance in mobile Safari: the app can tell it is not authorized, says
- * so with "Połącz z Cezarem", and can be re-unlocked from inside itself.
+ * so with "Connect to Cezar", and can be re-unlocked from inside itself.
  *
  * The session probe is stubbed rather than pointed at the live instance — this
  * suite runs against a local preview build with no Cezar behind it, and the
@@ -44,7 +45,7 @@ async function serveEmptyWorkspace(page: Page) {
 }
 
 /** What the gate guards, rendered: the list's headline. */
-const behindTheGate = (page: Page) => page.getByRole('heading', { name: 'Nic nie czeka na Ciebie' })
+const behindTheGate = (page: Page) => page.getByRole('heading', { name: en.runs.summary.none })
 
 test.describe('Connect to Cezar', () => {
   test('a refused session shows the connect screen, not an error or an empty list', async ({
@@ -53,8 +54,8 @@ test.describe('Connect to Cezar', () => {
     await refuseSession(page)
     await page.goto('.')
 
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
-    await expect(page.getByLabel('Wklej link dostępowy')).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
+    await expect(page.getByLabel(en.auth.linkLabel)).toBeVisible()
     // The chrome stays reachable: a lapsed session must not hide the update
     // prompt or the offline banner.
     await expect(page.getByRole('heading', { name: 'Cezar', exact: true })).toBeVisible()
@@ -65,7 +66,7 @@ test.describe('Connect to Cezar', () => {
     await page.goto('.')
 
     await expect(behindTheGate(page)).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeHidden()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeHidden()
   })
 
   test('pasting the access link navigates to the app’s own path carrying the key', async ({
@@ -74,9 +75,9 @@ test.describe('Connect to Cezar', () => {
     await refuseSession(page)
     await page.goto('.')
 
-    await page.getByLabel('Wklej link dostępowy').fill('/p/demo/runs/abc?key=s3/cr+et==')
+    await page.getByLabel(en.auth.linkLabel).fill('/p/demo/runs/abc?key=s3/cr+et==')
     const unlock = page.waitForRequest((request) => request.url().includes('key='))
-    await page.getByRole('button', { name: 'Połącz' }).click()
+    await page.getByRole('button', { name: en.auth.submit }).click()
 
     // The key reaches the gateway byte-for-byte: nginx compares the raw query,
     // so `/` → `%2F` or `=` → `%3D` would turn a correct key into a wrong one.
@@ -85,7 +86,7 @@ test.describe('Connect to Cezar', () => {
     // The gateway's guard is not present in front of this preview server, so
     // the navigation lands back on the shell with the key untouched — which is
     // exactly the case the app has to survive.
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
 
     // R-AUTH-5: the secret is gone from the URL — and so from the history
     // entry — before the operator sees the screen again.
@@ -93,7 +94,7 @@ test.describe('Connect to Cezar', () => {
     expect(new URL(page.url()).pathname).toBe('/m/')
 
     // And the app says what happened rather than looping silently.
-    await expect(page.getByText('Brama nie przyjęła tego linku', { exact: false })).toBeVisible()
+    await expect(page.getByText(en.auth.unlockFailed, { exact: false })).toBeVisible()
   })
 
   test.describe('with the service worker blocked', () => {
@@ -135,13 +136,13 @@ test.describe('Connect to Cezar', () => {
 
       await page.goto('.')
       // The path form: a full link would name the real host, not this preview's.
-      await page.getByLabel('Wklej link dostępowy').fill('/?key=Zm9v/YmFy+cXV4==')
-      await page.getByRole('button', { name: 'Połącz' }).click()
+      await page.getByLabel(en.auth.linkLabel).fill('/?key=Zm9v/YmFy+cXV4==')
+      await page.getByRole('button', { name: en.auth.submit }).click()
 
       await expect(behindTheGate(page)).toBeVisible()
       expect(new URL(page.url()).pathname).toBe('/m/')
       expect(page.url()).not.toContain('key=')
-      await expect(page.getByText('Brama nie przyjęła tego linku', { exact: false })).toBeHidden()
+      await expect(page.getByText(en.auth.unlockFailed, { exact: false })).toBeHidden()
     })
   })
 
@@ -149,23 +150,23 @@ test.describe('Connect to Cezar', () => {
     await refuseSession(page)
     await page.goto('.')
 
-    await page.getByLabel('Wklej link dostępowy').fill('https://evil.example/?key=s3cret')
-    await page.getByRole('button', { name: 'Połącz' }).click()
+    await page.getByLabel(en.auth.linkLabel).fill('https://evil.example/?key=s3cret')
+    await page.getByRole('button', { name: en.auth.submit }).click()
 
-    await expect(page.getByRole('alert')).toContainText('inny adres')
+    await expect(page.getByRole('alert')).toContainText(en.auth.errors.foreignOrigin)
     expect(page.url()).not.toContain('evil.example')
   })
 
   test('re-checking after the session exists lets the operator through', async ({ page }) => {
     await refuseSession(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
 
     // The operator went and opened their access link elsewhere.
     await page.unroute('**/api/v1/health')
     await grantSession(page)
 
-    await page.getByRole('button', { name: 'Sprawdź ponownie' }).click()
+    await page.getByRole('button', { name: en.auth.recheck }).click()
     await expect(behindTheGate(page)).toBeVisible()
   })
 
@@ -193,8 +194,8 @@ test.describe('Connect to Cezar', () => {
     await page.goto('.')
 
     await expect(
-      page.getByRole('heading', { name: 'Nie mogę połączyć się z Cezarem' }),
+      page.getByRole('heading', { name: en.auth.unreachable.title }),
     ).toBeVisible()
-    await expect(page.getByLabel('Wklej link dostępowy')).toBeHidden()
+    await expect(page.getByLabel(en.auth.linkLabel)).toBeHidden()
   })
 })

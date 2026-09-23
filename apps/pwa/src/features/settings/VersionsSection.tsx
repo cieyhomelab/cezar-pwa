@@ -2,13 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { healthQueryOptions } from '../../api/health.ts'
 import { APP_BUILT_AT, APP_COMMIT } from '../../config/app-version.ts'
 import { TESTED_CEZAR_VERSION } from '../../config/cezar-compat.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 function builtAt(iso: string | undefined): string | undefined {
   if (!iso) return undefined
   const at = new Date(iso)
   if (Number.isNaN(at.getTime())) return undefined
-  return at.toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' })
+  return at.toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 /**
@@ -20,7 +20,7 @@ function builtAt(iso: string | undefined): string | undefined {
 export function VersionsSection() {
   // Already in the cache: `AuthGate` asked it before this screen could render.
   const health = useQuery(healthQueryOptions())
-  const t = pl.settings.versions
+  const t = en.settings.versions
 
   return (
     <section aria-labelledby="versions-heading" className="flex flex-col gap-2 border-b border-border px-4 py-3">

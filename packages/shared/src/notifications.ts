@@ -41,7 +41,7 @@ export function isEntering(before: RunStatus | undefined, run: AttentionInput): 
 
 /**
  * The wire format from the sidecar to the service worker. Structured rather than prose, so the
- * words stay in the PWA's `i18n/pl.ts` and the sidecar never ships copy.
+ * words stay in the PWA's `i18n/en.ts` and the sidecar never ships copy.
  *
  * Carries no code and no transcript content (FR-043): the task's display title, its project, and
  * the attention label — the reason, as the same key the list's status dot translates.

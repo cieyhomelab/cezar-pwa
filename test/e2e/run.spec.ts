@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-05 acceptance in mobile Safari: the operator opens a task from the list and reads its
@@ -81,7 +82,7 @@ test.describe('Task screen', () => {
     await expect(plan).toContainText('Committing what is left')
 
     // The newest entry is what the screen opens on.
-    await expect(page.getByText('Sesja zamknięta.')).toBeInViewport()
+    await expect(page.getByText(en.run.transcript.footer.closed)).toBeInViewport()
   })
 
   test('the plan stays pinned while the transcript scrolls', async ({ page }) => {
@@ -108,7 +109,7 @@ test.describe('Task screen', () => {
     expect(box?.height ?? 0).toBeLessThan(60)
     await summary.click()
     await expect(tool).toHaveAttribute('open', '')
-    await expect(tool.getByText('Wejście')).toBeVisible()
+    await expect(tool.getByText(en.run.transcript.tool.input)).toBeVisible()
   })
 
   test('fits the phone: no sideways scrolling at 390 px, even with a tool expanded', async ({ page }) => {
@@ -135,16 +136,16 @@ test.describe('Task screen', () => {
     await page.goto(RUN_PATH)
     await page.reload()
     await expect(page.getByRole('heading', { level: 2, name: 'opening pull request' })).toBeVisible()
-    await page.getByRole('link', { name: 'Zadania' }).click()
+    await page.getByRole('link', { name: en.run.back }).click()
     await expect(page).toHaveURL(/\/m\/$/)
     await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible()
   })
 
-  test('a lapsed session lands on "Połącz z Cezarem", not on an error', async ({ page }) => {
+  test('a lapsed session lands on "Connect to Cezar", not on an error', async ({ page }) => {
     await page.route('**/api/v1/**', (route) =>
       route.fulfill({ status: 403, contentType: 'text/html', body: '<html>403</html>' }),
     )
     await page.goto(RUN_PATH)
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
   })
 })

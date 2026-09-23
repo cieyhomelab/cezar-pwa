@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { pl } from '../i18n/pl.ts'
+import { en } from '../i18n/en.ts'
 
 /**
  * FR-001, the iOS branch. Safari never fires `beforeinstallprompt` and Android
@@ -17,14 +17,14 @@ export function InstallHint({ standalone }: { standalone: boolean }) {
 
   return (
     <aside className="border-b border-border bg-surface-raised px-4 py-3">
-      <p className="text-sm font-medium">{pl.install.title}</p>
-      <p className="mt-1 text-sm text-text-muted">{pl.install.ios}</p>
+      <p className="text-sm font-medium">{en.install.title}</p>
+      <p className="mt-1 text-sm text-text-muted">{en.install.ios}</p>
       <button
         type="button"
         className="touch-target inline-flex items-center text-sm text-text-muted"
         onClick={() => setDismissed(true)}
       >
-        {pl.install.dismiss}
+        {en.install.dismiss}
       </button>
     </aside>
   )

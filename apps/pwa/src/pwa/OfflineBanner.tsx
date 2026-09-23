@@ -1,4 +1,4 @@
-import { pl } from '../i18n/pl.ts'
+import { en } from '../i18n/en.ts'
 
 /**
  * FR-002: with no network the product says so plainly, instead of a blank
@@ -16,7 +16,7 @@ export function OfflineBanner({ online }: { online: boolean }) {
       role="status"
       className="border-b border-border bg-surface-raised px-4 py-2 text-sm"
     >
-      {pl.offline.banner}
+      {en.offline.banner}
     </div>
   )
 }

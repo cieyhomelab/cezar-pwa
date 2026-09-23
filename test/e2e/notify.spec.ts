@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-10 acceptance in mobile Safari: notifications are turned on from Settings (FR-036), a browser
@@ -112,11 +113,11 @@ test('in a browser tab, Settings shows how to install instead of a prompt that c
   const sent = await serveSidecar(page)
   await page.goto('.')
 
-  await page.getByRole('link', { name: 'Ustawienia' }).tap()
+  await page.getByRole('link', { name: en.settings.title }).tap()
   await expect(page).toHaveURL(/\/m\/settings$/)
-  await expect(page.getByRole('heading', { name: 'Ustawienia' })).toBeVisible()
-  const section = page.getByRole('region', { name: 'Powiadomienia' })
-  await expect(section.getByRole('note')).toContainText('Najpierw dodaj Cezara do ekranu początkowego')
+  await expect(page.getByRole('heading', { name: en.settings.title })).toBeVisible()
+  const section = page.getByRole('region', { name: en.push.section })
+  await expect(section.getByRole('note')).toContainText(en.push.installTitle)
   await expect(section.getByRole('button')).toHaveCount(0)
   expect(sent).toEqual([])
 })
@@ -145,23 +146,23 @@ test('installed: a tap turns notifications on, and a test reaches this device (F
   await installedWithPush(page)
   await page.goto('settings')
 
-  const enable = page.getByRole('button', { name: 'Włącz powiadomienia' })
+  const enable = page.getByRole('button', { name: en.push.enable })
   await expect(enable).toBeVisible()
   expect((await enable.boundingBox())?.height).toBeGreaterThanOrEqual(44)
   await enable.tap()
-  await expect(page.getByText('Powiadomienia są włączone na tym urządzeniu.')).toBeVisible()
+  await expect(page.getByText(en.push.on)).toBeVisible()
   expect(sent.find((call) => call.method === 'POST' && call.path === '/m/push/subscription')?.body).toEqual({
     endpoint: ENDPOINT,
     expirationTime: null,
     keys: { p256dh: 'p', auth: 'a' },
   })
 
-  await page.getByRole('button', { name: 'Wyślij powiadomienie testowe' }).tap()
-  await expect(page.getByRole('status').filter({ hasText: 'Wysłane' })).toBeVisible()
+  await page.getByRole('button', { name: en.push.test }).tap()
+  await expect(page.getByRole('status').filter({ hasText: en.push.testSent })).toBeVisible()
   expect(sent.find((call) => call.path === '/m/push/test')?.body).toEqual({ endpoint: ENDPOINT })
 
-  await page.getByRole('button', { name: 'Wyłącz powiadomienia' }).tap()
-  await expect(page.getByRole('button', { name: 'Włącz powiadomienia' })).toBeVisible()
+  await page.getByRole('button', { name: en.push.disable }).tap()
+  await expect(page.getByRole('button', { name: en.push.enable })).toBeVisible()
   expect(sent.some((call) => call.method === 'DELETE')).toBe(true)
 })
 
@@ -170,7 +171,7 @@ test('a notification tapped while the app is open lands in that task, in the sam
 }) => {
   await serveCezar(page)
   await page.goto('.')
-  await expect(page.getByRole('link', { name: 'Ustawienia' })).toBeVisible()
+  await expect(page.getByRole('link', { name: en.settings.title })).toBeVisible()
 
   // Survives only if the window is routed in place rather than reloaded.
   await page.evaluate(() => ((window as unknown as { kept: boolean }).kept = true))

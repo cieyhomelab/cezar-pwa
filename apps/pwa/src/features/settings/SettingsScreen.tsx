@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { NotificationsSection } from './NotificationsSection.tsx'
 import { SignOutSection } from './SignOutSection.tsx'
 import { ThemeSection } from './ThemeSection.tsx'
@@ -19,10 +19,10 @@ export function SettingsScreen() {
       <div className="sticky top-0 z-20 flex h-11 items-center border-b border-border bg-surface px-2">
         <Link to="/" className="touch-target inline-flex items-center px-2 text-accent">
           <span aria-hidden="true">‹&nbsp;</span>
-          {pl.settings.back}
+          {en.settings.back}
         </Link>
       </div>
-      <h2 className="px-4 pt-3 text-lg font-semibold">{pl.settings.title}</h2>
+      <h2 className="px-4 pt-3 text-lg font-semibold">{en.settings.title}</h2>
       {/* Keyed on the sign-out attempt: after one that stayed here, both read the cleared state. */}
       <ThemeSection key={`theme-${signOut.attempt}`} />
       <NotificationsSection key={`push-${signOut.attempt}`} />

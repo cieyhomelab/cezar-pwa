@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-08 acceptance in mobile Safari: the operator acts on a task under a thumb. Cancel sits behind
@@ -66,18 +67,18 @@ test('cancel asks first, then stops the task (FR-025)', async ({ page }) => {
   })
   await page.goto(RUN_PATH)
 
-  const cancel = page.getByRole('button', { name: 'Anuluj', exact: true })
+  const cancel = page.getByRole('button', { name: en.run.actions.cancel, exact: true })
   const box = await cancel.boundingBox()
   expect(box?.height).toBeGreaterThanOrEqual(44)
   await cancel.tap()
 
-  const dialog = page.getByRole('alertdialog', { name: 'Anulować to zadanie?' })
+  const dialog = page.getByRole('alertdialog', { name: en.run.actions.confirmCancel.title })
   await expect(dialog).toBeVisible()
   expect(log).toEqual([])
-  await dialog.getByRole('button', { name: 'Anuluj zadanie' }).tap()
+  await dialog.getByRole('button', { name: en.run.actions.confirmCancel.confirm }).tap()
 
-  await expect(page.getByText('Zadanie anulowane.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Kontynuuj' })).toBeVisible()
+  await expect(page.getByText(en.run.actions.done.cancel)).toBeVisible()
+  await expect(page.getByRole('button', { name: en.run.actions.continue })).toBeVisible()
   expect(log).toEqual(['cancel'])
   await noSidewaysScroll(page)
 })
@@ -91,9 +92,9 @@ test('a review is accepted in one tap (FR-026)', async ({ page }) => {
   })
   await page.goto(RUN_PATH)
   await noSidewaysScroll(page)
-  await page.getByRole('button', { name: 'Akceptuj' }).tap()
-  await expect(page.getByText('Zmiany zaakceptowane, zadanie zakończone.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Akceptuj' })).toHaveCount(0)
+  await page.getByRole('button', { name: en.run.actions.finish.review }).tap()
+  await expect(page.getByText(en.run.actions.done.accepted)).toBeVisible()
+  await expect(page.getByRole('button', { name: en.run.actions.finish.review })).toHaveCount(0)
   expect(log).toEqual(['finish'])
 })
 
@@ -102,9 +103,9 @@ test("a refused draft PR shows the forge's reason (FR-027, FR-032)", async ({ pa
     pr: () => ({ status: 409, body: { error: 'gh: not logged in', manual: 'git merge cez/12d1b71c' } }),
   })
   await page.goto(RUN_PATH)
-  await page.getByRole('button', { name: 'Otwórz draft PR' }).tap()
-  await expect(page.getByRole('alert')).toHaveText('Cezar odmówił: gh: not logged in')
-  await expect(page.getByRole('button', { name: 'Otwórz draft PR' })).toBeEnabled()
+  await page.getByRole('button', { name: en.run.actions.draftPr }).tap()
+  await expect(page.getByRole('alert')).toHaveText(en.run.actions.failed.refused('gh: not logged in'))
+  await expect(page.getByRole('button', { name: en.run.actions.draftPr })).toBeEnabled()
 })
 
 test('archive marks the task and can be undone (FR-029)', async ({ page }) => {
@@ -115,9 +116,9 @@ test('archive marks the task and can be undone (FR-029)', async ({ page }) => {
     },
   })
   await page.goto(RUN_PATH)
-  await page.getByRole('button', { name: 'Archiwizuj' }).tap()
-  await expect(page.getByText('Zarchiwizowane', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Przywróć z archiwum' }).tap()
-  await expect(page.getByRole('button', { name: 'Archiwizuj' })).toBeVisible()
+  await page.getByRole('button', { name: en.run.actions.archive }).tap()
+  await expect(page.getByText(en.run.actions.archivedBadge, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: en.run.actions.unarchive }).tap()
+  await expect(page.getByRole('button', { name: en.run.actions.archive })).toBeVisible()
   expect(log).toEqual(['archive', 'archive'])
 })

@@ -1,6 +1,6 @@
 import type { PushPayload } from '@cezar-pwa/shared'
 import { runPath } from '../domain/run-header.ts'
-import { pl } from '../i18n/pl.ts'
+import { en } from '../i18n/en.ts'
 
 /**
  * What the service worker shows for a push and where a tap goes (FR-038, FR-041, FR-043). Pure, so
@@ -57,16 +57,16 @@ export function notificationFor(payload: PushPayload): NotificationSpec {
   const icon = `${BASE}/icons/icon-192.png`
   if (payload.kind === 'test') {
     return {
-      title: pl.push.testTitle,
-      options: { body: pl.push.testBody, tag: 'cezar-test', icon, data: { url: `${BASE}/` } },
+      title: en.push.testTitle,
+      options: { body: en.push.testBody, tag: 'cezar-test', icon, data: { url: `${BASE}/` } },
     }
   }
   const reason = payload.reason
-    ? (pl.push.reason[payload.reason] ?? pl.runs.status[payload.reason] ?? payload.reason)
-    : pl.push.fallbackReason
+    ? (en.push.reason[payload.reason] ?? en.runs.status[payload.reason] ?? payload.reason)
+    : en.push.fallbackReason
   const project = payload.projectName ?? payload.projectId
   return {
-    title: payload.title ?? pl.push.fallbackTitle,
+    title: payload.title ?? en.push.fallbackTitle,
     options: {
       body: project ? `${project} · ${reason}` : reason,
       tag: payload.runId ? `cezar-run-${payload.projectId ?? ''}/${payload.runId}` : 'cezar',

@@ -1,4 +1,4 @@
-import { pl } from '../i18n/pl.ts'
+import { en } from '../i18n/en.ts'
 
 type UpdatePromptProps = {
   needRefresh: boolean
@@ -20,21 +20,21 @@ export function UpdatePrompt({ needRefresh, onDismiss, onUpdate }: UpdatePromptP
       role="status"
       className="flex items-center justify-between gap-3 border-b border-border bg-surface-raised px-4 py-2"
     >
-      <span className="text-sm">{pl.update.available}</span>
+      <span className="text-sm">{en.update.available}</span>
       <div className="flex gap-2">
         <button
           type="button"
           className="touch-target rounded px-3 text-sm text-text-muted"
           onClick={onDismiss}
         >
-          {pl.update.dismiss}
+          {en.update.dismiss}
         </button>
         <button
           type="button"
           className="touch-target rounded bg-accent px-3 text-sm font-medium text-white"
           onClick={onUpdate}
         >
-          {pl.update.action}
+          {en.update.action}
         </button>
       </div>
     </div>

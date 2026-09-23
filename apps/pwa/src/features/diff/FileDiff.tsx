@@ -1,7 +1,7 @@
 import type { ChangedFile } from '@cezar-pwa/cezar-contract/contract'
 import { useId, useMemo, useState } from 'react'
 import { DIFF_LINE_PAGE, type DiffLine, fileBody, limitLines, splitPath } from '../../domain/diff.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { DiffCounts } from './DiffCounts.tsx'
 
 const LINE_CLASS: Record<DiffLine['kind'], string> = {
@@ -13,7 +13,7 @@ const LINE_CLASS: Record<DiffLine['kind'], string> = {
 const MARKER: Record<DiffLine['kind'], string> = { add: '+', del: '−', context: '' }
 
 function Line({ line }: { line: DiffLine }) {
-  const kind = pl.run.diff.lineKind[line.kind] ?? ''
+  const kind = en.run.diff.lineKind[line.kind] ?? ''
   return (
     <div className={`flex ${LINE_CLASS[line.kind]}`}>
       <span aria-hidden="true" className="w-9 shrink-0 pr-1 text-right text-text-muted select-none">
@@ -36,10 +36,10 @@ function Body({ file, cockpitHref }: { file: ChangedFile; cockpitHref: string })
   const body = useMemo(() => fileBody(file), [file])
 
   if (body.kind === 'binary') {
-    return <p className="px-4 py-3 text-sm text-text-muted">{body.image ? pl.run.diff.image : pl.run.diff.binary}</p>
+    return <p className="px-4 py-3 text-sm text-text-muted">{body.image ? en.run.diff.image : en.run.diff.binary}</p>
   }
   if (body.kind === 'no-content') {
-    return <p className="px-4 py-3 text-sm text-text-muted">{pl.run.diff.noContent}</p>
+    return <p className="px-4 py-3 text-sm text-text-muted">{en.run.diff.noContent}</p>
   }
 
   const hunks = limitLines(body.patch, limit)
@@ -63,15 +63,15 @@ function Body({ file, cockpitHref }: { file: ChangedFile; cockpitHref: string })
             className="touch-target rounded border border-border px-4 text-sm"
             onClick={() => setLimit((current) => current + DIFF_LINE_PAGE)}
           >
-            {pl.run.diff.showMore(Math.min(left, DIFF_LINE_PAGE))}
+            {en.run.diff.showMore(Math.min(left, DIFF_LINE_PAGE))}
           </button>
         </div>
       ) : null}
       {body.patch.truncated && left <= 0 ? (
         <p role="note" className="px-4 py-3 font-sans text-sm text-text-muted">
-          {pl.run.diff.truncated}{' '}
+          {en.run.diff.truncated}{' '}
           <a className="touch-target inline-flex items-center text-accent underline" href={cockpitHref}>
-            {pl.run.diff.openCockpit}
+            {en.run.diff.openCockpit}
           </a>
         </p>
       ) : null}
@@ -97,7 +97,7 @@ export function FileDiff({
   const [open, setOpen] = useState(defaultOpen)
   const bodyId = useId()
   const { name, dir } = splitPath(file.path)
-  const status = pl.run.diff.status[file.status] ?? pl.run.diff.statusUnknown
+  const status = en.run.diff.status[file.status] ?? en.run.diff.statusUnknown
 
   return (
     <section aria-label={file.path} className="border-b border-border">
@@ -118,7 +118,7 @@ export function FileDiff({
             {dir ? <span className="font-mono text-xs break-all text-text-muted">{dir}</span> : null}
             <span className="text-xs text-text-muted">
               {status}
-              {file.oldPath ? <span className="break-all"> · {pl.run.diff.renamedFrom(file.oldPath)}</span> : null}
+              {file.oldPath ? <span className="break-all"> · {en.run.diff.renamedFrom(file.oldPath)}</span> : null}
             </span>
           </span>
           <DiffCounts adds={file.adds} dels={file.dels} />

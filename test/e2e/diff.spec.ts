@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-09 acceptance in mobile Safari: the operator reads what the agent changed, file by file,
@@ -60,8 +61,8 @@ test('from the task header to one file\'s patch, and back (FR-031)', async ({ pa
   await serveCezar(page, { status: 200, body: { files, stat: { files: 4, adds: 0, dels: 0 } } })
   await page.goto(RUN_PATH)
 
-  await page.getByRole('link', { name: /4 pliki/ }).tap()
-  await expect(page.getByRole('heading', { name: 'Zmiany' })).toBeVisible()
+  await page.getByRole('link', { name: new RegExp(en.run.diff.files(4)) }).tap()
+  await expect(page.getByRole('heading', { name: en.run.diff.title })).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/m/${RUN_PATH}/diff$`))
 
   // Every file is listed, closed, and its header is a thumb-sized target.
@@ -79,7 +80,7 @@ test('from the task header to one file\'s patch, and back (FR-031)', async ({ pa
   await expect(wide.getByText(WIDE)).toBeVisible()
   await noSidewaysScroll(page)
 
-  await page.getByRole('link', { name: /Zadanie/ }).tap()
+  await page.getByRole('link', { name: new RegExp(en.run.diff.back) }).tap()
   await expect(page).toHaveURL(new RegExp(`/m/${RUN_PATH}$`))
 })
 
@@ -89,7 +90,7 @@ test("a task without a worktree: the server's reason, not an empty diff", async 
     body: { error: 'no worktree — this task ran directly in the repo working tree' },
   })
   await page.goto(`${RUN_PATH}/diff`)
-  await expect(page.getByText('Brak zmian do pokazania.')).toBeVisible()
+  await expect(page.getByText(en.run.diff.refused)).toBeVisible()
   await expect(page.getByText('no worktree — this task ran directly in the repo working tree')).toBeVisible()
   await noSidewaysScroll(page)
 })

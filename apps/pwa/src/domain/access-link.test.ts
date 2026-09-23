@@ -60,7 +60,7 @@ describe('buildUnlockUrl', () => {
   const rejected: Array<[name: string, pasted: string, problem: AccessLinkProblem]> = [
     ['nothing', '', 'empty'],
     ['whitespace only', '   ', 'empty'],
-    ['prose', 'oto twój link', 'missing-key'],
+    ['prose', 'here is your link', 'missing-key'],
     ['a non-http scheme', 'javascript:alert(1)', 'not-a-url'],
     ['another host', 'https://evil.example/?key=s3cret', 'foreign-origin'],
     ['the right host on the wrong port', 'https://cezar.ciey.studio:8443/?key=s3cret', 'foreign-origin'],

@@ -1,5 +1,5 @@
 import { THEME_PREFERENCES } from '../../domain/theme.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { useThemePreference } from '../../pwa/theme.ts'
 
 /**
@@ -8,7 +8,7 @@ import { useThemePreference } from '../../pwa/theme.ts'
  */
 export function ThemeSection() {
   const [preference, choose] = useThemePreference()
-  const t = pl.settings.theme
+  const t = en.settings.theme
 
   return (
     <section aria-labelledby="theme-heading" className="flex flex-col gap-3 border-b border-border px-4 py-3">

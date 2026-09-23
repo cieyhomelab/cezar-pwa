@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FakeEventSource } from '../../../test/fake-event-source.ts'
 import liveRun from '../../../test/fixtures/run.live-0.11.0.json'
 import { jsonResponse, renderWithQuery, routeFetch } from '../../../test/query.tsx'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { AppRoutes } from '../../routes.tsx'
 
 const RUN = { ...(liveRun as unknown as ApiRun), status: 'running' } as ApiRun
@@ -81,14 +81,14 @@ describe('RunScreen — live transcript (FR-016)', () => {
     expect(new URL(source.url, 'http://localhost').pathname).toBe(`${BASE}/events`)
     expect(params(source).get('cursor')).toBe('CURSOR')
     expect(params(source).get('afterSeq')).toBe('2')
-    expect(liveStatus()).toHaveTextContent(new RegExp(`^.?${pl.runs.live.live}$`))
+    expect(liveStatus()).toHaveTextContent(new RegExp(`^.?${en.runs.live.live}$`))
   })
 
   it('says it is connecting until the stream opens, and how old the screen is', async () => {
     renderLiveRun()
     await screen.findByText('First answer')
     expect(liveStatus()).toHaveAttribute('data-live-state', 'connecting')
-    expect(liveStatus()).toHaveTextContent(/stan z \d/)
+    expect(liveStatus()).toHaveTextContent(/state from \d/)
   })
 
   it('streams a new answer word by word', async () => {
@@ -128,7 +128,7 @@ describe('RunScreen — live transcript (FR-016)', () => {
     renderLiveRun()
     await openStream()
     act(() => FakeEventSource.latest.emit('run', { ...RUN, usage: undefined, status: 'waiting' }))
-    expect(await screen.findByText(pl.run.transcript.footer.waiting)).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.footer.waiting)).toBeInTheDocument()
   })
 
   it('ignores a frame it cannot read and a `run` frame for another task', async () => {
@@ -138,7 +138,7 @@ describe('RunScreen — live transcript (FR-016)', () => {
     act(() => FakeEventSource.latest.emit('ui-event', { type: 'no.seq' }))
     act(() => FakeEventSource.latest.emit('run', { ...RUN, id: 'someone-else', status: 'waiting' }))
     expect(screen.getByText('First answer')).toBeInTheDocument()
-    expect(screen.queryByText(pl.run.transcript.footer.waiting)).not.toBeInTheDocument()
+    expect(screen.queryByText(en.run.transcript.footer.waiting)).not.toBeInTheDocument()
     expect(liveStatus()).toHaveAttribute('data-live-state', 'live')
   })
 })

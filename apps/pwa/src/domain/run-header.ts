@@ -57,7 +57,7 @@ export type TokenSummary =
 
 /**
  * Directional counts when the record has them, the total otherwise. `null` for a run that has
- * used nothing yet, because `0 tokenów` next to a queued task reads like a measurement.
+ * used nothing yet, because `0 tokens` next to a queued task reads like a measurement.
  */
 export function tokenSummary(run: Pick<ApiRun, 'tokensUsed' | 'inputTokens' | 'outputTokens'>): TokenSummary {
   if (typeof run.inputTokens === 'number' && typeof run.outputTokens === 'number') {

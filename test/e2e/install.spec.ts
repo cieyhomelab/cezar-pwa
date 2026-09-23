@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-01 acceptance: install, launch full-screen, a plain offline state, and an
@@ -58,8 +59,8 @@ test.describe('Install to the home screen', () => {
   test('tells the operator how to install, since iOS offers no prompt', async ({ page }) => {
     await page.goto('.')
     // A Playwright page is a browser tab, never standalone, so the hint shows.
-    await expect(page.getByText('Dodaj Cezara do ekranu początkowego')).toBeVisible()
-    await expect(page.getByText(/Udostępnij/)).toBeVisible()
+    await expect(page.getByText(en.install.title)).toBeVisible()
+    await expect(page.getByText(/Share/)).toBeVisible()
   })
 
   test('says plainly when the network goes, and stops saying it when it returns (FR-002)', async ({
@@ -67,7 +68,7 @@ test.describe('Install to the home screen', () => {
     context,
   }) => {
     await page.goto('.')
-    const banner = page.getByRole('status').filter({ hasText: /Brak połączenia/ })
+    const banner = page.getByRole('status').filter({ hasText: /No connection/ })
     await expect(banner).toHaveCount(0)
 
     await context.setOffline(true)

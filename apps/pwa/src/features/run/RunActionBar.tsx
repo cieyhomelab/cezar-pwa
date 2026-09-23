@@ -1,5 +1,5 @@
 import { type ActionRun, type RunActionId, runActionFlags } from '../../domain/run-actions.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import type { RunActions } from './useRunActions.ts'
 
 const BASE = 'touch-target inline-flex items-center justify-center rounded px-4 text-sm disabled:opacity-60'
@@ -20,7 +20,7 @@ const STYLE = {
  */
 export function RunActionBar({ run, actions, busy }: { run: ActionRun; actions: RunActions; busy: boolean }) {
   const flags = runActionFlags(run)
-  const t = pl.run.actions
+  const t = en.run.actions
   const disabled = busy || actions.pending !== undefined
 
   const button = (id: RunActionId, style: string, idle: string, working: string) => (

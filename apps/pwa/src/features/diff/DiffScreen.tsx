@@ -11,7 +11,7 @@ import { openByDefault } from '../../domain/diff.ts'
 import { clockTime, runTitle } from '../../domain/run-display.ts'
 import { runPath } from '../../domain/run-header.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
 import { DiffCounts } from './DiffCounts.tsx'
@@ -55,32 +55,32 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
       <div className="sticky top-0 z-20 flex h-11 items-center border-b border-border bg-surface px-2">
         <Link to={runPath(projectId, runId)} className="touch-target inline-flex items-center px-2 text-accent">
           <span aria-hidden="true">‹&nbsp;</span>
-          {pl.run.diff.back}
+          {en.run.diff.back}
         </Link>
         {/* S-12, FR-048: the same diff in the cockpit's Changes tab. */}
         <a
           href={cockpitChangesPath(projectId, runId)}
-          aria-label={pl.shell.openTaskInCockpitLabel}
+          aria-label={en.shell.openTaskInCockpitLabel}
           className="touch-target ml-auto inline-flex items-center px-2 text-sm text-accent"
         >
-          {pl.shell.openTaskInCockpit}
+          {en.shell.openTaskInCockpit}
           <span aria-hidden="true">&nbsp;↗</span>
         </a>
       </div>
 
       <section className="flex flex-col gap-1 border-b border-border px-4 py-3">
-        <h2 className="text-lg font-semibold">{pl.run.diff.title}</h2>
+        <h2 className="text-lg font-semibold">{en.run.diff.title}</h2>
         {run.data ? <p className="text-sm break-words text-text-muted">{runTitle(run.data)}</p> : null}
         <div className="flex items-center justify-between gap-3">
           <p className="flex flex-wrap items-center gap-2 text-sm">
             {data ? (
               <>
-                {pl.run.diff.files(data.stat.files)}
+                {en.run.diff.files(data.stat.files)}
                 <DiffCounts adds={data.stat.adds} dels={data.stat.dels} />
               </>
             ) : null}
             {data && !changes.isFetching ? (
-              <span className="text-text-muted">· {pl.run.stateFrom(updatedAt)}</span>
+              <span className="text-text-muted">· {en.run.stateFrom(updatedAt)}</span>
             ) : null}
           </p>
           <button
@@ -92,7 +92,7 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
             }}
             disabled={changes.isFetching}
           >
-            {changes.isFetching ? pl.run.refreshing : pl.run.refresh}
+            {changes.isFetching ? en.run.refreshing : en.run.refresh}
           </button>
         </div>
       </section>
@@ -103,10 +103,10 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
             {/* A 409 is an answer, not an outage: e.g. the task ran without a worktree. */}
             <p>
               {error instanceof ApiError && error.status === 409
-                ? pl.run.diff.refused
+                ? en.run.diff.refused
                 : error instanceof ApiError && error.status === 404
-                  ? pl.run.notFound
-                  : pl.run.diff.loadFailed}
+                  ? en.run.notFound
+                  : en.run.diff.loadFailed}
             </p>
             {/* A 404's heading already says it all; anything else adds what the answer gave. */}
             {error instanceof ApiError && error.status !== 404 && apiErrorDetail(error) ? (
@@ -115,24 +115,24 @@ function DiffScreenFor({ projectId, runId }: { projectId: string; runId: string 
           </section>
         ) : (
           <p role="status" className="flex flex-1 items-center justify-center px-6 py-10 text-text-muted">
-            {pl.run.diff.loading}
+            {en.run.diff.loading}
           </p>
         )
       ) : (
         <div aria-busy={stale} className={stale ? 'opacity-50' : undefined}>
           {error ? (
             <div role="alert" className="border-b border-border bg-surface-raised px-4 py-2 text-sm">
-              {pl.run.refreshFailed(updatedAt)}
+              {en.run.refreshFailed(updatedAt)}
             </div>
           ) : null}
           {data.repointedHead ? (
             <p role="note" className="border-b border-border px-4 py-2 text-xs break-words text-text-muted">
-              {pl.run.diff.repointed(data.repointedHead.headBranch, data.repointedHead.taskBranch)}
+              {en.run.diff.repointed(data.repointedHead.headBranch, data.repointedHead.taskBranch)}
             </p>
           ) : null}
           {data.files.length === 0 ? (
             <p className="px-6 py-10 text-center text-text-muted">
-              {active ? pl.run.diff.emptyActive : pl.run.diff.empty}
+              {active ? en.run.diff.emptyActive : en.run.diff.empty}
             </p>
           ) : (
             data.files.map((file) => (

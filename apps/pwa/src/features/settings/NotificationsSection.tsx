@@ -1,4 +1,4 @@
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { usePushSubscription } from './usePushSubscription.ts'
 
 const BASE = 'touch-target inline-flex items-center justify-center rounded px-4 text-sm disabled:opacity-60'
@@ -14,7 +14,7 @@ const STYLE = {
  */
 export function NotificationsSection() {
   const push = usePushSubscription()
-  const t = pl.push
+  const t = en.push
 
   return (
     <section aria-labelledby="push-heading" className="flex flex-col gap-3 border-b border-border px-4 py-3">

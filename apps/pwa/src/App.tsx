@@ -1,7 +1,7 @@
 import { Link, Outlet } from 'react-router'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { AuthGate } from './features/auth/AuthGate.tsx'
-import { pl } from './i18n/pl.ts'
+import { en } from './i18n/en.ts'
 import { InstallHint } from './pwa/InstallHint.tsx'
 import { OfflineBanner } from './pwa/OfflineBanner.tsx'
 import { UpdatePrompt } from './pwa/UpdatePrompt.tsx'
@@ -36,8 +36,8 @@ export default function App() {
       {/* Not sticky: on a phone the brand is not worth a permanent strip, and the task screen
           pins its own bar (back link and plan) to the top. */}
       <header className="border-b border-border px-4 py-3">
-        <h1 className="text-lg font-semibold">{pl.app.name}</h1>
-        <p className="text-sm text-text-muted">{pl.app.tagline}</p>
+        <h1 className="text-lg font-semibold">{en.app.name}</h1>
+        <p className="text-sm text-text-muted">{en.app.tagline}</p>
       </header>
 
       <OfflineBanner online={online} />
@@ -61,11 +61,11 @@ export default function App() {
         {/* Same-origin link to the full cockpit — the PWA is deliberately a
             subset of it (REQUIREMENTS §1). */}
         <a className="touch-target inline-flex items-center text-sm text-accent" href="/">
-          {pl.shell.openCockpit}
+          {en.shell.openCockpit}
         </a>
         {/* S-10: notifications are turned on in Settings (FR-036). */}
         <Link className="touch-target inline-flex items-center text-sm text-accent" to="/settings">
-          {pl.settings.open}
+          {en.settings.open}
         </Link>
       </footer>
     </div>

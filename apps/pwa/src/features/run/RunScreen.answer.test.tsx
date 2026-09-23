@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import liveRun from '../../../test/fixtures/run.live-0.11.0.json'
 import { jsonResponse, renderWithQuery } from '../../../test/query.tsx'
 import { AuthRequiredError, NetworkError, TimeoutError } from '../../api/http.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { AppRoutes } from '../../routes.tsx'
 import { failureMessage } from './useDeliver.ts'
 
@@ -74,7 +74,7 @@ function serve(opts: { run: ApiRun; history: () => unknown; messages?: Handler; 
   return { fetchMock, writesTo }
 }
 
-const askCard = async () => (await screen.findByText(pl.run.transcript.ask.title)).closest('section')!
+const askCard = async () => (await screen.findByText(en.run.transcript.ask.title)).closest('section')!
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -93,20 +93,20 @@ describe('answering a question (FR-022)', () => {
       },
     })
     const card = within(await askCard())
-    expect(card.getByText(pl.run.transcript.ask.pickOrWrite)).toBeInTheDocument()
+    expect(card.getByText(en.run.transcript.ask.pickOrWrite)).toBeInTheDocument()
 
     fireEvent.click(card.getByRole('button', { name: 'dev' }))
 
     await waitFor(() => expect(writesTo('/messages')).toEqual([{ path: `${BASE}/messages`, body: { text: 'Branch: dev' } }]))
     // The refetch lands the operator's message, which resolves the card.
-    expect(await screen.findByText(pl.run.transcript.ask.answered('Branch: dev'))).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.ask.answered('Branch: dev'))).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'main' })).not.toBeInTheDocument()
   })
 
   it('several questions send once, together, and only when each has an answer', async () => {
     const { writesTo } = serve({ run: runAs('waiting'), history: () => askPage([branch, checks]) })
     const card = within(await askCard())
-    const send = card.getByRole('button', { name: pl.run.transcript.ask.send })
+    const send = card.getByRole('button', { name: en.run.transcript.ask.send })
     expect(send).toBeDisabled()
 
     fireEvent.click(card.getByRole('button', { name: /main/ }))
@@ -120,7 +120,7 @@ describe('answering a question (FR-022)', () => {
     await waitFor(() =>
       expect(writesTo('/messages').map((write) => write.body)).toEqual([{ text: 'Branch: main\nChecks: lint, test' }]),
     )
-    expect(await card.findByText(pl.run.transcript.ask.sent)).toBeInTheDocument()
+    expect(await card.findByText(en.run.transcript.ask.sent)).toBeInTheDocument()
   })
 
   it('shows the send in flight and blocks a second one (FR-032)', async () => {
@@ -133,14 +133,14 @@ describe('answering a question (FR-022)', () => {
     const card = within(await askCard())
     fireEvent.click(card.getByRole('button', { name: 'dev' }))
 
-    expect(await card.findByText(pl.run.compose.sending)).toBeInTheDocument()
+    expect(await card.findByText(en.run.compose.sending)).toBeInTheDocument()
     expect(card.getByRole('button', { name: /main/ })).toBeDisabled()
-    expect(screen.getByRole('button', { name: pl.run.compose.sending })).toBeDisabled()
+    expect(screen.getByRole('button', { name: en.run.compose.sending })).toBeDisabled()
     fireEvent.click(card.getByRole('button', { name: /main/ }))
     expect(writesTo('/messages')).toHaveLength(1)
 
     release(jsonResponse({ delivered: true }))
-    expect(await card.findByText(pl.run.transcript.ask.sent)).toBeInTheDocument()
+    expect(await card.findByText(en.run.transcript.ask.sent)).toBeInTheDocument()
   })
 
   it("says the server's own reason when it refuses, and lets the operator try again", async () => {
@@ -152,7 +152,7 @@ describe('answering a question (FR-022)', () => {
     const card = within(await askCard())
     fireEvent.click(card.getByRole('button', { name: 'dev' }))
 
-    expect(await card.findByRole('alert')).toHaveTextContent('Cezar odmówił: provider claude is not connected')
+    expect(await card.findByRole('alert')).toHaveTextContent('Cezar refused: provider claude is not connected')
     expect(card.getByRole('button', { name: 'dev' })).toBeEnabled()
   })
 
@@ -165,7 +165,7 @@ describe('answering a question (FR-022)', () => {
     fireEvent.click(within(await askCard()).getByRole('button', { name: 'dev' }))
 
     await waitFor(() => expect(writesTo('/continue').map((write) => write.body)).toEqual([{ text: 'Branch: dev' }]))
-    expect(await screen.findByText(pl.run.transcript.ask.sent)).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.ask.sent)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -178,13 +178,13 @@ describe('answering a question (FR-022)', () => {
     })
     const card = within(await askCard())
     fireEvent.click(card.getByRole('button', { name: 'dev' }))
-    expect(await card.findByRole('alert')).toHaveTextContent('Cezar odmówił: provider claude is not connected')
+    expect(await card.findByRole('alert')).toHaveTextContent('Cezar refused: provider claude is not connected')
   })
 
   it('a question whose session closed says so, and answering it reopens the session', async () => {
     const { writesTo } = serve({ run: runAs('done'), history: () => askPage() })
     const card = within(await askCard())
-    expect(card.getByText(pl.run.transcript.ask.resumeHint)).toBeInTheDocument()
+    expect(card.getByText(en.run.transcript.ask.resumeHint)).toBeInTheDocument()
 
     fireEvent.click(card.getByRole('button', { name: 'dev' }))
     await waitFor(() => expect(writesTo('/continue').map((write) => write.body)).toEqual([{ text: 'Branch: dev' }]))
@@ -194,9 +194,9 @@ describe('answering a question (FR-022)', () => {
   it('a closed task with no session to reopen shows the question inert, with the reason', async () => {
     serve({ run: runAs('done', withoutSession), history: () => askPage() })
     const card = within(await askCard())
-    expect(card.getByText(pl.run.compose.failed.unavailable)).toBeInTheDocument()
+    expect(card.getByText(en.run.compose.failed.unavailable)).toBeInTheDocument()
     expect(card.getByRole('button', { name: 'dev' })).toBeDisabled()
-    expect(screen.queryByRole('form', { name: pl.run.compose.label })).not.toBeInTheDocument()
+    expect(screen.queryByRole('form', { name: en.run.compose.label })).not.toBeInTheDocument()
   })
 
   it('an older, superseded question offers nothing', async () => {
@@ -209,24 +209,24 @@ describe('answering a question (FR-022)', () => {
           ev(4, 'ask.requested', { requestId: 'ask-1', questions: [branch] }),
         ]),
     })
-    await screen.findByText(pl.run.transcript.ask.superseded)
-    const old = screen.getByText(pl.run.transcript.ask.superseded).closest('section')!
+    await screen.findByText(en.run.transcript.ask.superseded)
+    const old = screen.getByText(en.run.transcript.ask.superseded).closest('section')!
     expect(within(old).getByRole('button', { name: /lint/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'dev' })).toBeEnabled()
   })
 })
 
 describe('messaging the task (FR-023)', () => {
-  const composer = async () => within(await screen.findByRole('form', { name: pl.run.compose.label }))
+  const composer = async () => within(await screen.findByRole('form', { name: en.run.compose.label }))
 
   it('sends free text to a running task and clears the draft once Cezar took it', async () => {
     const { writesTo } = serve({ run: runAs('running'), history: () => page(opening) })
     const form = await composer()
-    const box = form.getByRole('textbox', { name: pl.run.compose.label })
-    expect(form.getByRole('button', { name: pl.run.compose.send })).toBeDisabled()
+    const box = form.getByRole('textbox', { name: en.run.compose.label })
+    expect(form.getByRole('button', { name: en.run.compose.send })).toBeDisabled()
 
     fireEvent.change(box, { target: { value: 'Also update the docs.\nThanks' } })
-    fireEvent.click(form.getByRole('button', { name: pl.run.compose.send }))
+    fireEvent.click(form.getByRole('button', { name: en.run.compose.send }))
 
     await waitFor(() =>
       expect(writesTo('/messages').map((write) => write.body)).toEqual([{ text: 'Also update the docs.\nThanks' }]),
@@ -237,23 +237,23 @@ describe('messaging the task (FR-023)', () => {
   it('keeps every word when the send fails, with the reason', async () => {
     serve({ run: runAs('running'), history: () => page(opening), messages: () => Promise.reject(new TypeError('offline')) })
     const form = await composer()
-    const box = form.getByRole('textbox', { name: pl.run.compose.label })
+    const box = form.getByRole('textbox', { name: en.run.compose.label })
     fireEvent.change(box, { target: { value: 'Stop after this step.' } })
-    fireEvent.click(form.getByRole('button', { name: pl.run.compose.send }))
+    fireEvent.click(form.getByRole('button', { name: en.run.compose.send }))
 
-    expect(await form.findByRole('alert')).toHaveTextContent(pl.run.compose.failed.network)
+    expect(await form.findByRole('alert')).toHaveTextContent(en.run.compose.failed.network)
     expect(box).toHaveValue('Stop after this step.')
   })
 
   it('a reply in the operator own words answers the open question too', async () => {
     const { writesTo } = serve({ run: runAs('waiting'), history: () => askPage() })
     const form = await composer()
-    expect(form.getByRole('textbox')).toHaveAttribute('placeholder', pl.run.compose.placeholder.waiting)
+    expect(form.getByRole('textbox')).toHaveAttribute('placeholder', en.run.compose.placeholder.waiting)
     fireEvent.change(form.getByRole('textbox'), { target: { value: 'Neither — make a new branch.' } })
-    fireEvent.click(form.getByRole('button', { name: pl.run.compose.send }))
+    fireEvent.click(form.getByRole('button', { name: en.run.compose.send }))
 
     await waitFor(() => expect(writesTo('/messages')).toHaveLength(1))
-    expect(await screen.findByText(pl.run.transcript.ask.sent)).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.ask.sent)).toBeInTheDocument()
   })
 
   it('a queued task: the message joins the prompt, and what is stacked is shown', async () => {
@@ -265,8 +265,8 @@ describe('messaging the task (FR-023)', () => {
       messages: () => jsonResponse({ queued: true, message: { id: 'q2', text: 'x', createdAt: '2026-09-21T08:01:00.000Z' } }),
     })
     const form = await composer()
-    expect(form.getByText(pl.run.compose.hint.queued)).toBeInTheDocument()
-    expect(form.getByText(pl.run.compose.queuedTitle(1))).toBeInTheDocument()
+    expect(form.getByText(en.run.compose.hint.queued)).toBeInTheDocument()
+    expect(form.getByText(en.run.compose.queuedTitle(1))).toBeInTheDocument()
     expect(form.getByText('Use pnpm.')).toBeInTheDocument()
   })
 
@@ -274,22 +274,22 @@ describe('messaging the task (FR-023)', () => {
     serve({ run: runAs('running'), history: () => page(opening), messages: () => jsonResponse({ deferred: true }) })
     const form = await composer()
     fireEvent.change(form.getByRole('textbox'), { target: { value: 'hi' } })
-    fireEvent.click(form.getByRole('button', { name: pl.run.compose.send }))
-    expect(await form.findByText(pl.run.compose.deferred)).toBeInTheDocument()
+    fireEvent.click(form.getByRole('button', { name: en.run.compose.send }))
+    expect(await form.findByText(en.run.compose.deferred)).toBeInTheDocument()
   })
 
   it.each(['done', 'review', 'failed', 'cancelled'])('is not offered on a %s task with no open question', async (status) => {
     serve({ run: runAs(status), history: () => page(opening) })
-    await screen.findByRole('region', { name: pl.run.transcript.heading })
-    expect(screen.queryByRole('form', { name: pl.run.compose.label })).not.toBeInTheDocument()
+    await screen.findByRole('region', { name: en.run.transcript.heading })
+    expect(screen.queryByRole('form', { name: en.run.compose.label })).not.toBeInTheDocument()
   })
 })
 
 describe('failureMessage (FR-032)', () => {
   it.each([
-    [new AuthRequiredError(403), pl.run.compose.failed.auth],
-    [new TimeoutError(20_000), pl.run.compose.failed.timeout],
-    [new NetworkError('x'), pl.run.compose.failed.network],
+    [new AuthRequiredError(403), en.run.compose.failed.auth],
+    [new TimeoutError(20_000), en.run.compose.failed.timeout],
+    [new NetworkError('x'), en.run.compose.failed.network],
   ])('%s', (error, message) => {
     expect(failureMessage(error)).toBe(message)
   })

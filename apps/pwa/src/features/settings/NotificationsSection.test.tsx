@@ -86,13 +86,13 @@ afterEach(() => {
 })
 
 const render = () => renderWithQuery(<SettingsScreen />, undefined, '/settings')
-const section = () => screen.getByRole('region', { name: 'Powiadomienia' })
+const section = () => screen.getByRole('region', { name: 'Notifications' })
 
-describe('Settings → Powiadomienia', () => {
+describe('Settings → Notifications', () => {
   it('in a browser tab, shows how to install instead of a button that cannot work (FR-037)', () => {
     install({ standalone: false, push: false })
     render()
-    expect(screen.getByRole('note')).toHaveTextContent('Najpierw dodaj Cezara do ekranu początkowego')
+    expect(screen.getByRole('note')).toHaveTextContent('First add Cezar to your home screen')
     // S-12's sign-out button sits below, so "no button" is this section's; and Versions asks
     // Cezar for its version, so "no calls" is the sidecar's.
     expect(within(section()).queryByRole('button')).toBeNull()
@@ -102,13 +102,13 @@ describe('Settings → Powiadomienia', () => {
   it('says what a notification carries — and that it carries no code or transcript (FR-043)', () => {
     install({ standalone: false, push: false })
     render()
-    expect(section()).toHaveTextContent('bez kodu i bez treści rozmowy')
+    expect(section()).toHaveTextContent('no code and nothing from the conversation')
   })
 
   it('installed on a phone without Web Push, says so', () => {
     install({ push: false })
     render()
-    expect(section()).toHaveTextContent('potrzebny iOS 16.4')
+    expect(section()).toHaveTextContent('iOS 16.4 or newer is needed')
     expect(within(section()).queryByRole('button')).toBeNull()
   })
 
@@ -116,14 +116,14 @@ describe('Settings → Powiadomienia', () => {
     install()
     permission = 'denied'
     render()
-    expect(section()).toHaveTextContent('Ustawieniach iOS')
+    expect(section()).toHaveTextContent('iOS Settings')
     expect(within(section()).queryByRole('button')).toBeNull()
   })
 
   it('turns notifications on from a tap: prompt, subscribe with the key, register (FR-036)', async () => {
     install()
     render()
-    const enable = await screen.findByRole('button', { name: 'Włącz powiadomienia' })
+    const enable = await screen.findByRole('button', { name: 'Turn on notifications' })
     await waitFor(() => expect(calls.map((c) => c.path)).toContain('/m/push/vapid-public-key'))
     requestPermission.mockImplementationOnce(async () => {
       permission = 'granted'
@@ -131,7 +131,7 @@ describe('Settings → Powiadomienia', () => {
     })
     fireEvent.click(enable)
 
-    await screen.findByText('Powiadomienia są włączone na tym urządzeniu.')
+    await screen.findByText('Notifications are on for this device.')
     expect(requestPermission).toHaveBeenCalledOnce()
     const options = pushManager.subscribe.mock.calls[0]?.[0]
     expect(options.userVisibleOnly).toBe(true)
@@ -146,14 +146,14 @@ describe('Settings → Powiadomienia', () => {
   it('a subscription made with an old key is dropped on the sidecar too, not left to bounce (S-11)', async () => {
     install()
     render()
-    const enable = await screen.findByRole('button', { name: 'Włącz powiadomienia' })
+    const enable = await screen.findByRole('button', { name: 'Turn on notifications' })
     await waitFor(() => expect(calls.map((c) => c.path)).toContain('/m/push/vapid-public-key'))
     const stale = { ...fakeSubscription(), endpoint: `${ENDPOINT}-old`, options: { applicationServerKey: new Uint8Array([1, 2, 3]).buffer } }
     existing = stale
     permission = 'granted'
     fireEvent.click(enable)
 
-    await screen.findByText('Powiadomienia są włączone na tym urządzeniu.')
+    await screen.findByText('Notifications are on for this device.')
     expect(stale.unsubscribe).toHaveBeenCalledOnce()
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([
       { method: 'DELETE', path: '/m/push/subscription', body: { endpoint: `${ENDPOINT}-old` } },
@@ -164,8 +164,8 @@ describe('Settings → Powiadomienia', () => {
   it('a dismissed prompt subscribes nothing and says why', async () => {
     install()
     render()
-    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Nie udzielono zgody')
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn on notifications' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Notification permission was not granted')
     expect(pushManager.subscribe).not.toHaveBeenCalled()
   })
 
@@ -175,10 +175,10 @@ describe('Settings → Powiadomienia', () => {
     answers['POST /m/push/subscription'] = () =>
       new Response('<html>403</html>', { status: 403, headers: { 'content-type': 'text/html' } })
     render()
-    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Sesja z Cezarem wygasła')
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn on notifications' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The session with Cezar expired')
     expect(existing?.unsubscribe).toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Włącz powiadomienia' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Turn on notifications' })).toBeEnabled()
   })
 
   it('says the notification server is down when nginx answers for it', async () => {
@@ -187,18 +187,18 @@ describe('Settings → Powiadomienia', () => {
     answers['POST /m/push/subscription'] = () =>
       new Response('<html>502</html>', { status: 502, headers: { 'content-type': 'text/html' } })
     render()
-    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Serwer powiadomień nie odpowiada')
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn on notifications' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The notification server is not responding')
   })
 
-  it('says the sidecar answered in an unknown format, in Polish, when its key is missing', async () => {
+  it('says the sidecar answered in an unknown format when its key is missing', async () => {
     install()
     permission = 'granted'
     answers['GET /m/push/vapid-public-key'] = () => json({})
     render()
-    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn on notifications' }))
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Serwer powiadomień odpowiedział w nieznanym formacie')
+    expect(alert).toHaveTextContent('The notification server answered in an unknown format')
     // Never the developer-facing `ApiError.message` the code travels with.
     expect(alert).not.toHaveTextContent('unexpected sidecar response shape')
   })
@@ -210,10 +210,10 @@ describe('Settings → Powiadomienia', () => {
     answers['GET /m/push/vapid-public-key'] = () =>
       new Response('<!doctype html><title>Cezar</title>', { status: 200, headers: { 'content-type': 'text/html' } })
     render()
-    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn on notifications' }))
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Serwer powiadomień nie odpowiada')
-    expect(alert).not.toHaveTextContent('Sesja z Cezarem wygasła')
+    expect(alert).toHaveTextContent('The notification server is not responding')
+    expect(alert).not.toHaveTextContent('The session with Cezar expired')
     expect(pushManager.subscribe).not.toHaveBeenCalled()
   })
 
@@ -226,33 +226,33 @@ describe('Settings → Powiadomienia', () => {
 
     it('sends a test to this device only (FR-045)', async () => {
       render()
-      fireEvent.click(await screen.findByRole('button', { name: 'Wyślij powiadomienie testowe' }))
-      expect(await screen.findByRole('status')).toHaveTextContent('Wysłane')
+      fireEvent.click(await screen.findByRole('button', { name: 'Send a test notification' }))
+      expect(await screen.findByRole('status')).toHaveTextContent('Sent')
       expect(calls.find((c) => c.path === '/m/push/test')?.body).toEqual({ endpoint: ENDPOINT })
     })
 
     it('a test the sidecar cannot place tells the operator to re-enable', async () => {
       answers['POST /m/push/test'] = () => json({ error: 'unknown subscription' }, 404)
       render()
-      fireEvent.click(await screen.findByRole('button', { name: 'Wyślij powiadomienie testowe' }))
-      expect(await screen.findByRole('alert')).toHaveTextContent('Serwer nie zna tego urządzenia')
+      fireEvent.click(await screen.findByRole('button', { name: 'Send a test notification' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('The server does not know this device')
     })
 
     it('a device the push service disowned is switched off here too', async () => {
       answers['POST /m/push/test'] = () => json({ error: 'gone' }, 410)
       const subscription = existing
       render()
-      fireEvent.click(await screen.findByRole('button', { name: 'Wyślij powiadomienie testowe' }))
-      expect(await screen.findByRole('alert')).toHaveTextContent('nie zna już tego urządzenia')
+      fireEvent.click(await screen.findByRole('button', { name: 'Send a test notification' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('no longer knows this device')
       expect(subscription?.unsubscribe).toHaveBeenCalled()
-      expect(screen.getByRole('button', { name: 'Włącz powiadomienia' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Turn on notifications' })).toBeInTheDocument()
     })
 
     it('turns off: the device stops, and the sidecar forgets it', async () => {
       const subscription = existing
       render()
-      fireEvent.click(await screen.findByRole('button', { name: 'Wyłącz powiadomienia' }))
-      await screen.findByRole('button', { name: 'Włącz powiadomienia' })
+      fireEvent.click(await screen.findByRole('button', { name: 'Turn off notifications' }))
+      await screen.findByRole('button', { name: 'Turn on notifications' })
       expect(subscription?.unsubscribe).toHaveBeenCalled()
       expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({ endpoint: ENDPOINT })
     })
@@ -261,6 +261,6 @@ describe('Settings → Powiadomienia', () => {
   it('links back to the list', () => {
     install({ standalone: false, push: false })
     render()
-    expect(screen.getByRole('link', { name: /Lista zadań/ })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: /Task list/ })).toHaveAttribute('href', '/')
   })
 })

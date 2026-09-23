@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-03 acceptance in mobile Safari: the operator opens the app and sees every task across
@@ -56,14 +57,14 @@ test.describe('Task list', () => {
     await serveCezar(page)
     await page.goto('.')
 
-    await expect(page.getByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeVisible({
+    await expect(page.getByRole('heading', { name: en.runs.summary.some(3) })).toBeVisible({
       timeout: 3_000,
     })
     await expect(page.getByRole('heading', { level: 3 })).toHaveText([
-      'Wymaga uwagi (3)',
-      'W toku (2)',
-      'W kolejce (3)',
-      'Zakończone (3)',
+      `${en.runs.sections.attention} (3)`,
+      `${en.runs.sections.running} (2)`,
+      `${en.runs.sections.queued} (3)`,
+      `${en.runs.sections.finished} (3)`,
     ])
     // Archived work stays out of the list.
     await expect(page.getByText('An archived task nobody will touch again')).toHaveCount(0)
@@ -72,7 +73,7 @@ test.describe('Task list', () => {
   test('fits the phone: no sideways scrolling at 390 px', async ({ page }) => {
     await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -84,22 +85,22 @@ test.describe('Task list', () => {
     await serveCezar(page)
     await page.goto('.')
 
-    await page.getByRole('combobox', { name: 'Projekt' }).selectOption('kai-phone')
-    await expect(page.getByRole('heading', { name: 'Wymaga uwagi (1)' })).toBeVisible()
-    await expect(page.getByText('2 w innych projektach')).toBeVisible()
+    await page.getByRole('combobox', { name: en.runs.filter.label }).selectOption('kai-phone')
+    await expect(page.getByRole('heading', { name: `${en.runs.sections.attention} (1)` })).toBeVisible()
+    await expect(page.getByText(en.runs.summary.elsewhere(2))).toBeVisible()
 
     await page.reload()
-    await expect(page.getByRole('combobox', { name: 'Projekt' })).toHaveValue('kai-phone')
-    await expect(page.getByRole('heading', { name: 'Wymaga uwagi (1)' })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: en.runs.filter.label })).toHaveValue('kai-phone')
+    await expect(page.getByRole('heading', { name: `${en.runs.sections.attention} (1)` })).toBeVisible()
   })
 
   test('refreshes on request and on return to the foreground (FR-011)', async ({ page }) => {
     const counts = await serveCezar(page)
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
     const before = counts.runsIndex
-    await page.getByRole('button', { name: 'Odśwież' }).click()
+    await page.getByRole('button', { name: en.runs.refresh }).click()
     await expect.poll(() => counts.runsIndex).toBe(before + 1)
 
     // What iOS fires when the operator comes back to a frozen app. The real event bubbles
@@ -111,7 +112,7 @@ test.describe('Task list', () => {
     await expect.poll(() => counts.runsIndex).toBeGreaterThan(before + 1)
   })
 
-  test('a lapsed session sends the operator to "Połącz z Cezarem", not to a broken list', async ({
+  test('a lapsed session sends the operator to "Connect to Cezar", not to a broken list', async ({
     page,
   }) => {
     let authorized = true
@@ -127,11 +128,11 @@ test.describe('Task list', () => {
         : route.fulfill({ status: 403, contentType: 'text/html', body: '403' }),
     )
     await page.goto('.')
-    await expect(page.getByRole('heading', { name: /wymagają uwagi/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /need attention/ })).toBeVisible()
 
     authorized = false
-    await page.getByRole('button', { name: 'Odśwież' }).click()
+    await page.getByRole('button', { name: en.runs.refresh }).click()
 
-    await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
   })
 })

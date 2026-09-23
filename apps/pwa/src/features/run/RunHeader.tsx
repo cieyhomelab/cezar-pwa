@@ -4,7 +4,7 @@ import type { ApiRun } from '@cezar-pwa/cezar-contract/contract'
 import { deriveAttention } from '@cezar-pwa/shared'
 import { formatCost, runTitle } from '../../domain/run-display.ts'
 import { diffPath, prLink, runnerModel, stepProgress, tokenSummary, workflowLabel } from '../../domain/run-header.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { DiffCounts } from '../diff/DiffCounts.tsx'
 import { StatusBadge } from '../runs-list/StatusBadge.tsx'
 
@@ -36,49 +36,49 @@ export function RunHeader({ run, projectId, projectName }: { run: ApiRun; projec
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           <StatusBadge attention={deriveAttention(run)} status={run.status} />
           {/* S-08: an archived task is off the list, so the screen says where it went. */}
-          {run.archived ? <span className="text-sm text-text-muted">{pl.run.actions.archivedBadge}</span> : null}
+          {run.archived ? <span className="text-sm text-text-muted">{en.run.actions.archivedBadge}</span> : null}
           {run.pinned && !run.archived ? (
-            <span className="text-sm text-text-muted">{pl.run.actions.pinnedBadge}</span>
+            <span className="text-sm text-text-muted">{en.run.actions.pinnedBadge}</span>
           ) : null}
         </span>
         <span className="min-w-0 truncate text-sm text-text-muted">{projectName}</span>
       </div>
       <h2 className="text-lg leading-snug font-semibold break-words">{runTitle(run)}</h2>
       <dl className="flex flex-col gap-1 text-sm">
-        <Row label={pl.run.header.workflow}>
+        <Row label={en.run.header.workflow}>
           {workflowLabel(run)}
           {progress ? (
             <span className="block text-text-muted">
-              {pl.run.header.step(progress.position, progress.total, progress.name)}
+              {en.run.header.step(progress.position, progress.total, progress.name)}
             </span>
           ) : null}
         </Row>
-        {agent ? <Row label={pl.run.header.agent}>{agent}</Row> : null}
-        {cost ? <Row label={pl.run.header.cost}>{cost}</Row> : null}
+        {agent ? <Row label={en.run.header.agent}>{agent}</Row> : null}
+        {cost ? <Row label={en.run.header.cost}>{cost}</Row> : null}
         {tokens ? (
-          <Row label={pl.run.header.tokens}>
+          <Row label={en.run.header.tokens}>
             {tokens.kind === 'directional'
-              ? pl.run.header.tokensDirectional(tokens.input, tokens.output)
+              ? en.run.header.tokensDirectional(tokens.input, tokens.output)
               : tokens.total}
           </Row>
         ) : null}
         {run.branch ? (
-          <Row label={pl.run.header.branch}>
+          <Row label={en.run.header.branch}>
             <span className="font-mono text-xs">{run.branch}</span>
           </Row>
         ) : null}
-        <Row label={pl.run.header.changes}>
+        <Row label={en.run.header.changes}>
           <Link
             to={diffPath(projectId, run.id)}
             className="touch-target inline-flex items-center gap-2 text-accent underline"
           >
             {run.diffStat && run.diffStat.files > 0 ? (
               <>
-                {pl.run.diff.files(run.diffStat.files)}
+                {en.run.diff.files(run.diffStat.files)}
                 <DiffCounts adds={run.diffStat.adds} dels={run.diffStat.dels} />
               </>
             ) : (
-              pl.run.header.showChanges
+              en.run.header.showChanges
             )}
           </Link>
         </Row>
@@ -90,7 +90,7 @@ export function RunHeader({ run, projectId, projectName }: { run: ApiRun; projec
               rel="noopener noreferrer"
               className="touch-target inline-flex items-center text-accent underline"
             >
-              {pl.run.header.pr(pr.number)}
+              {en.run.header.pr(pr.number)}
             </a>
           </Row>
         ) : null}

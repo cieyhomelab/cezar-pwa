@@ -1,4 +1,4 @@
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import type { SignOutState } from './useSignOut.ts'
 
 const BASE = 'touch-target inline-flex items-center justify-center rounded px-4 text-sm disabled:opacity-60'
@@ -13,7 +13,7 @@ const STYLE = {
  * other sections on it; this only lays it out, like `RunActionBar` does for a task's actions.
  */
 export function SignOutSection({ signOut }: { signOut: SignOutState }) {
-  const t = pl.settings.signOut
+  const t = en.settings.signOut
 
   if (signOut.confirming) {
     return (

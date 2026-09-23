@@ -1,6 +1,6 @@
 import { turnBlocks, type TranscriptBlock } from '../../domain/transcript-blocks.ts'
 import type { Transcript, TranscriptEntry, TranscriptFooter } from '../../domain/transcript.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { AskCard } from './AskCard.tsx'
 import { Markdown } from './Markdown.tsx'
 import { ToolLine } from './ToolLine.tsx'
@@ -17,7 +17,7 @@ function UserBubble({ label, text, imageCount = 0 }: { label: string; text: stri
           interpreted. */}
       <p className="mt-1 break-words whitespace-pre-wrap">{text}</p>
       {imageCount > 0 ? (
-        <p className="mt-1 text-xs text-text-muted">{pl.run.transcript.imagesAttached(imageCount)}</p>
+        <p className="mt-1 text-xs text-text-muted">{en.run.transcript.imagesAttached(imageCount)}</p>
       ) : null}
     </div>
   )
@@ -26,13 +26,13 @@ function UserBubble({ label, text, imageCount = 0 }: { label: string; text: stri
 function Entry({ entry, answering }: { entry: TranscriptEntry; answering?: Answering }) {
   switch (entry.kind) {
     case 'message':
-      if (entry.role === 'user') return <UserBubble label={pl.run.transcript.you} text={entry.text} />
+      if (entry.role === 'user') return <UserBubble label={en.run.transcript.you} text={entry.text} />
       return entry.text.trim() === '' ? null : <Markdown text={entry.text} />
     case 'reasoning':
       return entry.text.trim() === '' ? null : (
         <details className="text-sm text-text-muted">
           <summary className="touch-target flex cursor-pointer list-none items-center">
-            {pl.run.transcript.reasoning}
+            {en.run.transcript.reasoning}
           </summary>
           <p className="break-words whitespace-pre-wrap">{entry.text}</p>
         </details>
@@ -44,9 +44,9 @@ function Entry({ entry, answering }: { entry: TranscriptEntry; answering?: Answe
         </p>
       )
     case 'image':
-      return <p className="text-sm text-text-muted">{pl.run.transcript.image(entry.name)}</p>
+      return <p className="text-sm text-text-muted">{en.run.transcript.image(entry.name)}</p>
     case 'provider-auth-required':
-      return <p className="text-sm text-danger">{pl.run.transcript.providerAuth(entry.provider)}</p>
+      return <p className="text-sm text-danger">{en.run.transcript.providerAuth(entry.provider)}</p>
     case 'ask':
       return (
         <AskCard
@@ -75,14 +75,14 @@ function Footer({ footer }: { footer: TranscriptFooter }) {
   if (footer === null) return null
   const text =
     footer.state === 'waiting'
-      ? pl.run.transcript.footer.waiting
+      ? en.run.transcript.footer.waiting
       : footer.state === 'failed'
         ? footer.error
-          ? pl.run.transcript.footer.failedWith(footer.error)
-          : pl.run.transcript.footer.failed
+          ? en.run.transcript.footer.failedWith(footer.error)
+          : en.run.transcript.footer.failed
         : footer.state === 'review'
-          ? pl.run.transcript.footer.review
-          : pl.run.transcript.footer.closed
+          ? en.run.transcript.footer.review
+          : en.run.transcript.footer.closed
   const tone =
     footer.state === 'failed' ? 'text-danger' : footer.state === 'waiting' ? 'text-pending' : 'text-text-muted'
   return <p className={`border-t border-border pt-3 text-sm break-words ${tone}`}>{text}</p>
@@ -115,24 +115,24 @@ export function TranscriptView({
     .filter(({ turn, blocks }) => blocks.length > 0 || turn.userMessage !== undefined)
 
   return (
-    <section aria-label={pl.run.transcript.heading} className="flex flex-col gap-3 px-4 py-4">
+    <section aria-label={en.run.transcript.heading} className="flex flex-col gap-3 px-4 py-4">
       {hasOlder ? (
         <p className="text-center text-xs text-text-muted">
           <a className="touch-target inline-flex items-center text-accent" href={olderHref}>
-            {pl.run.transcript.older}
+            {en.run.transcript.older}
           </a>
         </p>
       ) : task.trim() !== '' ? (
-        <UserBubble label={pl.run.transcript.task} text={task} />
+        <UserBubble label={en.run.transcript.task} text={task} />
       ) : null}
 
-      {turns.length === 0 ? <p className="text-sm text-text-muted">{pl.run.transcript.empty}</p> : null}
+      {turns.length === 0 ? <p className="text-sm text-text-muted">{en.run.transcript.empty}</p> : null}
 
       {turns.map(({ turn, blocks }) => (
         <article key={turn.id} className="flex flex-col gap-2">
           {turn.userMessage ? (
             <UserBubble
-              label={pl.run.transcript.you}
+              label={en.run.transcript.you}
               text={turn.userMessage.text}
               imageCount={turn.userMessage.imageCount}
             />

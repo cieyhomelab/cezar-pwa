@@ -1,4 +1,4 @@
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 /**
  * The probe got no answer at all.
@@ -18,15 +18,15 @@ export function UnreachableScreen({
 }) {
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-      <h2 className="text-xl font-semibold">{pl.auth.unreachable.title}</h2>
-      <p className="text-sm text-text-muted">{pl.auth.unreachable.body}</p>
+      <h2 className="text-xl font-semibold">{en.auth.unreachable.title}</h2>
+      <p className="text-sm text-text-muted">{en.auth.unreachable.body}</p>
       <button
         type="button"
         className="touch-target rounded border border-border px-4 text-sm"
         onClick={onRetry}
         disabled={isProbing}
       >
-        {isProbing ? pl.auth.rechecking : pl.auth.recheck}
+        {isProbing ? en.auth.rechecking : en.auth.recheck}
       </button>
     </section>
   )
