@@ -43,6 +43,12 @@ jobs:
 
       - run: npm test
 
+      # The push installer's own rehearsal: a scratch $HOME with shims for
+      # npm, systemd and curl, so it needs no VPS. Vitest cannot reach it, and
+      # a unit that stops following CEZAR_PUSH_HOME/STATE_DIR only breaks on a
+      # host (#36).
+      - run: deploy/push/rehearse.sh
+
       - run: npm run build
 
   e2e:
