@@ -5,7 +5,7 @@ import liveChanges from '../../../test/fixtures/changes.live-0.11.0.json'
 import liveRun from '../../../test/fixtures/run.live-0.11.0.json'
 import { createTestQueryClient, jsonResponse, refusalResponse, renderWithQuery } from '../../../test/query.tsx'
 import { DIFF_LINE_PAGE } from '../../domain/diff.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { AppRoutes } from '../../routes.tsx'
 
 /**
@@ -15,7 +15,7 @@ import { AppRoutes } from '../../routes.tsx'
 
 const RUN = { ...(liveRun as unknown as ApiRun), status: 'review' } as ApiRun
 const BASE = `/api/v1/p/cezar-pwa/runs/${RUN.id}`
-const t = pl.run.diff
+const t = en.run.diff
 
 const patch = (lines: string[]) => `diff --git a/x b/x\n--- a/x\n+++ b/x\n${lines.join('\n')}\n`
 
@@ -163,7 +163,7 @@ describe('DiffScreen — file by file', () => {
       'href',
       `/p/cezar-pwa/tasks/${RUN.id}/changes`,
     )
-    expect(screen.getByRole('link', { name: pl.shell.openTaskInCockpitLabel })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: en.shell.openTaskInCockpitLabel })).toHaveAttribute(
       'href',
       `/p/cezar-pwa/tasks/${RUN.id}/changes`,
     )
@@ -225,7 +225,7 @@ describe('DiffScreen — nothing to show', () => {
         return refusalResponse()
       },
     })
-    expect(await screen.findByRole('heading', { name: pl.auth.title })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: en.auth.title })).toBeInTheDocument()
   })
 })
 
@@ -258,6 +258,6 @@ describe('the way in and out', () => {
       },
       `/p/cezar-pwa/runs/${RUN.id}`,
     )
-    expect(await screen.findByRole('link', { name: pl.run.header.showChanges })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: en.run.header.showChanges })).toBeInTheDocument()
   })
 })

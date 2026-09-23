@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { ConnectScreen } from './ConnectScreen.tsx'
 import { UnreachableScreen } from './UnreachableScreen.tsx'
 import { consumeUnlockOutcome } from './unlock.ts'
@@ -25,7 +25,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (session.status === 'checking') {
     return (
       <p role="status" className="flex flex-1 items-center justify-center px-6 text-text-muted">
-        {pl.auth.checking}
+        {en.auth.checking}
       </p>
     )
   }

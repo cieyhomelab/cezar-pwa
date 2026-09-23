@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import {
   healthResponse,
   refusalResponse,
@@ -10,7 +10,7 @@ import {
 import { AuthGate } from './AuthGate.tsx'
 import { resetUnlockOutcome } from './unlock.ts'
 
-const TASKS = 'lista zadań'
+const TASKS = 'task list'
 
 function renderGate() {
   return renderWithQuery(
@@ -29,7 +29,7 @@ describe('AuthGate', () => {
   it('says it is checking before the probe answers', () => {
     stubFetch(() => new Promise<Response>(() => {}))
     renderGate()
-    expect(screen.getByRole('status')).toHaveTextContent(pl.auth.checking)
+    expect(screen.getByRole('status')).toHaveTextContent(en.auth.checking)
     expect(screen.queryByText(TASKS)).not.toBeInTheDocument()
   })
 
@@ -38,7 +38,7 @@ describe('AuthGate', () => {
     renderGate()
 
     expect(
-      await screen.findByRole('heading', { name: pl.auth.title }),
+      await screen.findByRole('heading', { name: en.auth.title }),
     ).toBeInTheDocument()
     expect(screen.queryByText(TASKS)).not.toBeInTheDocument()
   })
@@ -48,7 +48,7 @@ describe('AuthGate', () => {
     renderGate()
 
     expect(await screen.findByText(TASKS)).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: pl.auth.title })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: en.auth.title })).not.toBeInTheDocument()
   })
 
   it('tells a dead network apart from a refusal', async () => {
@@ -56,20 +56,20 @@ describe('AuthGate', () => {
     renderGate()
 
     expect(
-      await screen.findByRole('heading', { name: pl.auth.unreachable.title }),
+      await screen.findByRole('heading', { name: en.auth.unreachable.title }),
     ).toBeInTheDocument()
     // The operator is not sent hunting for an access link they already have.
-    expect(screen.queryByLabelText(pl.auth.linkLabel)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(en.auth.linkLabel)).not.toBeInTheDocument()
   })
 
   it('re-probes on demand and lets the operator through once Cezar answers', async () => {
     let authorized = false
     stubFetch(() => (authorized ? healthResponse() : refusalResponse()))
     renderGate()
-    await screen.findByRole('heading', { name: pl.auth.title })
+    await screen.findByRole('heading', { name: en.auth.title })
 
     authorized = true
-    fireEvent.click(screen.getByRole('button', { name: pl.auth.recheck }))
+    fireEvent.click(screen.getByRole('button', { name: en.auth.recheck }))
 
     expect(await screen.findByText(TASKS)).toBeInTheDocument()
   })
@@ -81,7 +81,7 @@ describe('AuthGate', () => {
     let authorized = false
     stubFetch(() => (authorized ? healthResponse() : refusalResponse()))
     renderGate()
-    await screen.findByRole('heading', { name: pl.auth.title })
+    await screen.findByRole('heading', { name: en.auth.title })
 
     authorized = true
     document.dispatchEvent(new Event('visibilitychange'))
@@ -90,7 +90,7 @@ describe('AuthGate', () => {
   })
 
   describe('once a session has been confirmed', () => {
-    const DRAFT = 'odpowiedź w trakcie pisania'
+    const DRAFT = 'an answer being typed'
 
     function renderGateWithDraft() {
       return renderWithQuery(
@@ -122,7 +122,7 @@ describe('AuthGate', () => {
       )
 
       expect(
-        screen.queryByRole('heading', { name: pl.auth.unreachable.title }),
+        screen.queryByRole('heading', { name: en.auth.unreachable.title }),
       ).not.toBeInTheDocument()
       expect(screen.getByLabelText(TASKS)).toBe(input)
       expect(input).toHaveValue(DRAFT)
@@ -138,7 +138,7 @@ describe('AuthGate', () => {
       document.dispatchEvent(new Event('visibilitychange'))
 
       expect(
-        await screen.findByRole('heading', { name: pl.auth.title }),
+        await screen.findByRole('heading', { name: en.auth.title }),
       ).toBeInTheDocument()
       expect(screen.queryByLabelText(TASKS)).not.toBeInTheDocument()
     })

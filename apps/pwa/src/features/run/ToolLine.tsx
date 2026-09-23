@@ -1,7 +1,7 @@
 import type { UiToolItem } from '@cezar-pwa/cezar-contract/protocol'
 import { clipOutput, toolInputText } from '../../domain/transcript-blocks.ts'
 import type { TranscriptEntry } from '../../domain/transcript.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 const STATUS_GLYPH: Record<string, string> = {
   pending: '…',
@@ -18,7 +18,7 @@ const STATUS_TONE: Record<string, string> = {
 }
 
 function ToolStatus({ status }: { status: string }) {
-  const word = pl.run.transcript.tool.status[status] ?? status
+  const word = en.run.transcript.tool.status[status] ?? status
   return (
     <span className={`inline-block w-4 shrink-0 text-center ${STATUS_TONE[status] ?? 'text-text-muted'}`}>
       <span aria-hidden="true">{STATUS_GLYPH[status] ?? '•'}</span>
@@ -67,24 +67,24 @@ export function ToolLine({ item, nested }: { item: UiToolItem; nested: Transcrip
         <ToolStatus status={item.status} />
         <span className="min-w-0 flex-1 truncate font-mono text-xs">{item.title || item.name}</span>
         {typeof item.exitCode === 'number' && item.exitCode !== 0 ? (
-          <span className="shrink-0 text-xs text-danger">{pl.run.transcript.tool.exitCode(item.exitCode)}</span>
+          <span className="shrink-0 text-xs text-danger">{en.run.transcript.tool.exitCode(item.exitCode)}</span>
         ) : null}
         <span aria-hidden="true" className="shrink-0 text-text-muted group-open:rotate-90">
           ›
         </span>
       </summary>
       <div className="border-t border-border px-2 pb-2">
-        {input ? <Block label={pl.run.transcript.tool.input} text={input} /> : null}
+        {input ? <Block label={en.run.transcript.tool.input} text={input} /> : null}
         {output && output.text ? (
           <Block
-            label={pl.run.transcript.tool.output}
-            text={output.clipped > 0 ? `${pl.run.transcript.tool.clipped(output.clipped)}\n${output.text}` : output.text}
+            label={en.run.transcript.tool.output}
+            text={output.clipped > 0 ? `${en.run.transcript.tool.clipped(output.clipped)}\n${output.text}` : output.text}
           />
         ) : null}
-        {item.error ? <Block label={pl.run.transcript.tool.error} text={item.error} /> : null}
+        {item.error ? <Block label={en.run.transcript.tool.error} text={item.error} /> : null}
         {nested.length > 0 ? (
           <div className="mt-2">
-            <p className="text-xs font-semibold text-text-muted">{pl.run.transcript.tool.children(nested.length)}</p>
+            <p className="text-xs font-semibold text-text-muted">{en.run.transcript.tool.children(nested.length)}</p>
             <ul className="mt-1 text-xs">
               {nested.map((child) => (
                 <ChildLine key={child.id} entry={child} />

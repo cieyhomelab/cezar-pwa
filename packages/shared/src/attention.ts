@@ -38,7 +38,7 @@ export interface Attention {
   pulse: boolean
   /**
    * Lower-case English phrase, verbatim from upstream. It is a KEY, not copy: the PWA
-   * translates it through `src/i18n/pl.ts`, so an upstream label this copy has never seen
+   * translates it through `src/i18n/en.ts`, so an upstream label this copy has never seen
    * shows up as a missing translation rather than as a wrong one.
    */
   label: string

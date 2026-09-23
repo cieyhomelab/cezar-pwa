@@ -42,7 +42,7 @@ export class AuthRequiredError extends Error {
 /**
  * Why this layer, rather than the server, judged an answer unusable. A coded `ApiError` carries
  * no words of the server's, so nothing may show its `message` to the operator — `i18n/errors.ts`
- * turns the code into the sentence a screen prints (CLAUDE.md: UI text only from `i18n/pl.ts`).
+ * turns the code into the sentence a screen prints (CLAUDE.md: UI text only from `i18n/en.ts`).
  */
 export type ApiErrorCode =
   /** A 2xx whose JSON is not the shape the caller needs — a field or a container is missing. */

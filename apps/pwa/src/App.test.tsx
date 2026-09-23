@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { pl } from './i18n/pl.ts'
+import { en } from './i18n/en.ts'
 import { AppRoutes } from './routes.tsx'
 import {
   emptyRunsIndexResponse,
@@ -28,14 +28,14 @@ afterEach(() => {
 describe('App shell', () => {
   it('renders the app chrome', async () => {
     renderApp()
-    expect(screen.getByRole('heading', { name: pl.app.name })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: en.app.name })).toBeInTheDocument()
     // Behind the gate: the task list (S-03), here with nothing waiting.
-    expect(await screen.findByRole('heading', { name: pl.runs.summary.none })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: en.runs.summary.none })).toBeInTheDocument()
   })
 
   it('links back to the full cockpit at the origin root', () => {
     renderApp()
-    expect(screen.getByRole('link', { name: pl.shell.openCockpit })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: en.shell.openCockpit })).toHaveAttribute(
       'href',
       '/',
     )
@@ -43,17 +43,17 @@ describe('App shell', () => {
 
   it('shows no update prompt while no new worker is waiting', () => {
     renderApp()
-    expect(screen.queryByText(pl.update.available)).not.toBeInTheDocument()
+    expect(screen.queryByText(en.update.available)).not.toBeInTheDocument()
   })
 
   it('offers the install instruction while running in a browser tab (S-01)', () => {
     renderApp()
-    expect(screen.getByText(pl.install.title)).toBeInTheDocument()
+    expect(screen.getByText(en.install.title)).toBeInTheDocument()
   })
 
   it('shows no offline banner while the network is up', () => {
     renderApp()
-    expect(screen.queryByText(pl.offline.banner)).not.toBeInTheDocument()
+    expect(screen.queryByText(en.offline.banner)).not.toBeInTheDocument()
   })
 
   it('keeps the chrome reachable when there is no session (S-02)', async () => {
@@ -62,9 +62,9 @@ describe('App shell', () => {
     // accept a new version or read that they are offline.
     renderApp(false)
 
-    expect(await screen.findByRole('heading', { name: pl.auth.title })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: pl.app.name })).toBeInTheDocument()
-    expect(screen.getByText(pl.install.title)).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: pl.runs.summary.none })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: en.auth.title })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: en.app.name })).toBeInTheDocument()
+    expect(screen.getByText(en.install.title)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: en.runs.summary.none })).not.toBeInTheDocument()
   })
 })

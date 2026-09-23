@@ -10,7 +10,7 @@ import { clockTime } from '../../domain/run-display.ts'
 import { transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { ConnectionStatus } from '../runs-list/ConnectionStatus.tsx'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
@@ -42,14 +42,14 @@ function BackBar({ projectId, runId, children }: { projectId: string; runId: str
       <div className="flex items-center justify-between gap-3 px-2">
         <Link to="/" className="touch-target inline-flex items-center px-2 text-accent">
           <span aria-hidden="true">‹&nbsp;</span>
-          {pl.run.back}
+          {en.run.back}
         </Link>
         <a
           href={cockpitTaskPath(projectId, runId)}
-          aria-label={pl.shell.openTaskInCockpitLabel}
+          aria-label={en.shell.openTaskInCockpitLabel}
           className="touch-target inline-flex items-center px-2 text-sm text-accent"
         >
-          {pl.shell.openTaskInCockpit}
+          {en.shell.openTaskInCockpit}
           <span aria-hidden="true">&nbsp;↗</span>
         </a>
       </div>
@@ -124,7 +124,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
         <div className="flex flex-1 flex-col">
           <BackBar projectId={projectId} runId={runId} />
           <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <p>{notFound ? pl.run.notFound : pl.run.loadFailed}</p>
+            <p>{notFound ? en.run.notFound : en.run.loadFailed}</p>
             {!notFound && apiErrorDetail(run.error) ? (
               <p className="text-sm text-text-muted">{apiErrorDetail(run.error)}</p>
             ) : null}
@@ -135,7 +135,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
                 onClick={() => void run.refetch()}
                 disabled={run.isFetching}
               >
-                {run.isFetching ? pl.run.refreshing : pl.run.retry}
+                {run.isFetching ? en.run.refreshing : en.run.retry}
               </button>
             )}
           </section>
@@ -146,7 +146,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
       <div className="flex flex-1 flex-col">
         <BackBar projectId={projectId} runId={runId} />
         <p role="status" className="flex flex-1 items-center justify-center px-6 text-text-muted">
-          {pl.run.loading}
+          {en.run.loading}
         </p>
       </div>
     )
@@ -184,7 +184,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm text-text-muted">
           <ConnectionStatus
             state={live.state}
-            detail={fetching ? pl.runs.refreshingInline : streaming ? undefined : pl.run.stateFrom(updatedAt)}
+            detail={fetching ? en.runs.refreshingInline : streaming ? undefined : en.run.stateFrom(updatedAt)}
           />
           <button
             type="button"
@@ -192,13 +192,13 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             onClick={refresh}
             disabled={fetching}
           >
-            {pl.run.refresh}
+            {en.run.refresh}
           </button>
         </div>
 
         {refreshFailed ? (
           <div role="alert" className="border-b border-border bg-surface-raised px-4 py-2 text-sm">
-            {pl.run.refreshFailed(updatedAt)}
+            {en.run.refreshFailed(updatedAt)}
           </div>
         ) : null}
 
@@ -213,7 +213,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
           />
         ) : history.isError && !(history.error instanceof AuthRequiredError) ? (
           <section className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-            <p>{pl.run.transcript.loadFailed}</p>
+            <p>{en.run.transcript.loadFailed}</p>
             {apiErrorDetail(history.error) ? (
               <p className="text-sm text-text-muted">{apiErrorDetail(history.error)}</p>
             ) : null}
@@ -223,12 +223,12 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
               onClick={() => void history.refetch()}
               disabled={history.isFetching}
             >
-              {history.isFetching ? pl.run.refreshing : pl.run.retry}
+              {history.isFetching ? en.run.refreshing : en.run.retry}
             </button>
           </section>
         ) : (
           <p role="status" className="px-6 py-10 text-center text-text-muted">
-            {pl.run.loading}
+            {en.run.loading}
           </p>
         )}
       </div>
@@ -243,7 +243,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             className="touch-target absolute left-1/2 -translate-x-1/2 rounded-full bg-accent px-4 text-sm font-semibold whitespace-nowrap text-white shadow-lg"
             style={{ bottom: composer ? 'calc(100% + 0.75rem)' : 'calc(env(safe-area-inset-bottom) + 1rem)' }}
           >
-            {pl.run.newMessages} <span aria-hidden="true">↓</span>
+            {en.run.newMessages} <span aria-hidden="true">↓</span>
           </button>
         ) : null}
         {composer ? (

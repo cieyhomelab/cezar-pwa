@@ -2,7 +2,7 @@ import type { UiAskQuestion } from '@cezar-pwa/cezar-contract/protocol'
 import { useState } from 'react'
 import { combineAnswers, formatAnswer, isOneTap, toggleSelection } from '../../domain/answer.ts'
 import type { TranscriptAsk } from '../../domain/transcript.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import type { Delivery } from './useDeliver.ts'
 
 /**
@@ -18,7 +18,7 @@ export function AskCard({ ask, delivery, superseded }: { ask: TranscriptAsk; del
   if (ask.resolved) {
     return (
       <section data-ask-id={ask.id} data-resolved="true" className="rounded border border-border px-3 py-2 text-sm">
-        <p className="font-semibold text-text-muted">{pl.run.transcript.ask.title}</p>
+        <p className="font-semibold text-text-muted">{en.run.transcript.ask.title}</p>
         {ask.questions.map((question, index) => (
           <p key={question.id ?? index} className="mt-1 break-words">
             {question.question}
@@ -26,7 +26,7 @@ export function AskCard({ ask, delivery, superseded }: { ask: TranscriptAsk; del
         ))}
         {ask.answer ? (
           <p className="mt-1 break-words whitespace-pre-line text-text-muted">
-            {pl.run.transcript.ask.answered(ask.answer)}
+            {en.run.transcript.ask.answered(ask.answer)}
           </p>
         ) : null}
       </section>
@@ -66,14 +66,14 @@ function OpenAsk({ ask, delivery, superseded }: { ask: TranscriptAsk; delivery?:
       aria-busy={delivery?.pending === true}
       className="rounded border border-pending px-3 py-3"
     >
-      <p className="text-sm font-semibold text-pending">{pl.run.transcript.ask.title}</p>
+      <p className="text-sm font-semibold text-pending">{en.run.transcript.ask.title}</p>
 
       <div className="mt-2 flex flex-col gap-4">
         {questions.map((question, index) => (
           <div key={question.id ?? index} role="group" aria-label={question.question}>
             <p className="flex items-center gap-2 text-xs text-text-muted">
               <span className="rounded bg-surface-raised px-1.5 py-0.5 font-semibold uppercase">{question.header}</span>
-              {question.multiSelect === true ? <span>{pl.run.transcript.ask.multiSelect}</span> : null}
+              {question.multiSelect === true ? <span>{en.run.transcript.ask.multiSelect}</span> : null}
             </p>
             <p className="mt-1 font-medium break-words">{question.question}</p>
             <div className="mt-2 flex flex-col gap-2">
@@ -110,14 +110,14 @@ function OpenAsk({ ask, delivery, superseded }: { ask: TranscriptAsk; delivery?:
       </div>
 
       {superseded ? (
-        <p className="mt-3 text-xs text-text-muted">{pl.run.transcript.ask.superseded}</p>
+        <p className="mt-3 text-xs text-text-muted">{en.run.transcript.ask.superseded}</p>
       ) : delivery === undefined ? (
-        <p className="mt-3 text-xs text-text-muted">{pl.run.transcript.ask.pending}</p>
+        <p className="mt-3 text-xs text-text-muted">{en.run.transcript.ask.pending}</p>
       ) : unavailable ? (
-        <p className="mt-3 text-xs text-text-muted">{pl.run.compose.failed.unavailable}</p>
+        <p className="mt-3 text-xs text-text-muted">{en.run.compose.failed.unavailable}</p>
       ) : answered ? (
         <p role="status" className="mt-3 text-sm text-text-muted">
-          {pl.run.transcript.ask.sent}
+          {en.run.transcript.ask.sent}
         </p>
       ) : (
         <div className="mt-3 flex flex-col gap-2">
@@ -129,23 +129,23 @@ function OpenAsk({ ask, delivery, superseded }: { ask: TranscriptAsk; delivery?:
               onClick={() => void delivery.send(combineAnswers(questions, selections), 'ask', ask.id)}
             >
               {delivery.pending
-                ? pl.run.compose.sending
+                ? en.run.compose.sending
                 : resuming
-                  ? pl.run.transcript.ask.sendAndReopen
-                  : pl.run.transcript.ask.send}
+                  ? en.run.transcript.ask.sendAndReopen
+                  : en.run.transcript.ask.send}
             </button>
           )}
           {oneTap && delivery.pending ? (
             <p role="status" className="text-sm text-text-muted">
-              {pl.run.compose.sending}
+              {en.run.compose.sending}
             </p>
           ) : null}
           <p className="text-xs text-text-muted">
             {resuming
-              ? pl.run.transcript.ask.resumeHint
+              ? en.run.transcript.ask.resumeHint
               : oneTap
-                ? pl.run.transcript.ask.pickOrWrite
-                : pl.run.transcript.ask.answerEach}
+                ? en.run.transcript.ask.pickOrWrite
+                : en.run.transcript.ask.answerEach}
           </p>
         </div>
       )}

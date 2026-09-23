@@ -2,7 +2,7 @@ import type { RunIndexEntry } from '@cezar-pwa/cezar-contract/contract'
 import { deriveAttention, isReadDoneItem, isUnread } from '@cezar-pwa/shared'
 import { Link } from 'react-router'
 import { runPath } from '../../domain/run-header.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import {
   formatCost,
   refPrefixMatches,
@@ -17,13 +17,13 @@ import { StatusBadge } from './StatusBadge.tsx'
 function timingText(timing: RunTiming): string {
   switch (timing.kind) {
     case 'queued':
-      return pl.runs.timing.queued(timing.position)
+      return en.runs.timing.queued(timing.position)
     case 'scheduled':
-      return pl.runs.timing.scheduled(timing.at)
+      return en.runs.timing.scheduled(timing.at)
     case 'since':
-      return pl.runs.timing.since(timing.age)
+      return en.runs.timing.since(timing.age)
     case 'ago':
-      return pl.runs.timing.ago(timing.age)
+      return en.runs.timing.ago(timing.age)
     default:
       return ''
   }
@@ -66,7 +66,7 @@ export function RunRow({
           <StatusBadge attention={attention} status={run.status} />
           {reference ? (
             <span className="shrink-0 rounded border border-border px-1.5 text-xs text-text-muted">
-              {pl.runs.reference[reference.kind](reference.number)}
+              {en.runs.reference[reference.kind](reference.number)}
             </span>
           ) : null}
         </div>
@@ -78,7 +78,7 @@ export function RunRow({
               <span aria-hidden="true" className="text-violet">
                 ●
               </span>
-              <span className="sr-only">({pl.runs.unread})</span>
+              <span className="sr-only">({en.runs.unread})</span>
             </>
           ) : null}
         </p>

@@ -494,7 +494,7 @@ do NOT re-scaffold them.
   *enters* waiting, review or failed. The rule is a port of the cockpit's own
   `diffRunTransitions`, so the phone rings for what makes the cockpit ring, and every
   (re)connect re-seeds a silent baseline from `runs-index`. The payload is structured (title,
-  project, attention label), and the service worker words it from `pl.ts`, so no code and no
+  project, attention label), and the service worker words it from `en.ts`, so no code and no
   transcript leave the server. Two old defects are fixed. The worker's deep link was
   `/m/run/…`, which matches no route. And the systemd unit pointed at port 4321, while the
   instance listens on 4322. A tap with the app open now routes that window in place. `/m/push/`

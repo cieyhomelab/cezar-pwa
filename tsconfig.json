@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
     "noEmit": true,
+    // `test/e2e` asserts against the app's own copy module (`i18n/en.ts`) rather
+    // than re-hardcoding its strings, and every import in this repo carries its
+    // `.ts` extension. Safe here because nothing in this project is emitted.
+    "allowImportingTsExtensions": true,
     "target": "es2023",
     // DOM is here for `test/e2e`: the bodies of `page.evaluate` callbacks are
     // typechecked in this project but execute inside the browser, so they need

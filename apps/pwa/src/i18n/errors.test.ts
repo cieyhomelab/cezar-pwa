@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError, AuthRequiredError, NetworkError } from '../api/http.ts'
 import { apiErrorDetail } from './errors.ts'
-import { pl } from './pl.ts'
+import { en } from './en.ts'
 
 describe('apiErrorDetail', () => {
   it("passes Cezar's own reason through, word for word (FR-032)", () => {
@@ -9,10 +9,10 @@ describe('apiErrorDetail', () => {
   })
 
   it.each([
-    ['unexpected-shape' as const, pl.apiError['unexpected-shape']],
-    ['invalid-json' as const, pl.apiError['invalid-json']],
-    ['not-routed' as const, pl.apiError['not-routed']],
-  ])('says %s in Polish rather than in the error message', (code, expected) => {
+    ['unexpected-shape' as const, en.apiError['unexpected-shape']],
+    ['invalid-json' as const, en.apiError['invalid-json']],
+    ['not-routed' as const, en.apiError['not-routed']],
+  ])('says %s in our own words rather than in the error message', (code, expected) => {
     // The message is the developer-facing note; nothing of it may reach the screen.
     const detail = apiErrorDetail(new ApiError('unexpected response shape', 200, code))
     expect(detail).toBe(expected)

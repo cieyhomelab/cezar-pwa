@@ -25,17 +25,17 @@ describe('notificationFor', () => {
     )
     const { title, options } = notificationFor(readPushPayload(JSON.parse(JSON.stringify(payload))))
     expect(title).toBe('Settings screen')
-    expect(options.body).toBe('Cezar PWA · Czeka na Twoją odpowiedź')
+    expect(options.body).toBe('Cezar PWA · Waiting for your answer')
     expect(options.data.url).toBe('/m/p/cezar-pwa/runs/a1b2')
     expect(options.icon).toBe('/m/icons/icon-192.png')
   })
 
   it.each([
-    ['needs review', 'Czeka na przegląd'],
-    ['failed', 'Zakończone błędem'],
-    ['needs permission', 'Prosi o zgodę'],
+    ['needs review', 'Waiting for review'],
+    ['failed', 'Ended with an error'],
+    ['needs permission', 'Asking for permission'],
     // A label the phone has not heard of yet: the list's word if it has one, else the raw key.
-    ['running', 'pracuje'],
+    ['running', 'working'],
     ['brand new', 'brand new'],
   ])('reason %s → %s', (reason, text) => {
     expect(notificationFor({ kind: 'attention', projectName: 'P', reason }).options.body).toBe(`P · ${text}`)
@@ -60,14 +60,14 @@ describe('notificationFor', () => {
   it('degrades to the app and a generic reason when the payload names nothing', () => {
     const { title, options } = notificationFor({ kind: 'attention' })
     expect(title).toBe('Cezar')
-    expect(options.body).toBe('Wymaga uwagi')
+    expect(options.body).toBe('Needs attention')
     expect(options.data.url).toBe('/m/')
   })
 
   it('shows a test as a test, landing on the list', () => {
     const { title, options } = notificationFor({ kind: 'test' })
     expect(title).toBe('Cezar')
-    expect(options.body).toBe('Powiadomienia działają.')
+    expect(options.body).toBe('Notifications are working.')
     expect(options.data.url).toBe('/m/')
   })
 })

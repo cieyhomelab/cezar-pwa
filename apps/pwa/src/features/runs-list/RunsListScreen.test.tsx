@@ -8,7 +8,7 @@ import {
   renderWithQuery,
   routeFetch,
 } from '../../../test/query.tsx'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { FINISHED_VISIBLE, RunsListScreen } from './RunsListScreen.tsx'
 import { PROJECT_FILTER_KEY } from './useProjectFilter.ts'
 
@@ -55,15 +55,15 @@ describe('RunsListScreen', () => {
   it('leads with how many tasks want the operator, then the four sections in order', async () => {
     renderList()
 
-    expect(await screen.findByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '3 tasks need attention' })).toBeInTheDocument()
     const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
-    expect(headings).toEqual(['Wymaga uwagi (3)', 'W toku (2)', 'W kolejce (3)', 'Zakończone (3)'])
-    expect(rowTexts('Wymaga uwagi')).toEqual(['run-waiting', 'run-review', 'run-failed'])
+    expect(headings).toEqual(['Needs attention (3)', 'In progress (2)', 'Queued (3)', 'Finished (3)'])
+    expect(rowTexts('Needs attention')).toEqual(['run-waiting', 'run-review', 'run-failed'])
   })
 
   it('hides archived tasks', async () => {
     renderList()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     expect(document.querySelector('[data-run-id="run-archived"]')).toBeNull()
   })
 
@@ -71,35 +71,35 @@ describe('RunsListScreen', () => {
     renderList(() =>
       jsonResponse({ ...index, runs: index.runs.filter((run) => run.status === 'done') }),
     )
-    expect(await screen.findByRole('heading', { name: pl.runs.summary.none })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: en.runs.summary.none })).toBeInTheDocument()
   })
 
   it('makes each row readable without opening it (FR-009)', async () => {
     renderList()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
 
     const review = within(document.querySelector('[data-run-id="run-review"]') as HTMLElement)
     // Status in words, not only colour.
-    expect(review.getByText('do przeglądu')).toBeInTheDocument()
+    expect(review.getByText('to review')).toBeInTheDocument()
     expect(review.getByText('PR #77')).toBeInTheDocument()
     // The `77: ` prefix is dropped because the chip already says 77 (cockpit #788).
     expect(review.getByText('removing the Hono scaffold route')).toBeInTheDocument()
-    expect(review.getByText(/Kai Phone · od .+ · \$13/)).toBeInTheDocument()
+    expect(review.getByText(/Kai Phone · for .+ · \$13/)).toBeInTheDocument()
 
     const unread = within(document.querySelector('[data-run-id="run-done-unread"]') as HTMLElement)
-    expect(unread.getByText(`(${pl.runs.unread})`)).toBeInTheDocument()
+    expect(unread.getByText(`(${en.runs.unread})`)).toBeInTheDocument()
     const read = within(document.querySelector('[data-run-id="run-done-read"]') as HTMLElement)
-    expect(read.queryByText(`(${pl.runs.unread})`)).toBeNull()
+    expect(read.queryByText(`(${en.runs.unread})`)).toBeNull()
 
     const queued = within(document.querySelector('[data-run-id="run-queued-second"]') as HTMLElement)
-    expect(queued.getByText(/#2 w kolejce/)).toBeInTheDocument()
+    expect(queued.getByText(/#2 in queue/)).toBeInTheDocument()
 
     const scheduled = within(document.querySelector('[data-run-id="run-scheduled"]') as HTMLElement)
-    expect(scheduled.getByText('zaplanowane')).toBeInTheDocument()
-    expect(scheduled.getByText(/wznowi o/)).toBeInTheDocument()
+    expect(scheduled.getByText('scheduled')).toBeInTheDocument()
+    expect(scheduled.getByText(/resumes at/)).toBeInTheDocument()
 
     const monitoring = within(document.querySelector('[data-run-id="run-monitoring"]') as HTMLElement)
-    expect(monitoring.getByText('monitoruje')).toBeInTheDocument()
+    expect(monitoring.getByText('monitoring')).toBeInTheDocument()
   })
 
   it('shows a status it has never heard of as itself, instead of failing', async () => {
@@ -110,16 +110,16 @@ describe('RunsListScreen', () => {
     const item = row.closest('li') as HTMLElement
     // Not `anulowane`: deriveAttention's last rung is a catch-all that would say cancelled.
     expect(within(item).getByText('paused')).toBeInTheDocument()
-    expect(within(item).queryByText('anulowane')).toBeNull()
+    expect(within(item).queryByText('cancelled')).toBeNull()
   })
 
   it('refuses to call an unreadable answer an empty list', async () => {
     renderList(() => jsonResponse({ unexpected: true }))
-    expect(await screen.findByText(pl.runs.loadFailed)).toBeInTheDocument()
-    expect(screen.queryByText(pl.runs.summary.none)).toBeNull()
-    // The detail line is the app's own judgement, so it is said in Polish rather than as the
+    expect(await screen.findByText(en.runs.loadFailed)).toBeInTheDocument()
+    expect(screen.queryByText(en.runs.summary.none)).toBeNull()
+    // The detail line is the app's own judgement, so it comes from the copy module rather than from the
     // developer-facing `ApiError.message` the code travels with.
-    expect(screen.getByText(pl.apiError['unexpected-shape'])).toBeInTheDocument()
+    expect(screen.getByText(en.apiError['unexpected-shape'])).toBeInTheDocument()
     expect(screen.queryByText('unexpected response shape')).toBeNull()
   })
 
@@ -131,30 +131,30 @@ describe('RunsListScreen', () => {
     }))
     renderList(() => jsonResponse({ ...index, runs: finished }))
 
-    const more = await screen.findByRole('button', { name: pl.runs.showOlder(5) })
-    expect(within(section('Zakończone')).getAllByRole('listitem')).toHaveLength(FINISHED_VISIBLE)
+    const more = await screen.findByRole('button', { name: en.runs.showOlder(5) })
+    expect(within(section('Finished')).getAllByRole('listitem')).toHaveLength(FINISHED_VISIBLE)
     fireEvent.click(more)
-    expect(within(section('Zakończone')).getAllByRole('listitem')).toHaveLength(FINISHED_VISIBLE + 5)
+    expect(within(section('Finished')).getAllByRole('listitem')).toHaveLength(FINISHED_VISIBLE + 5)
   })
 
   it('names the projects whose history was cut off', async () => {
     renderList(() => jsonResponse({ ...index, truncated: ['kai-phone'] }))
-    expect(await screen.findByText(pl.runs.truncated(200, 'Kai Phone'))).toBeInTheDocument()
+    expect(await screen.findByText(en.runs.truncated(200, 'Kai Phone'))).toBeInTheDocument()
   })
 })
 
 describe('project filter (FR-013)', () => {
   it('narrows the list to one project, and still says what waits elsewhere', async () => {
     renderList()
-    const select = await screen.findByRole('combobox', { name: pl.runs.filter.label })
+    const select = await screen.findByRole('combobox', { name: en.runs.filter.label })
 
     fireEvent.change(select, { target: { value: 'kai-phone' } })
 
-    expect(rowTexts('Wymaga uwagi')).toEqual(['run-review'])
-    expect(screen.queryByRole('region', { name: /^W kolejce/ })).toBeNull()
+    expect(rowTexts('Needs attention')).toEqual(['run-review'])
+    expect(screen.queryByRole('region', { name: /^Queued/ })).toBeNull()
     // The headline stays the whole truth; the filter only narrows the rows.
-    expect(screen.getByRole('heading', { name: '3 zadania wymagają uwagi' })).toBeInTheDocument()
-    expect(screen.getByText(pl.runs.summary.elsewhere(2))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '3 tasks need attention' })).toBeInTheDocument()
+    expect(screen.getByText(en.runs.summary.elsewhere(2))).toBeInTheDocument()
   })
 
   it('survives a restart', async () => {
@@ -167,7 +167,7 @@ describe('project filter (FR-013)', () => {
     renderList()
     const select = await screen.findByRole('combobox')
     await waitFor(() => expect(select).toHaveValue('notes'))
-    expect(rowTexts('W kolejce')).toEqual(['run-scheduled', 'run-queued-first'])
+    expect(rowTexts('Queued')).toEqual(['run-scheduled', 'run-queued-first'])
   })
 
   it('falls back to every project when the remembered one is gone', async () => {
@@ -175,29 +175,29 @@ describe('project filter (FR-013)', () => {
     renderList()
     const select = await screen.findByRole('combobox')
     await waitFor(() => expect(select).toHaveValue(''))
-    expect(await screen.findByRole('heading', { name: 'Wymaga uwagi (3)' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Needs attention (3)' })).toBeInTheDocument()
   })
 
   it('says so when the chosen project has no tasks', async () => {
     renderList(() => jsonResponse({ ...index, runs: index.runs.filter((r) => r.projectId !== 'notes') }))
     fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'notes' } })
-    expect(screen.getByText(pl.runs.empty.project)).toBeInTheDocument()
+    expect(screen.getByText(en.runs.empty.project)).toBeInTheDocument()
   })
 })
 
 describe('refreshing (FR-011)', () => {
   it('refreshes from the button', async () => {
     const { calls } = renderList()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     const before = calls('runs-index')
 
-    fireEvent.click(screen.getByRole('button', { name: pl.runs.refresh }))
+    fireEvent.click(screen.getByRole('button', { name: en.runs.refresh }))
     await waitFor(() => expect(calls('runs-index')).toBe(before + 1))
   })
 
   it('refreshes by pulling down from the top of the list', async () => {
     const { calls } = renderList()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     const before = calls('runs-index')
 
     const touch = (type: string, clientY: number) =>
@@ -208,9 +208,9 @@ describe('refreshing (FR-011)', () => {
       })
     touch('touchstart', 100)
     touch('touchmove', 150)
-    expect(screen.getByText(pl.runs.pull)).toBeInTheDocument()
+    expect(screen.getByText(en.runs.pull)).toBeInTheDocument()
     touch('touchmove', 300)
-    expect(screen.getByText(pl.runs.release)).toBeInTheDocument()
+    expect(screen.getByText(en.runs.release)).toBeInTheDocument()
     touch('touchend', 300)
 
     await waitFor(() => expect(calls('runs-index')).toBe(before + 1))
@@ -218,7 +218,7 @@ describe('refreshing (FR-011)', () => {
 
   it('does not refresh on a short pull', async () => {
     const { calls } = renderList()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     const before = calls('runs-index')
 
     act(() => {
@@ -232,7 +232,7 @@ describe('refreshing (FR-011)', () => {
 
   it('refreshes when the app returns to the foreground', async () => {
     const { calls } = renderList()
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
     const before = calls('runs-index')
 
     // TanStack's focus manager listens for exactly this event.
@@ -248,19 +248,19 @@ describe('refreshing (FR-011)', () => {
       if (fail) throw new TypeError('Failed to fetch')
       return jsonResponse(index)
     })
-    await screen.findByRole('heading', { name: /wymagają uwagi/ })
+    await screen.findByRole('heading', { name: /need attention/ })
 
     fail = true
-    fireEvent.click(screen.getByRole('button', { name: pl.runs.refresh }))
+    fireEvent.click(screen.getByRole('button', { name: en.runs.refresh }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Nie udało się odświeżyć/)
-    expect(rowTexts('Wymaga uwagi')).toHaveLength(3)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not refresh/)
+    expect(rowTexts('Needs attention')).toHaveLength(3)
   })
 
   it('hands a lapsed session back to the gate by re-probing it', async () => {
     const { calls } = renderList(refusalResponse)
     await waitFor(() => expect(calls('/api/v1/health')).toBeGreaterThanOrEqual(2))
     // No second "not authorized" screen of its own, and no error claiming the list failed.
-    expect(screen.queryByText(pl.runs.loadFailed)).toBeNull()
+    expect(screen.queryByText(en.runs.loadFailed)).toBeNull()
   })
 })

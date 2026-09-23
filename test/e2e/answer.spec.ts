@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-07 acceptance in mobile Safari: the operator answers the agent's question under a thumb
@@ -104,7 +105,7 @@ test.describe('Answering the agent', () => {
     await noSidewaysScroll(page)
 
     await option.tap()
-    await expect(page.getByText('Odpowiedź: Target: release/0.2')).toBeVisible()
+    await expect(page.getByText(en.run.transcript.ask.answered('Target: release/0.2'))).toBeVisible()
     expect(writes.messages).toEqual([{ text: 'Target: release/0.2' }])
     await expect(page.getByRole('button', { name: /release\/0\.2/ })).toHaveCount(0)
   })
@@ -125,7 +126,7 @@ test.describe('Answering the agent', () => {
     )
     await page.goto(RUN_PATH)
     await page.getByRole('button', { name: /^main/ }).tap()
-    await expect(page.getByRole('alert')).toHaveText('Cezar odmówił: provider claude is not connected')
+    await expect(page.getByRole('alert')).toHaveText(en.run.compose.failed.refused('provider claude is not connected'))
     await expect(page.getByRole('button', { name: /^main/ })).toBeEnabled()
   })
 })
@@ -143,7 +144,7 @@ test.describe('Messaging a task', () => {
     })
     await page.goto(RUN_PATH)
 
-    const box = page.getByRole('textbox', { name: 'Wiadomość do agenta' })
+    const box = page.getByRole('textbox', { name: en.run.compose.label })
     await expect(box).toBeVisible()
     // iOS zooms into any focused field under 16 px.
     const fontSize = await box.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize))
@@ -151,12 +152,12 @@ test.describe('Messaging a task', () => {
     // Docked: its bottom edge is the viewport's, whatever the scroll.
     await page.evaluate(() => window.scrollTo(0, 0))
     const viewport = page.viewportSize()!
-    const form = await page.getByRole('form', { name: 'Wiadomość do agenta' }).boundingBox()
+    const form = await page.getByRole('form', { name: en.run.compose.label }).boundingBox()
     expect(Math.round(form!.y + form!.height)).toBeLessThanOrEqual(viewport.height)
     expect(form!.y).toBeGreaterThan(viewport.height / 2)
 
     await box.fill('Also update the changelog.')
-    await page.getByRole('button', { name: 'Wyślij' }).tap()
+    await page.getByRole('button', { name: en.run.compose.send }).tap()
     await expect(box).toHaveValue('')
     expect(writes.messages).toEqual([{ text: 'Also update the changelog.' }])
     await expect(page.getByText('Also update the changelog.')).toBeVisible()
@@ -166,7 +167,7 @@ test.describe('Messaging a task', () => {
   test('a closed task offers no composer', async ({ page }) => {
     await serveCezar(page, { status: 'done', history: () => opening })
     await page.goto(RUN_PATH)
-    await expect(page.getByRole('region', { name: 'Transkrypt' })).toBeVisible()
-    await expect(page.getByRole('form', { name: 'Wiadomość do agenta' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: en.run.transcript.heading })).toBeVisible()
+    await expect(page.getByRole('form', { name: en.run.compose.label })).toHaveCount(0)
   })
 })

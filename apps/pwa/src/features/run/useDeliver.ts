@@ -6,7 +6,7 @@ import { ApiError, AuthRequiredError, NetworkError, TimeoutError } from '../../a
 import { continueRunWith, invalidateRun, sendRunMessage } from '../../api/run.ts'
 import { type DeliveryMode, type DeliveryRun, deliveryMode, lastSessionId, resumeAfterIdleTeardown } from '../../domain/answer.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 /** Where a send came from, so a failure is shown where the operator acted. */
 export type DeliverySource = 'ask' | 'composer'
@@ -27,14 +27,14 @@ export interface Delivery {
 
 /** A failure in the operator's language. Cezar's own reason is kept verbatim (FR-032). */
 export function failureMessage(error: unknown): string {
-  if (error instanceof AuthRequiredError) return pl.run.compose.failed.auth
-  if (error instanceof TimeoutError) return pl.run.compose.failed.timeout
-  if (error instanceof NetworkError) return pl.run.compose.failed.network
-  // A coded error carries no words of Cezar's, so its reason comes from `pl` (see `errors.ts`).
+  if (error instanceof AuthRequiredError) return en.run.compose.failed.auth
+  if (error instanceof TimeoutError) return en.run.compose.failed.timeout
+  if (error instanceof NetworkError) return en.run.compose.failed.network
+  // A coded error carries no words of Cezar's, so its reason comes from `en` (see `errors.ts`).
   if (error instanceof ApiError) {
-    return pl.run.compose.failed.refused(apiErrorDetail(error) ?? `HTTP ${error.status}`)
+    return en.run.compose.failed.refused(apiErrorDetail(error) ?? `HTTP ${error.status}`)
   }
-  return pl.run.compose.failed.refused(error instanceof Error ? error.message : String(error))
+  return en.run.compose.failed.refused(error instanceof Error ? error.message : String(error))
 }
 
 /**
@@ -72,7 +72,7 @@ export function useDeliver(projectId: string, runId: string, run: DeliveryRun | 
       const current = runRef.current
       const route = current === undefined ? 'unavailable' : deliveryMode(current)
       if (current === undefined || route === 'unavailable') {
-        setError({ source, message: pl.run.compose.failed.unavailable })
+        setError({ source, message: en.run.compose.failed.unavailable })
         return false
       }
       inFlight.current = true
@@ -99,7 +99,7 @@ export function useDeliver(projectId: string, runId: string, run: DeliveryRun | 
             }
           }
         }
-        if (answer !== undefined && 'deferred' in answer) setNotice(pl.run.compose.deferred)
+        if (answer !== undefined && 'deferred' in answer) setNotice(en.run.compose.deferred)
         if (askId !== undefined) setAnsweredAskId(askId)
         return true
       } catch (failure) {

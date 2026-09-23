@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithQuery } from '../../../test/query.tsx'
 import { TESTED_CEZAR_VERSION } from '../../config/cezar-compat.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { THEME_STORAGE_KEY } from '../../pwa/theme.ts'
 import { SettingsScreen } from './SettingsScreen.tsx'
 import { restart } from './useSignOut.ts'
@@ -14,7 +14,7 @@ import { restart } from './useSignOut.ts'
  */
 
 const ENDPOINT = 'https://web.push.apple.com/QGuQyavXutnMb'
-const t = pl.settings
+const t = en.settings
 
 type Call = { method: string; path: string }
 let calls: Call[]

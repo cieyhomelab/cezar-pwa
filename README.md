@@ -61,7 +61,7 @@ sequenceDiagram
   C-->>S: run frame: task enters waiting / review / failed
   S->>P: Web Push, Topic = task, payload = title, project, reason
   P-->>W: push
-  W->>W: show notification (tag = task, words from pl.ts)
+  W->>W: show notification (tag = task, words from en.ts)
   W->>A: tap opens /m/p/:projectId/runs/:runId
 ```
 

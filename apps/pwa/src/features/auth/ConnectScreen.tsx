@@ -1,14 +1,14 @@
 import { type FormEvent, useState } from 'react'
 import { type AccessLinkProblem, buildUnlockUrl } from '../../domain/access-link.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { useStandalone } from '../../pwa/useStandalone.ts'
 import { navigateToUnlock } from './unlock.ts'
 
 const problemMessage: Record<AccessLinkProblem, string> = {
-  empty: pl.auth.errors.empty,
-  'not-a-url': pl.auth.errors.notAUrl,
-  'foreign-origin': pl.auth.errors.foreignOrigin,
-  'missing-key': pl.auth.errors.missingKey,
+  empty: en.auth.errors.empty,
+  'not-a-url': en.auth.errors.notAUrl,
+  'foreign-origin': en.auth.errors.foreignOrigin,
+  'missing-key': en.auth.errors.missingKey,
 }
 
 export type ConnectScreenProps = {
@@ -63,25 +63,25 @@ export function ConnectScreen({
   return (
     <section className="flex flex-1 flex-col gap-4 px-6 py-8">
       <div>
-        <h2 className="text-xl font-semibold">{pl.auth.title}</h2>
-        <p className="mt-2 text-sm text-text-muted">{pl.auth.intro}</p>
+        <h2 className="text-xl font-semibold">{en.auth.title}</h2>
+        <p className="mt-2 text-sm text-text-muted">{en.auth.intro}</p>
       </div>
 
       {unlockFailed && (
         <div role="alert" className="rounded border border-border bg-surface-raised p-3 text-sm">
-          <p>{pl.auth.unlockFailed}</p>
+          <p>{en.auth.unlockFailed}</p>
           {/* In the installed app there is no other way in, so the one
               remaining cause the operator can act on is the server. In a tab,
               opening the link directly works too. */}
           <p className="mt-2 text-text-muted">
-            {standalone ? pl.auth.unlockFailedServer : pl.auth.manualTab}
+            {standalone ? en.auth.unlockFailedServer : en.auth.manualTab}
           </p>
         </div>
       )}
 
       <form className="flex flex-col gap-2" onSubmit={onSubmit} noValidate>
         <label className="text-sm font-medium" htmlFor="access-link">
-          {pl.auth.linkLabel}
+          {en.auth.linkLabel}
         </label>
         <input
           id="access-link"
@@ -95,7 +95,7 @@ export function ConnectScreen({
           autoCorrect="off"
           spellCheck={false}
           className="touch-target rounded border border-border bg-surface-raised px-3 py-2 text-base"
-          placeholder={pl.auth.linkPlaceholder}
+          placeholder={en.auth.linkPlaceholder}
           value={link}
           onChange={(event) => {
             setLink(event.target.value)
@@ -109,18 +109,18 @@ export function ConnectScreen({
             {problemMessage[problem]}
           </p>
         )}
-        <p className="text-sm text-text-muted">{pl.auth.privacy}</p>
+        <p className="text-sm text-text-muted">{en.auth.privacy}</p>
         <button
           type="submit"
           className="touch-target rounded bg-accent px-4 text-base font-medium text-white"
         >
-          {pl.auth.submit}
+          {en.auth.submit}
         </button>
       </form>
 
       <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
         {!standalone && !unlockFailed && (
-          <p className="text-sm text-text-muted">{pl.auth.manualTab}</p>
+          <p className="text-sm text-text-muted">{en.auth.manualTab}</p>
         )}
         <button
           type="button"
@@ -128,7 +128,7 @@ export function ConnectScreen({
           onClick={onRecheck}
           disabled={isProbing}
         >
-          {isProbing ? pl.auth.rechecking : pl.auth.recheck}
+          {isProbing ? en.auth.rechecking : en.auth.recheck}
         </button>
       </div>
     </section>

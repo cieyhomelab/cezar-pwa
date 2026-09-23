@@ -1,5 +1,5 @@
 import type { LiveState } from '../../api/workspace-events.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 const DOT: Record<LiveState, { glyph: string; className: string }> = {
   live: { glyph: '●', className: 'text-success' },
@@ -18,7 +18,7 @@ export function ConnectionStatus({
   detail,
 }: {
   state: LiveState
-  /** Freshness or activity, said after the state — `pl.runs.listFrom`, `pl.runs.refreshingInline`. */
+  /** Freshness or activity, said after the state — `en.runs.listFrom`, `en.runs.refreshingInline`. */
   detail?: string
 }) {
   const dot = DOT[state] ?? DOT.lost
@@ -28,7 +28,7 @@ export function ConnectionStatus({
         {dot.glyph}
       </span>
       <span className="truncate">
-        {pl.runs.live[state] ?? state}
+        {en.runs.live[state] ?? state}
         {detail ? ` · ${detail}` : ''}
       </span>
     </p>

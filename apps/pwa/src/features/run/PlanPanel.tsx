@@ -1,6 +1,6 @@
 import type { PlanEntry } from '@cezar-pwa/cezar-contract/protocol'
 import { planProgress } from '../../domain/transcript.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 const GLYPH: Record<string, string> = {
   completed: '✓',
@@ -24,8 +24,8 @@ export function PlanPanel({ entries }: { entries: PlanEntry[] | undefined }) {
   return (
     <details className="border-t border-border text-sm" data-testid="plan">
       <summary className="touch-target flex cursor-pointer list-none items-center gap-2 px-4">
-        <span className="font-semibold">{pl.run.plan.title}</span>
-        <span className="text-text-muted">{pl.run.plan.progress(done, total)}</span>
+        <span className="font-semibold">{en.run.plan.title}</span>
+        <span className="text-text-muted">{en.run.plan.progress(done, total)}</span>
         {current ? (
           <span className="min-w-0 flex-1 truncate text-text-muted">· {current.activeForm ?? current.content}</span>
         ) : (
@@ -37,7 +37,7 @@ export function PlanPanel({ entries }: { entries: PlanEntry[] | undefined }) {
       </summary>
       <ul className="max-h-[40vh] overflow-y-auto px-4 pb-2">
         {entries.map((entry, index) => {
-          const word = pl.run.plan.status[entry.status] ?? entry.status
+          const word = en.run.plan.status[entry.status] ?? entry.status
           return (
             <li key={index} className="flex gap-2 py-1">
               <span

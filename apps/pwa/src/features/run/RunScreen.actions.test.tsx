@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import liveRun from '../../../test/fixtures/run.live-0.11.0.json'
 import { jsonResponse, renderWithQuery } from '../../../test/query.tsx'
 import { AuthRequiredError, NetworkError, TimeoutError } from '../../api/http.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { AppRoutes } from '../../routes.tsx'
 import { actionFailureMessage } from './useRunActions.ts'
 
@@ -16,7 +16,7 @@ import { actionFailureMessage } from './useRunActions.ts'
 
 const BASE_RUN = liveRun as unknown as ApiRun
 const BASE = `/api/v1/p/cezar-pwa/runs/${BASE_RUN.id}`
-const t = pl.run.actions
+const t = en.run.actions
 
 const withSession = [
   { id: 'task', name: 'Do the task', kind: 'agent', status: 'done', iterations: 1, tokensUsed: 1, sessionId: 's-1' },

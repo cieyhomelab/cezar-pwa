@@ -9,7 +9,7 @@ import {
   pushAvailability,
   sameKey,
 } from '../../domain/push-setup.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { isStandalone } from '../../pwa/useStandalone.ts'
 
 type Busy = 'enable' | 'disable' | 'test'
@@ -41,23 +41,23 @@ function readEnvironment() {
 
 /** A failed step, in the operator's words. The sidecar's own reason is shown verbatim. */
 function describe(error: unknown): string {
-  if (error instanceof AuthRequiredError) return pl.push.errors.auth
+  if (error instanceof AuthRequiredError) return en.push.errors.auth
   if (error instanceof ApiError) {
-    if (error.status === 404) return pl.push.errors.unknownDevice
-    if (error.status === 410) return pl.push.errors.gone
+    if (error.status === 404) return en.push.errors.unknownDevice
+    if (error.status === 410) return en.push.errors.gone
     // The sidecar answered, but not in its own shape — its words are not in there to show.
     if (error.code === 'unexpected-shape' || error.code === 'invalid-json') {
-      return pl.push.errors.unexpectedShape
+      return en.push.errors.unexpectedShape
     }
     // nginx's own answer while the sidecar is down, not the sidecar's — or the app shell answering
     // for an unrouted /m/push/, which pushFetch reports as `not-routed` (#31). Either way the
     // error carries a code rather than the sidecar's own reason.
-    if (error.status === 502 && error.code !== undefined) return pl.push.errors.unavailable
-    if (error.status === 503 || error.status === 504) return pl.push.errors.unavailable
-    return pl.push.errors.failed(error.message)
+    if (error.status === 502 && error.code !== undefined) return en.push.errors.unavailable
+    if (error.status === 503 || error.status === 504) return en.push.errors.unavailable
+    return en.push.errors.failed(error.message)
   }
-  if (error instanceof NetworkError) return pl.push.errors.unavailable
-  return pl.push.errors.failed(error instanceof Error ? error.message : String(error))
+  if (error instanceof NetworkError) return en.push.errors.unavailable
+  return en.push.errors.failed(error instanceof Error ? error.message : String(error))
 }
 
 /**
@@ -116,7 +116,7 @@ export function usePushSubscription(): PushSettings {
       const granted = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
       setPermission(granted)
       if (granted !== 'granted') {
-        if (granted === 'default') setError(pl.push.errors.dismissed)
+        if (granted === 'default') setError(en.push.errors.dismissed)
         return
       }
       const key = applicationServerKey(vapidKey.data ?? (await queryClient.fetchQuery(vapidKeyQueryOptions())))
@@ -167,7 +167,7 @@ export function usePushSubscription(): PushSettings {
         }
         throw caught
       }
-      setNotice(pl.push.testSent)
+      setNotice(en.push.testSent)
     })
   }, [run, subscription])
 

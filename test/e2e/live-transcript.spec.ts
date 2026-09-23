@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, type Route, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-06 acceptance in mobile Safari: the transcript updates while the agent works (FR-016), stays
@@ -65,7 +66,7 @@ async function serveCezar(page: Page) {
 
 /** The page is in and the screen opened at its end. A running task has no closing footer. */
 async function opened(page: Page) {
-  await expect(page.getByRole('region', { name: 'Transkrypt' })).toBeVisible()
+  await expect(page.getByRole('region', { name: en.run.transcript.heading })).toBeVisible()
   await expect.poll(() => distanceFromBottom(page)).toBeLessThanOrEqual(96)
 }
 
@@ -99,7 +100,7 @@ test.describe('Live transcript', () => {
     // At the end when it arrived, so the screen followed it.
     await expect(answer).toBeInViewport()
     expect(await distanceFromBottom(page)).toBeLessThanOrEqual(96)
-    await expect(page.getByRole('button', { name: /Nowe wiadomości/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: new RegExp(en.run.newMessages) })).toHaveCount(0)
   })
 
   test('scrolled up, the screen stays put and offers "new messages" (FR-019)', async ({ page }) => {
@@ -110,7 +111,7 @@ test.describe('Live transcript', () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(200)
 
     await deliver(message(SEQ + 1, 'live-2', 'Written while you read'))
-    const button = page.getByRole('button', { name: /Nowe wiadomości/ })
+    const button = page.getByRole('button', { name: new RegExp(en.run.newMessages) })
     await expect(button).toBeVisible()
     expect(await page.evaluate(() => window.scrollY)).toBe(200)
     const box = await button.boundingBox()

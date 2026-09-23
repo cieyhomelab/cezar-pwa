@@ -13,7 +13,7 @@ import {
   routeFetch,
 } from '../../../test/query.tsx'
 import { RUNS_INDEX_QUERY_KEY } from '../../api/runs-index.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { AppRoutes } from '../../routes.tsx'
 
 const RUN = liveRun as unknown as ApiRun
@@ -65,14 +65,14 @@ describe('RunScreen — the header (FR-014)', () => {
   it('says status, workflow, agent, cost, tokens, branch and links the PR', async () => {
     renderRun()
     const title = await screen.findByRole('heading', { name: 'opening pull request', level: 2 })
-    // Scoped to the header: the transcript below mentions the same branch and says "gotowe" too.
+    // Scoped to the header: the transcript below mentions the same branch and says "done" too.
     const header = within(title.closest('section')!)
-    expect(header.getByText('gotowe')).toBeInTheDocument()
+    expect(header.getByText('done')).toBeInTheDocument()
     expect(header.getByText('Cezar PWA')).toBeInTheDocument()
     expect(header.getByText('quick-task')).toBeInTheDocument()
     expect(header.getByText('claude · opus[1m]')).toBeInTheDocument()
     expect(header.getByText('$3.13')).toBeInTheDocument()
-    expect(header.getByText('we 52 · wy 13.7k')).toBeInTheDocument()
+    expect(header.getByText('in 52 · out 13.7k')).toBeInTheDocument()
     expect(header.getByText('cez/12d1b71c')).toBeInTheDocument()
     const pr = header.getByRole('link', { name: 'PR #9' })
     expect(pr).toHaveAttribute('href', 'https://github.com/cieyhomelab/cezar-pwa/pull/9')
@@ -81,7 +81,7 @@ describe('RunScreen — the header (FR-014)', () => {
 
   it('jumps to the same task in the full cockpit (FR-048)', async () => {
     renderRun()
-    const link = await screen.findByRole('link', { name: pl.shell.openTaskInCockpitLabel })
+    const link = await screen.findByRole('link', { name: en.shell.openTaskInCockpitLabel })
     // The cockpit's own route for a task, outside the app's /m/ scope.
     expect(link).toHaveAttribute('href', `/p/cezar-pwa/tasks/${RUN.id}`)
   })
@@ -100,14 +100,14 @@ describe('RunScreen — the header (FR-014)', () => {
           ],
         }),
     })
-    expect(await screen.findByText('Krok 2/3 · Review')).toBeInTheDocument()
+    expect(await screen.findByText('Step 2/3 · Review')).toBeInTheDocument()
   })
 })
 
 describe('RunScreen — the transcript (FR-015, FR-017)', () => {
   it('renders the live page with every tool collapsed to one line, once', async () => {
     const { container } = renderRun()
-    await screen.findByRole('region', { name: pl.run.transcript.heading })
+    await screen.findByRole('region', { name: en.run.transcript.heading })
     const toolIds = [...container.querySelectorAll('[data-tool-id]')].map((node) => node.getAttribute('data-tool-id'))
     expect(toolIds.length).toBeGreaterThan(0)
     expect(new Set(toolIds).size).toBe(toolIds.length)
@@ -115,9 +115,9 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
       expect(details).not.toHaveAttribute('open')
     }
     // The first page reaches the start of the run, so the prompt is on top.
-    expect(screen.getByText(pl.run.transcript.task)).toBeInTheDocument()
+    expect(screen.getByText(en.run.transcript.task)).toBeInTheDocument()
     expect(screen.getByText('there was .ai folder not commited')).toBeInTheDocument()
-    expect(screen.getByText(pl.run.transcript.footer.closed)).toBeInTheDocument()
+    expect(screen.getByText(en.run.transcript.footer.closed)).toBeInTheDocument()
   })
 
   it('expands a tool line to its input and output', async () => {
@@ -134,7 +134,7 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
     const { container } = renderRun({ history: recordingPage })
     await screen.findByText('Task Explore the repo')
     const parent = container.querySelector('details[data-tool-id="toolu_2"]') as HTMLElement
-    expect(within(parent).getByText(pl.run.transcript.tool.children(1))).toBeInTheDocument()
+    expect(within(parent).getByText(en.run.transcript.tool.children(1))).toBeInTheDocument()
     expect(container.querySelector('[data-tool-id="toolu_3"]')).toBeNull()
     expect(container.querySelector('[data-tool-id="toolu_4"]')).toBeNull()
   })
@@ -169,29 +169,29 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
     expect(container.querySelector('[onerror]')).toBeNull()
     expect(screen.getByText('[tracker]')).toBeInTheDocument()
     // An image with no alt still says what it is, in the operator's language.
-    expect(screen.getByText(`[${pl.run.transcript.markdownImageAlt}]`)).toBeInTheDocument()
+    expect(screen.getByText(`[${en.run.transcript.markdownImageAlt}]`)).toBeInTheDocument()
     const link = screen.getByText('click').closest('a')
     expect(link?.getAttribute('href') ?? '').not.toMatch(/javascript:/i)
   })
 
   it('says older entries live in the cockpit when the page does not reach the start (FR-049 parked)', async () => {
     renderRun({ history: recordingPage })
-    expect(await screen.findByRole('link', { name: pl.run.transcript.older })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: en.run.transcript.older })).toHaveAttribute(
       'href',
       `/p/cezar-pwa/tasks/${RUN.id}`,
     )
-    expect(screen.queryByText(pl.run.transcript.task)).not.toBeInTheDocument()
+    expect(screen.queryByText(en.run.transcript.task)).not.toBeInTheDocument()
   })
 
   it('shows the ask card read-only, with the answer that resolved it', async () => {
     renderRun({ history: recordingPage })
     expect(await screen.findByText('Which branch should I use?')).toBeInTheDocument()
-    expect(screen.getByText(pl.run.transcript.ask.answered('Use dev.'))).toBeInTheDocument()
+    expect(screen.getByText(en.run.transcript.ask.answered('Use dev.'))).toBeInTheDocument()
   })
 
   it('keeps the header when the transcript fails, and offers a retry', async () => {
     renderRun({ history: () => jsonResponse({ error: 'history exploded' }, 500) })
-    expect(await screen.findByText(pl.run.transcript.loadFailed)).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.loadFailed)).toBeInTheDocument()
     expect(screen.getByText('history exploded')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'opening pull request' })).toBeInTheDocument()
   })
@@ -201,7 +201,7 @@ describe('RunScreen — the plan (FR-018)', () => {
   it('pins the latest plan above the transcript with its progress', async () => {
     renderRun({ history: recordingPage })
     const plan = await screen.findByTestId('plan')
-    expect(within(plan).getByText(pl.run.plan.progress(1, 3))).toBeInTheDocument()
+    expect(within(plan).getByText(en.run.plan.progress(1, 3))).toBeInTheDocument()
     expect(within(plan).getByText('· Writing the reducer')).toBeInTheDocument()
     expect(within(plan).getAllByRole('listitem')).toHaveLength(4)
   })
@@ -228,7 +228,7 @@ describe('RunScreen — the plan (FR-018)', () => {
 
   it('shows no plan when there is none, and survives a failed context', async () => {
     renderRun({ context: () => jsonResponse({ error: 'nope' }, 500) })
-    await screen.findByRole('region', { name: pl.run.transcript.heading })
+    await screen.findByRole('region', { name: en.run.transcript.heading })
     expect(screen.queryByTestId('plan')).toBeNull()
   })
 })
@@ -267,12 +267,12 @@ describe('RunScreen — opening marks it read (FR-020)', () => {
 
   it('sends nothing for a task already read, or one still running', async () => {
     const first = renderRun()
-    await screen.findByRole('region', { name: pl.run.transcript.heading })
+    await screen.findByRole('region', { name: en.run.transcript.heading })
     expect(first.calls(`${BASE}/read`, 'POST')).toBe(0)
     first.unmount()
 
     const running = renderRun({ run: () => jsonResponse({ ...RUN, status: 'running', seenAt: undefined }) })
-    await screen.findByRole('region', { name: pl.run.transcript.heading })
+    await screen.findByRole('region', { name: en.run.transcript.heading })
     expect(running.calls(`${BASE}/read`, 'POST')).toBe(0)
   })
 })
@@ -280,16 +280,16 @@ describe('RunScreen — opening marks it read (FR-020)', () => {
 describe('RunScreen — failures', () => {
   it('says a missing task plainly and offers the way back', async () => {
     renderRun({ run: () => jsonResponse({ error: 'not found' }, 404) })
-    expect(await screen.findByText(pl.run.notFound)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: pl.run.back })).toHaveAttribute('href', '/')
+    expect(await screen.findByText(en.run.notFound)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: en.run.back })).toHaveAttribute('href', '/')
     // The cockpit may still know it (a task archived there, or listed under another project).
-    expect(screen.getByRole('link', { name: pl.shell.openTaskInCockpitLabel })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: en.shell.openTaskInCockpitLabel })).toHaveAttribute(
       'href',
       `/p/cezar-pwa/tasks/${RUN.id}`,
     )
   })
 
-  it('hands a lapsed session to the gate: "Połącz z Cezarem", not an error', async () => {
+  it('hands a lapsed session to the gate: "Connect to Cezar", not an error', async () => {
     let authorized = true
     routeFetch({
       '/api/v1/health': () => (authorized ? health() : refusalResponse()),
@@ -301,6 +301,6 @@ describe('RunScreen — failures', () => {
       [`${BASE}/history-context`]: refusalResponse,
     })
     renderWithQuery(<AppRoutes />, createTestQueryClient(), `/p/cezar-pwa/runs/${RUN.id}`)
-    expect(await screen.findByRole('heading', { name: pl.auth.title })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: en.auth.title })).toBeInTheDocument()
   })
 })

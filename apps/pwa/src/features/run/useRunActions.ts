@@ -14,7 +14,7 @@ import {
 } from '../../api/run.ts'
 import type { ActionRun, RunActionId } from '../../domain/run-actions.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 
 export interface RunActions {
   /** The action in flight. Every action is disabled until it settles (FR-032). */
@@ -32,11 +32,11 @@ export interface RunActions {
 
 /** A failure in the operator's language. Cezar's own reason is kept verbatim (FR-032). */
 export function actionFailureMessage(error: unknown): string {
-  const failed = pl.run.actions.failed
+  const failed = en.run.actions.failed
   if (error instanceof AuthRequiredError) return failed.auth
   if (error instanceof TimeoutError) return failed.timeout
   if (error instanceof NetworkError) return failed.network
-  // A coded error carries no words of Cezar's, so its reason comes from `pl` (see `errors.ts`).
+  // A coded error carries no words of Cezar's, so its reason comes from `en` (see `errors.ts`).
   if (error instanceof ApiError) return failed.refused(apiErrorDetail(error) ?? `HTTP ${error.status}`)
   return failed.refused(error instanceof Error ? error.message : String(error))
 }
@@ -68,7 +68,7 @@ export function useRunActions(projectId: string, runId: string, run: ActionRun |
 
   const perform = useCallback(
     async (action: RunActionId): Promise<string | undefined> => {
-      const done = pl.run.actions.done
+      const done = en.run.actions.done
       const current = runRef.current
       switch (action) {
         case 'cancel': {

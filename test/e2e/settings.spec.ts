@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { type Page, expect, test } from '@playwright/test'
+import { en } from '../../apps/pwa/src/i18n/en.ts'
 
 /**
  * S-12 acceptance in mobile Safari: the theme (FR-046), both versions (FR-047), the cockpit link
@@ -84,12 +85,12 @@ test('the theme follows the system until forced, and a forced one survives a rel
   await page.goto('settings')
 
   const html = page.locator('html')
-  await expect(page.getByRole('radio', { name: 'Jak w systemie' })).toBeChecked()
+  await expect(page.getByRole('radio', { name: en.settings.theme.options.system })).toBeChecked()
   await expect(html).not.toHaveAttribute('data-theme')
   const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   expect(await background()).toBe('rgb(11, 17, 23)')
 
-  await page.getByText('Jasny', { exact: true }).click()
+  await page.getByText(en.settings.theme.options.light, { exact: true }).click()
   await expect(html).toHaveAttribute('data-theme', 'light')
   expect(await background()).toBe('rgb(255, 255, 255)')
   // The status bar follows the forced theme, whatever the system says.
@@ -100,13 +101,13 @@ test('the theme follows the system until forced, and a forced one survives a rel
 
   await page.reload()
   await expect(html).toHaveAttribute('data-theme', 'light')
-  await expect(page.getByRole('radio', { name: 'Jasny' })).toBeChecked()
+  await expect(page.getByRole('radio', { name: en.settings.theme.options.light })).toBeChecked()
 
   // Forced dark holds against a light system; "system" hands it back.
   await page.emulateMedia({ colorScheme: 'light' })
-  await page.getByText('Ciemny', { exact: true }).click()
+  await page.getByText(en.settings.theme.options.dark, { exact: true }).click()
   expect(await background()).toBe('rgb(11, 17, 23)')
-  await page.getByText('Jak w systemie', { exact: true }).click()
+  await page.getByText(en.settings.theme.options.system, { exact: true }).click()
   await expect(html).not.toHaveAttribute('data-theme')
   expect(await background()).toBe('rgb(255, 255, 255)')
 })
@@ -114,32 +115,32 @@ test('the theme follows the system until forced, and a forced one survives a rel
 test('shows the build and the Cezar version it talks to (FR-047)', async ({ page }) => {
   await serve(page)
   await page.goto('settings')
-  const versions = page.getByRole('region', { name: 'Wersje' })
+  const versions = page.getByRole('region', { name: en.settings.versions.section })
   // The commit this build came from, stamped by vite.config.ts.
-  await expect(versions.getByRole('definition').first()).toHaveText(/^[0-9a-f]{7}( · zbudowana .+)?$/)
+  await expect(versions.getByRole('definition').first()).toHaveText(/^[0-9a-f]{7}( · built .+)?$/)
   await expect(versions.getByRole('definition').nth(1)).toHaveText('0.11.0')
 })
 
 test('a task links to the same task in the full cockpit (FR-048)', async ({ page }) => {
   await serve(page)
   await page.goto(`p/${PROJECT}/runs/${liveRun.id}`)
-  const link = page.getByRole('link', { name: 'Otwórz to zadanie w pełnym cockpicie' })
+  const link = page.getByRole('link', { name: en.shell.openTaskInCockpitLabel })
   await expect(link).toHaveAttribute('href', `/p/${PROJECT}/tasks/${liveRun.id}`)
 })
 
-test('signing out stops notifications, ends the session, clears the phone and lands on "Połącz z Cezarem" (FR-006)', async ({
+test('signing out stops notifications, ends the session, clears the phone and lands on "Connect to Cezar" (FR-006)', async ({
   page,
 }) => {
   const state = await serve(page)
   await subscribedDevice(page)
   await page.goto('settings')
-  await page.getByText('Jasny', { exact: true }).click()
+  await page.getByText(en.settings.theme.options.light, { exact: true }).click()
 
-  await page.getByRole('button', { name: 'Wyloguj' }).click()
-  const dialog = page.getByRole('alertdialog', { name: 'Wylogować z Cezara?' })
-  await dialog.getByRole('button', { name: 'Wyloguj' }).click()
+  await page.getByRole('button', { name: en.settings.signOut.action }).click()
+  const dialog = page.getByRole('alertdialog', { name: en.settings.signOut.confirmTitle })
+  await dialog.getByRole('button', { name: en.settings.signOut.action }).click()
 
-  await expect(page.getByRole('heading', { name: 'Połącz z Cezarem' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
   await expect(page).toHaveURL(/\/m\/$/)
   // The sidecar was told while the session still let it through; then the session went.
   expect(state.sent).toEqual(['DELETE /m/push/subscription', 'POST /m/session/end'])
@@ -155,10 +156,10 @@ test('when the perimeter cannot end the session, Settings says so instead of pre
   await page.route('**/m/session/end', (route) => route.fulfill({ status: 405, body: '' }))
   await page.goto('settings')
 
-  await page.getByRole('button', { name: 'Wyloguj' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Wyloguj' }).click()
+  await page.getByRole('button', { name: en.settings.signOut.action }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: en.settings.signOut.action }).click()
 
-  await expect(page.getByRole('alert')).toContainText('serwer nie potwierdził zakończenia sesji')
-  await expect(page.getByRole('button', { name: 'Spróbuj ponownie' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('the server did not confirm the session ended')
+  await expect(page.getByRole('button', { name: en.settings.signOut.retry })).toBeVisible()
   await expect(page).toHaveURL(/\/m\/settings$/)
 })

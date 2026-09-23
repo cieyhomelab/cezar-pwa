@@ -6,7 +6,7 @@ import { runsIndexQueryOptions } from '../../api/runs-index.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { attentionCount, buildTaskList } from '../../domain/task-list.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
-import { pl } from '../../i18n/pl.ts'
+import { en } from '../../i18n/en.ts'
 import { ConnectionStatus } from './ConnectionStatus.tsx'
 import { RunRow } from './RunRow.tsx'
 import { useLiveRuns } from './useLiveRuns.ts'
@@ -73,7 +73,7 @@ export function RunsListScreen() {
     if (runs.isError && !(runs.error instanceof AuthRequiredError)) {
       return (
         <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <p>{pl.runs.loadFailed}</p>
+          <p>{en.runs.loadFailed}</p>
           {apiErrorDetail(runs.error) ? (
             <p className="text-sm text-text-muted">{apiErrorDetail(runs.error)}</p>
           ) : null}
@@ -83,14 +83,14 @@ export function RunsListScreen() {
             onClick={refresh}
             disabled={runs.isFetching}
           >
-            {runs.isFetching ? pl.runs.refreshing : pl.runs.retry}
+            {runs.isFetching ? en.runs.refreshing : en.runs.retry}
           </button>
         </section>
       )
     }
     return (
       <p role="status" className="flex flex-1 items-center justify-center px-6 text-text-muted">
-        {pl.runs.loading}
+        {en.runs.loading}
       </p>
     )
   }
@@ -110,10 +110,10 @@ export function RunsListScreen() {
   const asOfTime = clockTime(new Date(asOf).toISOString(), now)
   const stale = runs.isFetching && now - asOf > STALE_AFTER_MS
   const detail = runs.isFetching
-    ? pl.runs.refreshingInline
+    ? en.runs.refreshingInline
     : synced
       ? undefined
-      : pl.runs.listFrom(asOfTime)
+      : en.runs.listFrom(asOfTime)
   const truncated = runs.data.truncated.map((id) => projectNames.get(id) ?? id)
 
   return (
@@ -124,31 +124,31 @@ export function RunsListScreen() {
           className="flex items-end justify-center overflow-hidden text-sm text-text-muted"
           style={{ height: pull.distance }}
         >
-          <span className="pb-2">{pull.armed ? pl.runs.release : pl.runs.pull}</span>
+          <span className="pb-2">{pull.armed ? en.runs.release : en.runs.pull}</span>
         </div>
       ) : null}
 
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
         <div>
           <h2 className={`text-lg font-semibold ${totalAttention > 0 ? 'text-pending' : ''}`}>
-            {totalAttention > 0 ? pl.runs.summary.some(totalAttention) : pl.runs.summary.none}
+            {totalAttention > 0 ? en.runs.summary.some(totalAttention) : en.runs.summary.none}
           </h2>
           {totalAttention > shownAttention ? (
             <p className="text-sm text-text-muted">
-              {pl.runs.summary.elsewhere(totalAttention - shownAttention)}
+              {en.runs.summary.elsewhere(totalAttention - shownAttention)}
             </p>
           ) : null}
         </div>
 
         {projects.length > 1 ? (
           <label className="flex items-center gap-2 text-sm">
-            <span className="text-text-muted">{pl.runs.filter.label}</span>
+            <span className="text-text-muted">{en.runs.filter.label}</span>
             <select
               className="touch-target flex-1 rounded border border-border bg-surface-raised px-2 text-text"
               value={projectId ?? ''}
               onChange={(event) => setProject(event.target.value === '' ? null : event.target.value)}
             >
-              <option value="">{pl.runs.filter.all}</option>
+              <option value="">{en.runs.filter.all}</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -166,21 +166,21 @@ export function RunsListScreen() {
             onClick={refresh}
             disabled={runs.isFetching}
           >
-            {pl.runs.refresh}
+            {en.runs.refresh}
           </button>
         </div>
       </div>
 
       {runs.isError && !(runs.error instanceof AuthRequiredError) ? (
         <div role="alert" className="border-b border-border bg-surface-raised px-4 py-2 text-sm">
-          {pl.runs.refreshFailed(asOfTime)}
+          {en.runs.refreshFailed(asOfTime)}
         </div>
       ) : null}
 
       <div aria-busy={stale} className={stale ? 'opacity-50' : undefined}>
         {sections.length === 0 ? (
           <p className="px-6 py-10 text-center text-text-muted">
-            {projectId === null ? pl.runs.empty.all : pl.runs.empty.project}
+            {projectId === null ? en.runs.empty.all : en.runs.empty.project}
           </p>
         ) : (
           sections.map((section) => {
@@ -195,7 +195,7 @@ export function RunsListScreen() {
                   id={`section-${section.key}`}
                   className="px-4 pt-4 pb-1 text-xs font-semibold tracking-wide text-text-muted uppercase"
                 >
-                  {pl.runs.sections[section.key]} ({section.rows.length})
+                  {en.runs.sections[section.key]} ({section.rows.length})
                 </h3>
                 <ul>
                   {rows.map(({ run, queuePosition }) => (
@@ -214,7 +214,7 @@ export function RunsListScreen() {
                     className="touch-target w-full px-4 text-sm text-accent"
                     onClick={() => setShowOlder(true)}
                   >
-                    {pl.runs.showOlder(hidden)}
+                    {en.runs.showOlder(hidden)}
                   </button>
                 ) : null}
               </section>
@@ -224,7 +224,7 @@ export function RunsListScreen() {
 
         {truncated.length > 0 ? (
           <p className="px-4 py-4 text-xs text-text-muted">
-            {pl.runs.truncated(runs.data.perProjectLimit, truncated.join(', '))}
+            {en.runs.truncated(runs.data.perProjectLimit, truncated.join(', '))}
           </p>
         ) : null}
       </div>

@@ -1,5 +1,5 @@
 import type { RunIndexEntry } from '@cezar-pwa/cezar-contract/contract'
-import { pl } from '../i18n/pl.ts'
+import { en } from '../i18n/en.ts'
 
 /**
  * What a list row says about a run (FR-009): its title, its PR/issue number, its cost and its
@@ -114,7 +114,7 @@ export function formatCost(usd: number | undefined): string {
 // ---- timing -----------------------------------------------------------------------------
 
 /**
- * Compact age — `4 s` / `26 min` / `2 godz.` / `3 dni`, worded by `pl.age`. One unit, never
+ * Compact age — `4 s` / `26 min` / `2 godz.` / `3 dni`, worded by `en.age`. One unit, never
  * rounded up, like the cockpit's `shortAge`. Empty for a missing or unparseable stamp: an empty
  * slot is honest, `NaN min` is not. Clamped at zero against clock skew.
  */
@@ -123,23 +123,23 @@ export function shortAge(iso: string | undefined, now: number): string {
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return ''
   const seconds = Math.max(0, (now - then) / 1000)
-  if (seconds < 60) return pl.age.seconds(Math.floor(seconds))
-  if (seconds < 3600) return pl.age.minutes(Math.floor(seconds / 60))
-  if (seconds < 86_400) return pl.age.hours(Math.floor(seconds / 3600))
-  return pl.age.days(Math.floor(seconds / 86_400))
+  if (seconds < 60) return en.age.seconds(Math.floor(seconds))
+  if (seconds < 3600) return en.age.minutes(Math.floor(seconds / 60))
+  if (seconds < 86_400) return en.age.hours(Math.floor(seconds / 3600))
+  return en.age.days(Math.floor(seconds / 86_400))
 }
 
 /**
- * Wall-clock time of an instant — `11:40` today, `22.09 11:40` otherwise. Empty when the stamp
+ * Wall-clock time of an instant — `11:40` today, `22/09 11:40` otherwise. Empty when the stamp
  * is unparseable, so a row never prints `Invalid Date`.
  */
 export function clockTime(iso: string | undefined, now: number): string {
   if (!iso) return ''
   const at = new Date(iso)
   if (Number.isNaN(at.getTime())) return ''
-  const time = at.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+  const time = at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   if (at.toDateString() === new Date(now).toDateString()) return time
-  const date = at.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' })
+  const date = at.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })
   return `${date} ${time}`
 }
 

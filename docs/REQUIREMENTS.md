@@ -119,7 +119,7 @@ Motyw (system/ciemny/jasny), powiadomienia (P1), filtr projektów, „Wyloguj”
 - **NF-5 Bezpieczeństwo:** brak `innerHTML` z danych agenta (Markdown przez sanitizujący renderer), CSP dla `/m/` (`default-src 'self'; connect-src 'self'; img-src 'self' data: blob:`), brak zewnętrznych CDN.
 - **NF-6 Kompatybilność:** iOS 16.4+ (Web Push), Safari/Chrome Android aktualne. Testowana wersja Cezara zapisana w `src/config/cezar-compat.ts`.
 - **NF-7 Prywatność:** zero telemetrii, zero zewnętrznych usług poza push service Apple/Google.
-- **NF-8 Język UI:** polski (teksty w jednym pliku `src/i18n/pl.ts`, gotowe pod dodanie EN).
+- **NF-8 Język UI:** angielski (teksty w jednym pliku `src/i18n/en.ts`; aplikacja jest jednojęzyczna — brak przełącznika języka).
 
 ## 6. Sidecar `cezar-push` — specyfikacja
 

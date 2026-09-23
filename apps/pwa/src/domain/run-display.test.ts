@@ -95,9 +95,9 @@ describe('shortAge', () => {
   it.each([
     ['2026-09-21T09:59:56.000Z', '4 s'],
     ['2026-09-21T09:34:00.000Z', '26 min'],
-    ['2026-09-21T07:30:00.000Z', '2 godz.'],
-    ['2026-09-20T09:00:00.000Z', '1 dzień'],
-    ['2026-09-18T09:00:00.000Z', '3 dni'],
+    ['2026-09-21T07:30:00.000Z', '2 h'],
+    ['2026-09-20T09:00:00.000Z', '1 day'],
+    ['2026-09-18T09:00:00.000Z', '3 days'],
     ['2026-09-21T10:00:30.000Z', '0 s'],
     [undefined, ''],
     ['not a date', ''],
@@ -113,7 +113,7 @@ describe('clockTime', () => {
     expect(clockTime(today.toISOString(), NOW)).toBe('11:40')
 
     const tomorrow = new Date(today.getTime() + 86_400_000)
-    expect(clockTime(tomorrow.toISOString(), NOW)).toMatch(/^\d{2}\.\d{2} 11:40$/)
+    expect(clockTime(tomorrow.toISOString(), NOW)).toMatch(/^\d{2}\/\d{2} 11:40$/)
   })
 
   it('prints nothing for a stamp it cannot read', () => {
@@ -147,7 +147,7 @@ describe('runTiming', () => {
   it('shows finished work how long ago it finished', () => {
     expect(
       runTiming({ ...base, status: 'done', finishedAt: '2026-09-21T07:30:00.000Z' }, null, NOW),
-    ).toEqual({ kind: 'ago', age: '2 godz.' })
+    ).toEqual({ kind: 'ago', age: '2 h' })
   })
 
   it('says nothing rather than something false when the stamps are unreadable', () => {
