@@ -50,3 +50,5 @@ Environment: `HOST` (127.0.0.1), `PORT` (4330), `CEZAR_URL` (`http://127.0.0.1:4
 
 On the VPS, `deploy/push/install.sh` (as the user Cezar runs as) builds, installs the user unit
 `deploy/systemd/cezar-push.service` and starts it. Logs: `journalctl --user -u cezar-push`.
+`CEZAR_PUSH_HOME` and `STATE_DIR` are rendered into the unit it installs, and its health probe
+follows `PORT` from `$STATE_DIR/env`; `deploy/push/rehearse.sh` rehearses that in a scratch `$HOME`.

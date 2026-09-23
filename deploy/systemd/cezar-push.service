@@ -1,5 +1,7 @@
 # User unit, installed by deploy/push/install.sh (run on the VPS as the user
-# Cezar runs as). By hand:
+# Cezar runs as). It renders the two %h-relative paths below with the ones it
+# installed to, so CEZAR_PUSH_HOME and STATE_DIR reach the service too; edit
+# them here and the installer's check will say so. By hand (defaults only):
 #   cp deploy/systemd/cezar-push.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now cezar-push
@@ -23,8 +25,10 @@ Environment=PORT=4330
 # Cezar's own port on this host (`cezar-cli serve --port 4322`), on loopback,
 # where it answers without the gate's cookie.
 Environment=CEZAR_URL=http://127.0.0.1:4322
-# The VAPID keys and the subscriptions live in %h/.cezar-push (0700, files
-# 0600), never in the repo (CLAUDE.md rule 6). VAPID_SUBJECT defaults to the
+# The VAPID keys and the subscriptions live in %h/.cezar-push (files 0600; the
+# installer makes the directory 0700 — the sidecar's own mkdir only sets that
+# mode on a directory it creates), never in the repo (CLAUDE.md rule 6). The
+# port below is also what the installer probes. VAPID_SUBJECT defaults to the
 # site's https URL; a mailto: contact can be set in the optional file below.
 Environment=STATE_DIR=%h/.cezar-push
 EnvironmentFile=-%h/.cezar-push/env

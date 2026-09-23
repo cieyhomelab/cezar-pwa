@@ -210,7 +210,11 @@ Three steps remain manual and one-off, all run **on the VPS**:
 
    The unit reads optional settings from `~/.cezar-push/env` (mode 600), for
    example `PUBLIC_ORIGIN=https://cezar.ciey.studio`, the only origin that may
-   subscribe.
+   subscribe, or a `PORT` other than 4330 — which the installer then probes
+   instead. `CEZAR_PUSH_HOME` and `STATE_DIR` move the bundle and the state
+   elsewhere; the unit is installed with those paths in it, so the service
+   starts where the install actually wrote. `deploy/push/rehearse.sh` checks
+   that against a scratch `$HOME`, no VPS needed.
 
 Steps 1 and 2 were applied on the production VPS on 2026-09-22 (#30). To check a
 host:
