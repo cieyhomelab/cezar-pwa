@@ -20,9 +20,9 @@ Przed pracą przeczytaj:
 ## Stack
 
 - Vite 8 + React 19 + TypeScript (strict, ESM) + Tailwind v4 — ten sam co cockpit Cezara, więc komponenty i tokeny motywu można podglądać w `packages/web/src/`
-- React Router 7, TanStack Query 5 (cache serwera), `virtua` (wirtualne listy), `streamdown` lub `react-markdown` + sanitizacja (Markdown agenta)
+- React Router 7, TanStack Query 5 (cache serwera), `react-markdown` + `remark-gfm` (Markdown agenta, bez raw HTML — patrz `src/features/run/Markdown.tsx`)
 - `vite-plugin-pwa` w trybie **`injectManifest`** (własny `src/sw.ts` z handlerami `push` i `notificationclick`), Workbox precache
-- IndexedDB przez `idb-keyval` (snapshot offline)
+- **Bez wirtualizacji list i bez trwałego snapshotu offline (IndexedDB)** — oba są Non-Goals w PRD. Nie dodawaj `virtua` ani `idb-keyval`; długie listy stronicuj, stan serwera trzymaj w cache TanStack Query.
 - Testy: Vitest + Testing Library; E2E: Playwright z projektem **WebKit** (mobile Safari) — Chromium jest preinstalowany, nie uruchamiaj `playwright install` bez potrzeby
 - Sidecar: Node 20+, Hono, `web-push`, zod
 
