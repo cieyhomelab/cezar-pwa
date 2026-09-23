@@ -5,6 +5,7 @@ import { HEALTH_QUERY_KEY } from '../../api/health.ts'
 import { ApiError, AuthRequiredError, NetworkError, TimeoutError } from '../../api/http.ts'
 import { continueRunWith, invalidateRun, sendRunMessage } from '../../api/run.ts'
 import { type DeliveryMode, type DeliveryRun, deliveryMode, lastSessionId, resumeAfterIdleTeardown } from '../../domain/answer.ts'
+import { apiErrorDetail } from '../../i18n/errors.ts'
 import { pl } from '../../i18n/pl.ts'
 
 /** Where a send came from, so a failure is shown where the operator acted. */
@@ -29,7 +30,10 @@ export function failureMessage(error: unknown): string {
   if (error instanceof AuthRequiredError) return pl.run.compose.failed.auth
   if (error instanceof TimeoutError) return pl.run.compose.failed.timeout
   if (error instanceof NetworkError) return pl.run.compose.failed.network
-  if (error instanceof ApiError) return pl.run.compose.failed.refused(error.message)
+  // A coded error carries no words of Cezar's, so its reason comes from `pl` (see `errors.ts`).
+  if (error instanceof ApiError) {
+    return pl.run.compose.failed.refused(apiErrorDetail(error) ?? `HTTP ${error.status}`)
+  }
   return pl.run.compose.failed.refused(error instanceof Error ? error.message : String(error))
 }
 

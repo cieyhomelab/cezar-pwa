@@ -18,7 +18,7 @@ export function ConnectionStatus({
   detail,
 }: {
   state: LiveState
-  /** Freshness or activity, said after the state — e.g. "lista z 14:02", "odświeżam…". */
+  /** Freshness or activity, said after the state — `pl.runs.listFrom`, `pl.runs.refreshingInline`. */
   detail?: string
 }) {
   const dot = DOT[state] ?? DOT.lost

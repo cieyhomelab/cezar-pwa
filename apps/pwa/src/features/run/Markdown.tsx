@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { pl } from '../../i18n/pl.ts'
 
 /**
  * Agent markdown as text (FR-017, NF "content produced by an agent never executes").
@@ -16,7 +17,9 @@ import remarkGfm from 'remark-gfm'
  * highlighting (PRD non-goal).
  */
 const components: Components = {
-  img: ({ alt }) => <span className="text-text-muted">[{alt || 'obraz'}]</span>,
+  img: ({ alt }) => (
+    <span className="text-text-muted">[{alt || pl.run.transcript.markdownImageAlt}]</span>
+  ),
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noopener noreferrer" className="break-words text-accent underline">
       {children}

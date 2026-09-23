@@ -92,11 +92,32 @@ describe('apiFetch', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).message).toBe('run not found')
     expect((error as ApiError).status).toBe(404)
+    // No code: the words are the server's, and a screen may print them verbatim (FR-032).
+    expect((error as ApiError).code).toBeUndefined()
   })
 
   it('falls back to the status when the error body is not JSON', async () => {
     mockFetch(async () => new Response('boom', { status: 502 }))
-    await expect(apiFetch('/api/v1/health')).rejects.toThrow('HTTP 502')
+    const error = await apiFetch('/api/v1/health').catch((e: unknown) => e)
+    expect((error as ApiError).message).toBe('HTTP 502')
+    // Coded, so nothing reads that fallback out as though the server had given a reason.
+    expect((error as ApiError).code).toBe('no-detail')
+  })
+
+  it('codes an error body whose { error } is missing or empty as no reason at all', async () => {
+    mockFetch(async () => json({ error: '' }, 500))
+    const error = await apiFetch('/api/v1/health').catch((e: unknown) => e)
+    expect((error as ApiError).code).toBe('no-detail')
+  })
+
+  it('codes a 2xx that claims JSON and is not', async () => {
+    mockFetch(
+      async () =>
+        new Response('{oops', { status: 200, headers: { 'content-type': 'application/json' } }),
+    )
+    const error = await apiFetch('/api/v1/health').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).code).toBe('invalid-json')
   })
 
   it('turns a dead network into NetworkError, which is not an auth failure', async () => {
@@ -164,16 +185,17 @@ describe('pushFetch', () => {
 
   it.each([
     // An unrouted /m/push/ falls into the SPA fallback: a missing sidecar, not a lapsed session (#31).
-    { answer: shell, error: ApiError, status: 502, message: 'HTTP 200 (not JSON)' },
+    { answer: shell, error: ApiError, status: 502, message: 'HTTP 200 (not JSON)', code: 'not-routed' },
     // The gate's refusal still means no session.
-    { answer: bareRefusal, error: AuthRequiredError, status: 403, message: undefined },
-    { answer: () => json({ error: 'unknown subscription' }, 404), error: ApiError, status: 404, message: 'unknown subscription' },
-  ])('turns $status into $error.name', async ({ answer, error: kind, status, message }) => {
+    { answer: bareRefusal, error: AuthRequiredError, status: 403, message: undefined, code: undefined },
+    { answer: () => json({ error: 'unknown subscription' }, 404), error: ApiError, status: 404, message: 'unknown subscription', code: undefined },
+  ])('turns $status into $error.name', async ({ answer, error: kind, status, message, code }) => {
     mockFetch(async () => answer())
     const error = await pushFetch('/m/push/vapid-public-key').catch((e: unknown) => e)
     expect(error).toBeInstanceOf(kind)
     expect((error as ApiError).status).toBe(status)
     if (message) expect((error as ApiError).message).toBe(message)
+    if (kind === ApiError) expect((error as ApiError).code).toBe(code)
   })
 
   it('returns the sidecar’s JSON', async () => {

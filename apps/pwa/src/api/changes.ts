@@ -35,7 +35,7 @@ export async function fetchChanges(projectId: string, runId: string, signal?: Ab
     { signal, timeoutMs: CHANGES_TIMEOUT_MS },
   )
   if (!isRecord(body) || !Array.isArray(body.files)) {
-    throw new ApiError('Cezar odpowiedział w nieznanym formacie', 200)
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
   }
   const files = body.files.filter(isFile).map((file) => ({
     ...file,

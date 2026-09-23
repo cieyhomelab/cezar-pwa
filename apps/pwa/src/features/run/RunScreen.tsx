@@ -9,6 +9,7 @@ import { cockpitTaskPath } from '../../domain/cockpit-link.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
+import { apiErrorDetail } from '../../i18n/errors.ts'
 import { pl } from '../../i18n/pl.ts'
 import { ConnectionStatus } from '../runs-list/ConnectionStatus.tsx'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
@@ -124,8 +125,8 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
           <BackBar projectId={projectId} runId={runId} />
           <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
             <p>{notFound ? pl.run.notFound : pl.run.loadFailed}</p>
-            {!notFound && run.error instanceof ApiError ? (
-              <p className="text-sm text-text-muted">{run.error.message}</p>
+            {!notFound && apiErrorDetail(run.error) ? (
+              <p className="text-sm text-text-muted">{apiErrorDetail(run.error)}</p>
             ) : null}
             {notFound ? null : (
               <button
@@ -213,8 +214,8 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
         ) : history.isError && !(history.error instanceof AuthRequiredError) ? (
           <section className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <p>{pl.run.transcript.loadFailed}</p>
-            {history.error instanceof ApiError ? (
-              <p className="text-sm text-text-muted">{history.error.message}</p>
+            {apiErrorDetail(history.error) ? (
+              <p className="text-sm text-text-muted">{apiErrorDetail(history.error)}</p>
             ) : null}
             <button
               type="button"

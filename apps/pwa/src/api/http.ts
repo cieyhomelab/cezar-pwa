@@ -1,6 +1,6 @@
 /**
- * The single door to Cezar's API (CLAUDE.md → "Każde wywołanie API przez
- * src/api/http.ts"). It exists to make three judgements in one place:
+ * The single door to Cezar's API (CLAUDE.md: every API call goes through
+ * `src/api/http.ts`). It exists to make three judgements in one place:
  *
  *  1. **Is there a session?** The gateway answers a missing or stale session
  *     with a bare 403 carrying a 148-byte HTML error page — no redirect, no
@@ -39,14 +39,37 @@ export class AuthRequiredError extends Error {
   }
 }
 
-/** Cezar itself answered with an error. `message` is its own `{ error }` when it sent one. */
+/**
+ * Why this layer, rather than the server, judged an answer unusable. A coded `ApiError` carries
+ * no words of the server's, so nothing may show its `message` to the operator — `i18n/errors.ts`
+ * turns the code into the sentence a screen prints (CLAUDE.md: UI text only from `i18n/pl.ts`).
+ */
+export type ApiErrorCode =
+  /** A 2xx whose JSON is not the shape the caller needs — a field or a container is missing. */
+  | 'unexpected-shape'
+  /** A 2xx that claimed JSON and did not parse. */
+  | 'invalid-json'
+  /** `/m/push/…` answered by the SPA fallback instead of the sidecar: a missing sidecar (#31). */
+  | 'not-routed'
+  /** An error status with no `{ error }` of its own — nginx's page, or an empty body. */
+  | 'no-detail'
+
+/**
+ * Cezar itself answered with an error. `message` is its own `{ error }` when it sent one — and
+ * only then, which is exactly what `code === undefined` says. With a code, `message` is a
+ * developer-facing note and the operator's sentence comes from the code instead.
+ */
 export class ApiError extends Error {
   readonly status: number
 
-  constructor(message: string, status: number) {
+  /** Set when this layer judged the answer; absent when the server gave its own reason. */
+  readonly code: ApiErrorCode | undefined
+
+  constructor(message: string, status: number, code?: ApiErrorCode) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -79,17 +102,21 @@ function isJson(response: Response): boolean {
   return response.headers.get('content-type')?.includes('application/json') ?? false
 }
 
-/** Cezar's error shape is `{ error }`; anything else falls back to the status. */
-async function errorMessage(response: Response): Promise<string> {
-  if (!isJson(response)) return `HTTP ${response.status}`
+/**
+ * Cezar's error shape is `{ error }`; anything else falls back to the status, and says so with
+ * `no-detail` — the caller must not read that fallback out to the operator as a reason.
+ */
+async function refusal(response: Response): Promise<ApiError> {
+  const noDetail = new ApiError(`HTTP ${response.status}`, response.status, 'no-detail')
+  if (!isJson(response)) return noDetail
   try {
     const body: unknown = await response.json()
     const message = (body as { error?: unknown } | null)?.error
     return typeof message === 'string' && message.length > 0
-      ? message
-      : `HTTP ${response.status}`
+      ? new ApiError(message, response.status)
+      : noDetail
   } catch {
-    return `HTTP ${response.status}`
+    return noDetail
   }
 }
 
@@ -170,21 +197,23 @@ async function request<T>(path: string, options: ApiFetchOptions, notJson: NotJs
   }
 
   if (!response.ok) {
-    throw new ApiError(await errorMessage(response), response.status)
+    throw await refusal(response)
   }
 
   // A 200 that is not JSON means something in front of Cezar answered for it —
   // a login page, a captive portal, a cached shell. Treat it as no session
-  // rather than as data (CLAUDE.md → "odpowiedź HTML zamiast JSON").
+  // rather than as data (CLAUDE.md: HTML where JSON was asked for means no session).
   if (!isJson(response)) {
-    if (notJson === 'not-routed') throw new ApiError(`HTTP ${response.status} (not JSON)`, 502)
+    if (notJson === 'not-routed') {
+      throw new ApiError(`HTTP ${response.status} (not JSON)`, 502, 'not-routed')
+    }
     throw new AuthRequiredError(response.status)
   }
 
   try {
     return (await response.json()) as T
   } catch {
-    throw new ApiError('Odpowiedź Cezara nie jest poprawnym JSON-em', response.status)
+    throw new ApiError('the answer is not valid JSON', response.status, 'invalid-json')
   }
 }
 
@@ -218,7 +247,7 @@ async function send(
     // A caller-driven abort is not a failure — let it propagate as itself so
     // TanStack Query can tell a cancelled query from a broken network.
     if (signal?.aborted) throw cause
-    throw new NetworkError('Nie udało się połączyć z Cezarem', { cause })
+    throw new NetworkError('could not reach Cezar', { cause })
   } finally {
     clearTimeout(timer)
     signal?.removeEventListener('abort', abortFromCaller)

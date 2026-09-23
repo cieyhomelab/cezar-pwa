@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
-import { ApiError, AuthRequiredError } from '../../api/http.ts'
+import { AuthRequiredError } from '../../api/http.ts'
 import { runsIndexQueryOptions } from '../../api/runs-index.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { attentionCount, buildTaskList } from '../../domain/task-list.ts'
+import { apiErrorDetail } from '../../i18n/errors.ts'
 import { pl } from '../../i18n/pl.ts'
 import { ConnectionStatus } from './ConnectionStatus.tsx'
 import { RunRow } from './RunRow.tsx'
@@ -73,8 +74,8 @@ export function RunsListScreen() {
       return (
         <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
           <p>{pl.runs.loadFailed}</p>
-          {runs.error instanceof ApiError ? (
-            <p className="text-sm text-text-muted">{runs.error.message}</p>
+          {apiErrorDetail(runs.error) ? (
+            <p className="text-sm text-text-muted">{apiErrorDetail(runs.error)}</p>
           ) : null}
           <button
             type="button"

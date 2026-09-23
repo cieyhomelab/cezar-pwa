@@ -144,6 +144,7 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
       '| a | b |\n| - | - |\n| 1 | 2 |',
       '<img src="https://evil.example/pixel.png" onerror="alert(1)">',
       '![tracker](https://evil.example/t.png)',
+      '![](https://evil.example/anon.png)',
       '[click](javascript:alert(1))',
     ].join('\n\n')
     const { container } = renderRun({
@@ -167,6 +168,8 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
     expect(container.querySelector('img')).toBeNull()
     expect(container.querySelector('[onerror]')).toBeNull()
     expect(screen.getByText('[tracker]')).toBeInTheDocument()
+    // An image with no alt still says what it is, in the operator's language.
+    expect(screen.getByText(`[${pl.run.transcript.markdownImageAlt}]`)).toBeInTheDocument()
     const link = screen.getByText('click').closest('a')
     expect(link?.getAttribute('href') ?? '').not.toMatch(/javascript:/i)
   })

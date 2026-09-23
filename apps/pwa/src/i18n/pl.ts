@@ -1,8 +1,14 @@
+import type { ApiErrorCode } from '../api/http.ts'
+
 /**
- * Every user-facing string lives here (CLAUDE.md → "teksty UI po polsku,
- * wyłącznie przez src/i18n/pl.ts"). The shape is ready for an `en.ts` sibling
- * (NF-8) but nothing selects a locale yet.
+ * Every user-facing string lives here (CLAUDE.md: UI text in Polish, only through
+ * `src/i18n/pl.ts`). The shape is ready for an `en.ts` sibling (NF-8) but nothing
+ * selects a locale yet.
  */
+
+/** Said in two places: a `not-routed` answer and every other way the sidecar goes quiet. */
+const PUSH_UNAVAILABLE = 'Serwer powiadomień nie odpowiada. Spróbuj później.'
+
 /** Polish plural: 1 → one, 2–4 (not 12–14) → few, everything else → many. */
 function plural(count: number, one: string, few: string, many: string): string {
   if (count === 1) return one
@@ -16,6 +22,24 @@ export const pl = {
   app: {
     name: 'Cezar',
     tagline: 'Podgląd agentów',
+  },
+  /**
+   * What this app judged about an answer, keyed by `ApiError.code` (`api/http.ts`). Never the
+   * server's own reason — that one is shown verbatim (FR-032) and needs no translation.
+   */
+  apiError: {
+    'unexpected-shape': 'Cezar odpowiedział w nieznanym formacie',
+    'invalid-json': 'Odpowiedź Cezara nie jest poprawnym JSON-em',
+    'not-routed': PUSH_UNAVAILABLE,
+    /** A bare status is not a reason: the screen's own "nie udało się…" already said that much. */
+    'no-detail': '',
+  } satisfies Record<ApiErrorCode, string>,
+  /** Compact age, one unit, as `shortAge` (`domain/run-display.ts`) measures it. */
+  age: {
+    seconds: (count: number) => `${count} s`,
+    minutes: (count: number) => `${count} min`,
+    hours: (count: number) => `${count} godz.`,
+    days: (count: number) => (count === 1 ? '1 dzień' : `${count} dni`),
   },
   shell: {
     openCockpit: 'Otwórz w pełnym cockpicie',
@@ -236,6 +260,8 @@ export const pl = {
         } as Record<string, string>,
       },
       image: (name?: string) => `Obraz${name ? ` ${name}` : ''} — do obejrzenia w pełnym cockpicie`,
+      /** A markdown image is never loaded (`Markdown.tsx`); this stands in for a missing alt. */
+      markdownImageAlt: 'obraz',
       providerAuth: (provider: string) =>
         `Agent ${provider} stracił logowanie. Zaloguj go ponownie w pełnym cockpicie.`,
       ask: {
@@ -402,7 +428,9 @@ export const pl = {
       dismissed: 'Nie udzielono zgody na powiadomienia.',
       unknownDevice: 'Serwer nie zna tego urządzenia — wyłącz i włącz powiadomienia ponownie.',
       gone: 'Usługa powiadomień nie zna już tego urządzenia — włącz powiadomienia ponownie.',
-      unavailable: 'Serwer powiadomień nie odpowiada. Spróbuj później.',
+      unavailable: PUSH_UNAVAILABLE,
+      /** The sidecar answered, but not in its own shape — `ApiError.code` said so. */
+      unexpectedShape: 'Serwer powiadomień odpowiedział w nieznanym formacie',
       auth: 'Sesja z Cezarem wygasła — połącz się ponownie.',
       failed: (reason: string) => `Nie udało się: ${reason}`,
     },

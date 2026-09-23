@@ -191,6 +191,18 @@ describe('Settings → Powiadomienia', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Serwer powiadomień nie odpowiada')
   })
 
+  it('says the sidecar answered in an unknown format, in Polish, when its key is missing', async () => {
+    install()
+    permission = 'granted'
+    answers['GET /m/push/vapid-public-key'] = () => json({})
+    render()
+    fireEvent.click(await screen.findByRole('button', { name: 'Włącz powiadomienia' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Serwer powiadomień odpowiedział w nieznanym formacie')
+    // Never the developer-facing `ApiError.message` the code travels with.
+    expect(alert).not.toHaveTextContent('unexpected sidecar response shape')
+  })
+
   it('says the notification server is down, not that the session expired, when the app shell answers for it (#31)', async () => {
     install()
     permission = 'granted'

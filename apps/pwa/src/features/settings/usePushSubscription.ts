@@ -45,9 +45,14 @@ function describe(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) return pl.push.errors.unknownDevice
     if (error.status === 410) return pl.push.errors.gone
+    // The sidecar answered, but not in its own shape — its words are not in there to show.
+    if (error.code === 'unexpected-shape' || error.code === 'invalid-json') {
+      return pl.push.errors.unexpectedShape
+    }
     // nginx's own answer while the sidecar is down, not the sidecar's — or the app shell answering
-    // for an unrouted /m/push/, which pushFetch reports the same way (#31).
-    if (error.status === 502 && error.message.startsWith('HTTP ')) return pl.push.errors.unavailable
+    // for an unrouted /m/push/, which pushFetch reports as `not-routed` (#31). Either way the
+    // error carries a code rather than the sidecar's own reason.
+    if (error.status === 502 && error.code !== undefined) return pl.push.errors.unavailable
     if (error.status === 503 || error.status === 504) return pl.push.errors.unavailable
     return pl.push.errors.failed(error.message)
   }
