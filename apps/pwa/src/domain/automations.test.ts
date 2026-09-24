@@ -2,7 +2,7 @@ import type { AutomationLogResponse, AutomationsResponse } from '@cezar-pwa/ceza
 import { describe, expect, it } from 'vitest'
 import automationLog from '../../test/fixtures/automation-log.json'
 import automations from '../../test/fixtures/automations.json'
-import { automationRows, eventText, isFailureResult, logRows, resultText, scheduleText } from './automations.ts'
+import { automationRows, eventText, isFailureResult, logRows, resultText, scheduleText, zoneSuffix } from './automations.ts'
 
 const list = automations as unknown as AutomationsResponse
 const log = automationLog as unknown as AutomationLogResponse
@@ -26,9 +26,33 @@ describe('scheduleText', () => {
   })
 })
 
+describe('zoneSuffix', () => {
+  const summer = new Date('2026-07-01T12:00:00Z')
+  it.each([
+    ['UTC', 'UTC', ''],
+    ['UTC', 'Etc/UTC', ''],
+    ['UTC', 'Europe/Warsaw', ' (UTC)'],
+    ['Europe/Warsaw', 'Europe/Warsaw', ''],
+    // Same clock today, even under another name: nothing to explain.
+    ['Europe/Berlin', 'Europe/Warsaw', ''],
+    ['Not/A_Zone', 'Europe/Warsaw', ''],
+    [undefined, 'Europe/Warsaw', ''],
+  ])('%s on a phone in %s → %j', (zone, local, expected) => {
+    expect(zoneSuffix(zone, local, summer)).toBe(expected)
+  })
+})
+
 describe('automationRows', () => {
+  it("names the server's zone on a schedule when the phone's clock differs", () => {
+    const [nightly, triage] = automationRows(list, 'Europe/Warsaw')
+    expect(nightly?.trigger).toBe('Every day at 04:00 (UTC)')
+    // A GitHub poll has no wall time to explain.
+    expect(triage?.trigger).toBe('GitHub: new issue, issue labelled')
+  })
+
+
   it('reads the fixture', () => {
-    expect(automationRows(list)).toEqual([
+    expect(automationRows(list, 'UTC')).toEqual([
       {
         id: 'nightly-deps',
         name: 'Nightly dependency check',

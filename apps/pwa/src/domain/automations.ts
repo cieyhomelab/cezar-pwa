@@ -59,11 +59,30 @@ export function eventText(event: string): string {
   return (en.automations.events as Record<string, string>)[event] ?? event
 }
 
-function triggerText(entry: Record<string, unknown>): string {
+/**
+ * A schedule's wall time is the server's (`timeZone`, UTC on the host), while every instant on the
+ * screen is the phone's. Name the zone when the two clocks differ, so "04:00" beside "Next 06:00"
+ * does not read as a contradiction. `localZone` undefined = the device's own.
+ */
+export function zoneSuffix(zone: unknown, localZone?: string, now: Date = new Date()): string {
+  const name = text(zone)
+  if (!name) return ''
+  try {
+    const clock = (timeZone?: string) => now.toLocaleString('en-GB', timeZone ? { timeZone } : {})
+    return clock(name) === clock(localZone) ? '' : ` (${name})`
+  } catch {
+    // An IANA name this engine does not know: say nothing rather than guess.
+    return ''
+  }
+}
+
+function triggerText(entry: Record<string, unknown>, suffix: string): string {
   const t = en.automations.trigger
   switch (entry.kind) {
-    case 'schedule':
-      return scheduleText(entry.schedule)
+    case 'schedule': {
+      const schedule = scheduleText(entry.schedule)
+      return schedule === t.unknown ? schedule : `${schedule}${suffix}`
+    }
     case 'github': {
       const events = Array.isArray(entry.events) ? entry.events.filter((e): e is string => typeof e === 'string') : []
       return events.length > 0 ? t.github(events.map(eventText).join(', ')) : t.githubNoEvents
@@ -73,7 +92,8 @@ function triggerText(entry: Record<string, unknown>): string {
   }
 }
 
-export function automationRows(response: AutomationsResponse): AutomationRow[] {
+export function automationRows(response: AutomationsResponse, localZone?: string): AutomationRow[] {
+  const suffix = zoneSuffix(response.timeZone, localZone)
   return response.automations.flatMap((raw): AutomationRow[] => {
     const entry = raw as unknown as Record<string, unknown>
     const id = text(entry.id)
@@ -91,7 +111,7 @@ export function automationRows(response: AutomationsResponse): AutomationRow[] {
         name: text(entry.name) ?? id,
         enabled,
         canRunNow: entry.kind === 'schedule',
-        trigger: triggerText(entry),
+        trigger: triggerText(entry, suffix),
         ...(lastAt
           ? { lastRun: { at: lastAt, ...(lastRunId ? { runId: lastRunId } : {}), ...(lastStatus ? { status: lastStatus } : {}) } }
           : {}),

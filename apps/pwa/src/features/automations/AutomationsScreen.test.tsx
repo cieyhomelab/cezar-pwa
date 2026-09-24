@@ -66,7 +66,8 @@ describe('AutomationsScreen', () => {
 
     const nightly = await item('Nightly dependency check')
     expect(nightly.getByText(t.enabled)).toBeTruthy()
-    expect(nightly.getByText('Every day at 04:00')).toBeTruthy()
+    // `(UTC)` follows on a phone whose clock is not UTC's.
+    expect(nightly.getByText(/^Every day at 04:00/)).toBeTruthy()
     expect(nightly.getByText(/^Last run /)).toBeTruthy()
     expect(nightly.getByText(/^Next /)).toBeTruthy()
     expect(nightly.getByRole('button', { name: t.pause })).toBeTruthy()
