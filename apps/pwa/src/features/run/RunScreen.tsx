@@ -6,6 +6,7 @@ import { ApiError, AuthRequiredError } from '../../api/http.ts'
 import { historyContextQueryOptions, historyQueryOptions, runQueryOptions } from '../../api/run.ts'
 import { composerOpen, openAsk } from '../../domain/answer.ts'
 import { cockpitTaskPath } from '../../domain/cockpit-link.ts'
+import { prLink } from '../../domain/run-header.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
@@ -15,6 +16,7 @@ import { ConnectionStatus } from '../runs-list/ConnectionStatus.tsx'
 import { STALE_AFTER_MS } from '../runs-list/RunsListScreen.tsx'
 import { useNow } from '../runs-list/useNow.ts'
 import { Composer } from './Composer.tsx'
+import { MergePanel } from './MergePanel.tsx'
 import { PlanPanel } from './PlanPanel.tsx'
 import { RunActionBar } from './RunActionBar.tsx'
 import { RunHeader } from './RunHeader.tsx'
@@ -66,6 +68,7 @@ function BackBar({ projectId, runId, children }: { projectId: string; runId: str
  * a docked composer messages the task (FR-022, FR-023, FR-032). S-08: under the header, the
  * task's own actions — cancel, finish, draft PR, continue, pin, archive (FR-025 to FR-029).
  * S-21: a task started as variants lists its siblings and can be kept (#71).
+ * S-19: a task with a pull request shows its checks and merge state, and can merge it (#69).
  * Rendered behind `AuthGate`.
  *
  * S-06: kept live by the task's event stream (FR-016), following the newest entry only while the
@@ -176,6 +179,8 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
     (run.isError && !(run.error instanceof AuthRequiredError)) ||
     (history.isError && history.data !== undefined && !(history.error instanceof AuthRequiredError))
   const composer = history.data !== undefined && composerOpen(run.data, ask)
+  // S-19: the PR the header links to. Only a number can be asked about; the route is the project's.
+  const pr = prLink(run.data)
 
   return (
     <div className="flex flex-1 flex-col">
@@ -195,6 +200,9 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             busy={delivery.pending || actions.pending !== undefined}
             runState={`${run.data.status}:${run.data.archived === true}`}
           />
+        ) : null}
+        {pr?.number ? (
+          <MergePanel projectId={projectId} runId={runId} number={Number(pr.number)} prUrl={pr.url} />
         ) : null}
 
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm text-text-muted">

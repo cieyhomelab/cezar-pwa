@@ -1,0 +1,50 @@
+{
+  "available": true,
+  "mergeState": {
+    "number": 78,
+    "title": "feat(pwa): pause, enable and run an automation from the phone",
+    "url": "https://github.com/cieyhomelab/cezar-pwa/pull/78",
+    "state": "merged",
+    "isDraft": false,
+    "headRef": "cez/f16baa01",
+    "baseRef": "main",
+    "headSha": "ca15c1164b454784ba5c87dc6a35e9868a73f36b",
+    "mergeable": "unknown",
+    "reviewDecision": "unknown",
+    "checks": [
+      {
+        "name": "typecheck \u00b7 lint \u00b7 test \u00b7 build",
+        "state": "passing",
+        "required": null,
+        "url": "https://github.com/cieyhomelab/cezar-pwa/actions/runs/36014333711/job/107682830985"
+      },
+      {
+        "name": "e2e (webkit-iphone)",
+        "state": "passing",
+        "required": null,
+        "url": "https://github.com/cieyhomelab/cezar-pwa/actions/runs/36014333711/job/107682831185"
+      },
+      {
+        "name": "shellcheck \u00b7 nginx rehearsal",
+        "state": "passing",
+        "required": null,
+        "url": "https://github.com/cieyhomelab/cezar-pwa/actions/runs/36014333711/job/107682831257"
+      }
+    ],
+    "methods": [
+      "squash",
+      "merge",
+      "rebase"
+    ],
+    "defaultMethod": "squash",
+    "eligibility": "terminal",
+    "blockers": [
+      {
+        "code": "terminal",
+        "message": "This pull request is merged."
+      }
+    ],
+    "canMerge": false,
+    "canOverride": false
+  }
+}
