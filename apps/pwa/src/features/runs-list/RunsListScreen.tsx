@@ -5,13 +5,16 @@ import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
 import { AuthRequiredError } from '../../api/http.ts'
 import { runsIndexQueryOptions } from '../../api/runs-index.ts'
 import { clockTime } from '../../domain/run-display.ts'
+import { readAllPlan } from '../../domain/read-all.ts'
 import { attentionCount, buildTaskList } from '../../domain/task-list.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
 import { en } from '../../i18n/en.ts'
 import { PROJECT_PARAM } from '../new-task/NewTaskScreen.tsx'
 import { ConnectionStatus } from './ConnectionStatus.tsx'
+import { MarkAllReadControl } from './MarkAllReadControl.tsx'
 import { RunRow } from './RunRow.tsx'
 import { useLiveRuns } from './useLiveRuns.ts'
+import { useMarkAllRead } from './useMarkAllRead.ts'
 import { useNow } from './useNow.ts'
 import { useProjectFilter } from './useProjectFilter.ts'
 import { usePullToRefresh } from './usePullToRefresh.ts'
@@ -42,6 +45,7 @@ export function RunsListScreen() {
   const runs = useQuery(runsIndexQueryOptions({ live: live.state === 'live' }))
   const now = useNow()
   const [showOlder, setShowOlder] = useState(false)
+  const readAll = useMarkAllRead()
   useScrollAnchor(runs.data)
 
   // A refusal here means the session lapsed since the probe. Re-asking the probe hands the
@@ -70,6 +74,8 @@ export function RunsListScreen() {
     () => (projectId === null ? all : buildTaskList(runs.data?.runs ?? [], projectId)),
     [all, runs.data, projectId],
   )
+  // #67: the rows on screen decide which projects the sweep reaches — the filter included.
+  const readAllTargets = useMemo(() => readAllPlan(sections), [sections])
 
   if (runs.data === undefined) {
     if (runs.isError && !(runs.error instanceof AuthRequiredError)) {
@@ -179,6 +185,12 @@ export function RunsListScreen() {
             </select>
           </label>
         ) : null}
+
+        <MarkAllReadControl
+          plan={readAllTargets}
+          readAll={readAll}
+          projectName={(id) => projectNames.get(id) ?? id}
+        />
 
         <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
           <ConnectionStatus state={live.state} detail={detail} />
