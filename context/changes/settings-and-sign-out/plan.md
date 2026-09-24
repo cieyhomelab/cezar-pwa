@@ -27,7 +27,7 @@ S-10/S-11 code. See `change.md`.
   expiring the cookie there signs out this app only. The gate's secret is static and shared.
   Revoking access everywhere means rotating the key, which is the operator's job on the host.
 - **No clearing the service worker's precache.** It holds the shell and nothing else (CLAUDE.md
-  rule 4). Without it the signed-out app could not open offline to show "Połącz z Cezarem".
+  rule 4). Without it the signed-out app could not open offline to show "Connect to Cezar".
 - **No theme-colour boot script in `index.html`.** The CSP has no `'unsafe-inline'`. `main.tsx`
   applies the stored theme before the first render instead. The page is empty until then, so all
   that can flash is the background, for the time it takes to load the precached module.
@@ -41,7 +41,7 @@ S-10/S-11 code. See `change.md`.
 | 1 | Theme: `ThemePreference` parse/resolve and `THEME_COLOR` (pure). `pwa/theme.ts` stores one word in `localStorage`, sets `data-theme` on `<html>` (none = system) and rewrites the `theme-color` tags. `index.css`: the light palette applies under `prefers-color-scheme: light` unless dark is forced, or when light is forced. `main.tsx` applies it before rendering. | `domain/theme.ts`, `pwa/theme.ts`, `index.css`, `main.tsx`, `features/settings/ThemeSection.tsx` |
 | 2 | Versions: `vite.config.ts` stamps `__APP_COMMIT__` (from `GITHUB_SHA` in CI, else `git rev-parse`, else `dev`) and `__APP_BUILT_AT__`. Settings shows the commit and build time, the probe's Cezar version and `TESTED_CEZAR_VERSION`. | `vite.config.ts`, `config/app-version.ts`, `features/settings/VersionsSection.tsx` |
 | 3 | Cockpit links: `cockpitTaskPath()` / `cockpitChangesPath()` after the cockpit's routes. A "W cockpicie ↗" link in the task's and the diff's top bar. The transcript's "older" note and the diff's "cut short" note point at the task / its Changes tab instead of `/`. | `domain/cockpit-link.ts`, `features/run/RunScreen.tsx`, `TranscriptView.tsx`, `features/diff/DiffScreen.tsx`, `FileDiff.tsx` |
-| 4 | Sign-out, app: `signOut()` with injected steps. (a) The sidecar forgets the device (`DELETE /m/push/subscription`) while the gate still lets it through, then the device unsubscribes whatever the sidecar said. (b) The perimeter ends the session (`POST /m/session/end`, only a 204 counts). (c) Storage and IndexedDB are cleared. No step blocks the next. A sign-out that took restarts at `/m/`, which lands on "Połącz z Cezarem". One that did not stays and says which half is missing. Behind a confirmation. | `pwa/sign-out.ts`, `api/session.ts`, `api/http.ts` (`perimeterPost`, shared `send`), `features/settings/useSignOut.ts`, `SignOutSection.tsx`, `SettingsScreen.tsx` |
+| 4 | Sign-out, app: `signOut()` with injected steps. (a) The sidecar forgets the device (`DELETE /m/push/subscription`) while the gate still lets it through, then the device unsubscribes whatever the sidecar said. (b) The perimeter ends the session (`POST /m/session/end`, only a 204 counts). (c) Storage and IndexedDB are cleared. No step blocks the next. A sign-out that took restarts at `/m/`, which lands on "Connect to Cezar". One that did not stays and says which half is missing. Behind a confirmation. | `pwa/sign-out.ts`, `api/session.ts`, `api/http.ts` (`perimeterPost`, shared `send`), `features/settings/useSignOut.ts`, `SignOutSection.tsx`, `SettingsScreen.tsx` |
 | 5 | Sign-out, perimeter: `signout-from-unlock.sh` reads the cookie's **name, Path and Secure** from the unlock guard `extract-unlock.sh` already copies (never the value), and writes `location = /m/session/end`. Same-origin `POST` → 204 + `Set-Cookie: <name>=; Max-Age=0; …`. `GET` → 405. Another origin, or none → 403. `install.sh` generates it next to the unlock file. `cezar-mobile.conf` includes it by glob, so a host without it answers 405 from the shell. | `deploy/nginx/signout-from-unlock.sh`, `install.sh`, `cezar-mobile.conf`, `rehearse.sh` |
 | 6 | Tests, docs | see Progress; `docs/CEZAR_API.md` § 1a, `docs/REQUIREMENTS.md` § 4.7 |
 
@@ -76,7 +76,7 @@ S-10/S-11 code. See `change.md`.
 - [x] **E2E (WebKit, iPhone 14)**: 60 passing (`npm run test:e2e`), 5 new in
       `test/e2e/settings.spec.ts`. A forced theme beats the system and survives a reload, and the
       status-bar colour follows. The build and Cezar versions are shown. The task's cockpit link.
-      Sign-out lands on "Połącz z Cezarem" with storage empty, sidecar first. A 405 from the
+      Sign-out lands on "Connect to Cezar" with storage empty, sidecar first. A 405 from the
       perimeter is reported, not hidden.
 - [x] **nginx rehearsal** (`deploy/nginx/rehearse.sh`): all expectations met. It checks that the
       generator prints nothing and writes no secret, and uses the gate's cookie name and attributes.
@@ -97,5 +97,5 @@ S-10/S-11 code. See `change.md`.
   - [ ] Settings → Wersje shows the deployed commit and Cezar `0.11.0`.
   - [ ] On a task, "W cockpicie ↗" opens that task in the cockpit. If the cockpit answers 403 there,
         the link works but the session does not carry over. Record which of the two it is.
-  - [ ] With notifications on: Wyloguj → confirm. The app lands on "Połącz z Cezarem". A task
+  - [ ] With notifications on: Sign out → confirm. The app lands on "Connect to Cezar". A task
         entering "needs you" no longer rings this phone. Pasting the access link unlocks it again.

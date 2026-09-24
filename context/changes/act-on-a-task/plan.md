@@ -28,7 +28,7 @@ Cezar's source at `v0.11.0`. See `change.md`.
   finished run. The phone copies it rather than inventing a second opinion.
 - **Finish has two meanings on one endpoint.** At `review` it accepts the changes without a PR
   (FR-026). At `waiting` it closes the session. The cockpit labels them differently, and so does
-  the phone ("Akceptuj" / "Zakończ").
+  the phone ("Accept" / "Finish").
 - **Draft PR lives in the review panel, not the header.** It is offered while the run rests at
   `review` and no `http(s)` PR URL is known, because a second tap would open a duplicate. On
   success the server sets `pullRequestUrl` and completes the run as `done`. A run without a
@@ -75,11 +75,11 @@ Cezar's source at `v0.11.0`. See `change.md`.
   collide with a send, and the composer is closed on every status where Continue is offered,
   unless a question is open.
 - **The confirmation is inline, not a modal.** It replaces the bar with an `alertdialog`
-  (title, what happens, "Zostaw" / "Anuluj zadanie"). The first tap only asks. A native
+  (title, what happens, "Keep" / "Cancel the task"). The first tap only asks. A native
   `<dialog>` adds a focus trap and a backdrop that jsdom cannot drive, and the inline panel keeps
   both buttons under the thumb.
 - **Archive stays on the screen.** The task leaves the list, so the screen says where it went
-  ("Zarchiwizowane" in the header, plus a notice) and offers "Przywróć z archiwum". A mis-tap
+  ("Archived" in the header, plus a notice) and offers "Restore from archive". A mis-tap
   is one tap to undo.
 
 ## Progress
@@ -104,6 +104,6 @@ Cezar's source at `v0.11.0`. See `change.md`.
 ## Found while building
 
 - `test/e2e/shell.spec.ts` failed once in the full run: `getByRole('heading', { name: 'Cezar' })`
-  also matches "Połącz z Cezarem" once the health probe answers, and strict mode refuses two
+  also matches "Connect to Cezar" once the health probe answers, and strict mode refuses two
   matches. That is a race that predates S-08, and it passed on rerun. Fixed with
   `exact: true`.

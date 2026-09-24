@@ -11,7 +11,7 @@ import type {
 import { attachmentFileName } from './run-images.ts'
 
 /**
- * The transcript reducer (CLAUDE.md → "Transkrypt"). It folds one run's persisted lines, ordered
+ * The transcript reducer (CLAUDE.md → "Transcript"). It folds one run's persisted lines, ordered
  * by `seq`, into renderable turns. It is a port of the cockpit's `reduceThread()`
  * (`packages/web/src/routes/task-thread/thread-state.ts`, tag `v0.11.0`), so a task reads the
  * same on the phone as on the laptop. Diff it against upstream when the contract is re-synced.

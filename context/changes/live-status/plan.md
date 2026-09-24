@@ -114,8 +114,8 @@ FR-010, FR-012, the 2-second NF, and Cezar's server at `v0.11.0`.
 
 - **The existing lapsed-session E2E (`task-list.spec.ts`) raced the new stream.** Unrouted,
       the stream reached the real gateway through the preview proxy, was refused, and its
-      drop re-probed the session, which could reach "Połącz z Cezarem" before the test clicked
-      Odśwież. The app was right; the test now holds the stream silent.
+      drop re-probed the session, which could reach "Connect to Cezar" before the test clicked
+      Refresh. The app was right; the test now holds the stream silent.
 - **Re-probing the session on every drop could blank the list.** Invalidating the health query
       on a drop let a network blip fail it, and `AuthGate` then swaps the whole list for
       "unreachable" — the opposite of S-03's failed-refresh behaviour. Found in self-review;

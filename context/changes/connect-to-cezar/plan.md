@@ -3,7 +3,7 @@
 ## Overview
 
 Close roadmap slice **S-02** (`connect-to-cezar`): the operator can tell from inside the
-installed app that it is not authorized, is shown "Połącz z Cezarem" instead of an error or
+installed app that it is not authorized, is shown "Connect to Cezar" instead of an error or
 an empty list, and can re-unlock the app from where they are standing.
 
 Derived from `context/foundation/roadmap.md` § S-02, PRD FR-004 and FR-005, and the
@@ -16,7 +16,7 @@ is derived rather than authored, and how the slice's recorded blocker was resolv
 | --- | --- |
 | An HTTP layer that can recognise a refusal | **absent** — no `src/api/` at all |
 | A session probe | **absent** |
-| "Połącz z Cezarem" screen | **absent** (roadmap Baseline: "Auth: absent") |
+| "Connect to Cezar" screen | **absent** (roadmap Baseline: "Auth: absent") |
 | A way to unlock from inside the app | **absent**, and assumed impossible without a `?next=` the perimeter does not have |
 | Telling a refusal apart from a dead network | **absent** — `useOnlineStatus` (S-01) only knows `navigator.onLine` |
 

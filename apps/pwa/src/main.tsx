@@ -10,7 +10,7 @@ import { AppRoutes } from './routes.tsx'
 applyTheme(readThemePreference())
 
 // Server state lives here and nowhere else; SSE will update it through
-// queryClient.setQueryData (CLAUDE.md → "Konwencje kodu").
+// queryClient.setQueryData (CLAUDE.md → "Code conventions").
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(

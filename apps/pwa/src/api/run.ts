@@ -30,7 +30,7 @@ import { RUNS_INDEX_QUERY_KEY } from './runs-index.ts'
  * checked, and a missing one is an error rather than an empty transcript.
  */
 
-/** Query keys, per CLAUDE.md → "Klucze query". The context rides under the history key. */
+/** Query keys, per CLAUDE.md → "Query keys". The context rides under the history key. */
 export const runQueryKey = (projectId: string, runId: string) => ['run', projectId, runId] as const
 export const historyQueryKey = (projectId: string, runId: string) => ['history', projectId, runId] as const
 export const historyContextQueryKey = (projectId: string, runId: string) =>
