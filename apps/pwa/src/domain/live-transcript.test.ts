@@ -4,8 +4,11 @@ import {
   appendLiveEvent,
   asRunEvent,
   carryOver,
+  prependOlder,
   transcriptSignature,
 } from './live-transcript.ts'
+import longPages from '../../test/fixtures/history-pages.long.json'
+import longRecording from '../../test/fixtures/transcript-long.ndjson?raw'
 import { reduceTranscript } from './transcript.ts'
 
 const ts = '2026-09-21T10:00:00.000Z'
@@ -14,6 +17,7 @@ const ev = (seq: number, type: string, rest: Record<string, unknown> = {}): RunE
 
 const message = (seq: number, type: string, text: string, id = 'm1') =>
   ev(seq, type, { item: { kind: 'message', id, role: 'assistant', text } })
+const note = (seq: number) => ev(seq, 'note', { message: `n${seq}` })
 const delta = (seq: number, text: string, itemId = 'm1', field = 'text') =>
   ev(seq, 'item.delta', { itemId, field, delta: text })
 
@@ -138,6 +142,90 @@ describe('carryOver', () => {
   it('is the fresh page when nothing was cached', () => {
     const fresh = page([ev(1, 'note', { message: 'a' })])
     expect(carryOver(fresh, undefined)).toBe(fresh)
+  })
+
+  // FR-049: what the operator scrolled back through survives the 30 s refetch.
+  const older = (events: RunEvent[], olderCursor?: string): RunHistoryPage => ({
+    ...page(events),
+    hasOlder: olderCursor !== undefined,
+    ...(olderCursor !== undefined ? { olderCursor } : {}),
+  })
+
+  it('keeps the earlier lines a refetched page no longer reaches, with the way further back', () => {
+    const previous = older([note(1), note(2), note(3), note(4)], 'c-before-1')
+    const fresh = older([note(3), note(4), note(5)], 'c-before-3')
+    const merged = carryOver(fresh, previous)
+    expect(merged.events.map((e) => e.seq)).toEqual([1, 2, 3, 4, 5])
+    expect(merged.olderCursor).toBe('c-before-1')
+    expect(merged.hasOlder).toBe(true)
+    expect(merged.asOfSeq).toBe(5)
+    expect(merged.liveCursor).toBe(fresh.liveCursor)
+  })
+
+  it('keeps the start of the file once it was reached', () => {
+    const previous = page([note(1), note(2), note(3)])
+    const merged = carryOver(older([note(2), note(3), note(4)], 'c-before-2'), previous)
+    expect(merged.events.map((e) => e.seq)).toEqual([1, 2, 3, 4])
+    expect(merged.hasOlder).toBe(false)
+    expect(merged.olderCursor).toBeUndefined()
+  })
+
+  it('takes the fresh page alone when lines between the two are on neither (no hole)', () => {
+    const previous = older([note(1), note(2), note(3)], 'c-before-1')
+    const fresh = older([note(8), note(9)], 'c-before-8')
+    expect(carryOver(fresh, previous)).toEqual(fresh)
+  })
+
+  it('does not count the turn opener the server repeats in front of a page as an overlap', () => {
+    // The opener (seq 2) is on both pages; the fresh page's first item (9) is past the previous
+    // page's mark, so 4 to 8 are on neither.
+    const previous = older([note(1), ev(2, 'user-message', { text: 'go' }), note(3), note(4)], 'c-before-1')
+    const fresh = older([ev(2, 'user-message', { text: 'go' }), note(9), note(10)], 'c-before-9')
+    expect(carryOver(fresh, previous)).toEqual(fresh)
+  })
+
+  it("drops the stream's deltas below the fresh mark: the page's snapshot supersedes them", () => {
+    const previous = older([message(1, 'item.started', '', 'm0'), delta(2, 'x', 'm0'), note(3), note(4)], 'c-0')
+    const fresh = older([note(3), note(4), note(5)], 'c-3')
+    expect(carryOver(fresh, previous).events.map((e) => e.seq)).toEqual([1, 3, 4, 5])
+  })
+})
+
+describe('prependOlder', () => {
+  const file = longRecording
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => JSON.parse(line) as RunEvent)
+  const pages = longPages as { cursor: string | null; page: RunHistoryPage }[]
+
+  it('walks back from the newest page to the whole file, one cursor at a time', () => {
+    let held = pages[0]!.page
+    for (const { cursor, page: olderPage } of pages.slice(1)) {
+      expect(held.olderCursor).toBe(cursor)
+      held = prependOlder(held, olderPage, cursor!)
+    }
+    expect(held.events.map((e) => e.seq)).toEqual(file.map((e) => e.seq))
+    expect(held.hasOlder).toBe(false)
+    expect(held.olderCursor).toBeUndefined()
+    // The newest page's resume point is untouched: the stream still continues from it.
+    expect(held.asOfSeq).toBe(pages[0]!.page.asOfSeq)
+    expect(held.liveCursor).toBe(pages[0]!.page.liveCursor)
+    expect(reduceTranscript(held.events)).toEqual(reduceTranscript(file))
+  })
+
+  it('ignores a page asked for with a cursor the held page no longer has', () => {
+    const [newest, second] = pages
+    const once = prependOlder(newest!.page, second!.page, second!.cursor!)
+    expect(prependOlder(once, second!.page, second!.cursor!)).toBe(once)
+    expect(prependOlder(newest!.page, second!.page, 'another-cursor')).toBe(newest!.page)
+  })
+
+  it('keeps what the stream added while the older page was on its way', () => {
+    const [newest, second] = pages
+    const extended = appendLiveEvent(newest!.page, note(newest!.page.asOfSeq + 1), 0)
+    const held = prependOlder(extended, second!.page, second!.cursor!)
+    expect(held.events.at(-1)?.seq).toBe(newest!.page.asOfSeq + 1)
+    expect(held.asOfSeq).toBe(newest!.page.asOfSeq + 1)
   })
 })
 

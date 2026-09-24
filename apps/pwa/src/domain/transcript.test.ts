@@ -2,6 +2,8 @@ import type { RunEvent, RunHistoryPage } from '@cezar-pwa/cezar-contract/contrac
 import { describe, expect, it } from 'vitest'
 import liveContext from '../../test/fixtures/history-context.live-0.11.0.json'
 import livePage from '../../test/fixtures/history.live-0.11.0.json'
+import longPages from '../../test/fixtures/history-pages.long.json'
+import longRecording from '../../test/fixtures/transcript-long.ndjson?raw'
 import recording from '../../test/fixtures/transcript.ndjson?raw'
 import {
   createDraft,
@@ -293,5 +295,46 @@ describe('v1ToolDisplay', () => {
     ['mcp__thing', null, { toolKind: 'other', title: 'mcp__thing' }],
   ])('%s', (name, input, expected) => {
     expect(v1ToolDisplay(name, input)).toEqual(expected)
+  })
+})
+
+/**
+ * FR-049 (#64): a run longer than a page, read back one page at a time. The pages are what
+ * Cezar 0.11.1's own reader returns for `transcript-long.ndjson`
+ * (`scripts/record-history-pages.mjs`), newest first. Its first turn alone is longer than a
+ * page, so it spans a page boundary, with v1/v2 twins on both sides.
+ */
+describe('reduceTranscript — a long recording read back page by page', () => {
+  const file = parseNdjson(longRecording)
+  const pages = (longPages as { cursor: string | null; page: RunHistoryPage }[]).map(({ page }) => page)
+  const whole = reduceTranscript(file)
+  const ids = (transcript: Transcript) =>
+    transcript.turns.flatMap((turn) => [
+      ...(turn.userMessage ? [`${turn.id}:user`] : []),
+      ...turn.entries.map((entry) => entry.id),
+    ])
+
+  it('is several pages, each starting inside the file', () => {
+    expect(pages.length).toBeGreaterThanOrEqual(3)
+    expect(pages.at(-1)?.hasOlder).toBe(false)
+    expect(pages.slice(0, -1).every((page) => page.hasOlder && page.olderCursor !== undefined)).toBe(true)
+  })
+
+  it('folds every page prepended in turn to the same transcript as the whole file', () => {
+    const lines = mergeBySeq(...[...pages].reverse().map((page) => page.events))
+    expect(lines.map((event) => event.seq)).toEqual(file.map((event) => event.seq))
+    expect(reduceTranscript(lines)).toEqual(whole)
+  })
+
+  it('shows no entry twice and loses none', () => {
+    const lines = mergeBySeq(...[...pages].reverse().map((page) => page.events))
+    const seen = ids(reduceTranscript(lines))
+    expect(new Set(seen).size).toBe(seen.length)
+    expect(seen).toEqual(ids(whole))
+  })
+
+  it('is why the raw lines are merged, not the folded pages: gluing folds splits the long turn', () => {
+    const glued = [...pages].reverse().flatMap((page) => reduceTranscript(page.events).turns)
+    expect(glued.length).toBeGreaterThan(whole.turns.length)
   })
 })

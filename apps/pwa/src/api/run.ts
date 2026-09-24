@@ -70,13 +70,18 @@ export async function fetchRun(projectId: string, runId: string, signal?: AbortS
   return body as ApiRun
 }
 
-/** `GET …/history` without a cursor: the newest page (FR-015). Older pages are FR-049, parked. */
+/**
+ * `GET …/history`: without a cursor, the newest page (FR-015); with a page's `olderCursor`, the
+ * page before it (FR-049). A cursor from before the file shrank is `409`.
+ */
 export async function fetchHistory(
   projectId: string,
   runId: string,
   signal?: AbortSignal,
+  cursor?: string,
 ): Promise<RunHistoryPage> {
-  const body = await apiFetch<unknown>(`${runBase(projectId, runId)}/history`, { signal })
+  const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`
+  const body = await apiFetch<unknown>(`${runBase(projectId, runId)}/history${query}`, { signal })
   if (!isRecord(body) || !Array.isArray(body.events)) {
     throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
   }

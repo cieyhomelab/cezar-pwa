@@ -24,8 +24,10 @@ import { RunHeader } from './RunHeader.tsx'
 import { TranscriptView } from './TranscriptView.tsx'
 import { useDeliver } from './useDeliver.ts'
 import { useFollowBottom } from './useFollowBottom.ts'
+import { useKeepPlace } from './useKeepPlace.ts'
 import { useLiveTranscript } from './useLiveTranscript.ts'
 import { useMarkRead } from './useMarkRead.ts'
+import { useOlderHistory } from './useOlderHistory.ts'
 import { useQueuedMessages } from './useQueuedMessages.ts'
 import { usePickVariant } from './usePickVariant.ts'
 import { useRunActions } from './useRunActions.ts'
@@ -66,7 +68,7 @@ function BackBar({ projectId, runId, children }: { projectId: string; runId: str
 
 /**
  * S-05: one task's header, its plan and the newest stretch of its transcript (US-01, FR-014,
- * FR-015, FR-017, FR-018, FR-020). S-07: the agent's open question is answerable in place and
+ * FR-015, FR-017, FR-018, FR-020), reaching further back as the operator scrolls up (FR-049). S-07: the agent's open question is answerable in place and
  * a docked composer messages the task (FR-022, FR-023, FR-032). S-08: under the header, the
  * task's own actions — cancel, finish, draft PR, continue, pin, archive (FR-025 to FR-029).
  * S-21: a task started as variants lists its siblings and can be kept (#71).
@@ -77,8 +79,8 @@ function BackBar({ projectId, runId, children }: { projectId: string; runId: str
  * operator is at the end (FR-019), and resumed after a suspension from where it stopped (FR-021).
  * While the stream is not live, the reads fall back to S-05's refetching.
  *
- * Three reads, one screen. The record is authoritative for the header. The newest history page
- * is the transcript body. The history context adds the latest plan snapshot when it is older
+ * Three reads, one screen. The record is authoritative for the header. The newest history page,
+ * with any older pages read back in front of it, is the transcript body. The history context adds the latest plan snapshot when it is older
  * than the page (the cockpit's `currentEvents`). The context is an optimization: when it fails,
  * the plan is folded from the page alone rather than failing the screen.
  */
@@ -94,6 +96,9 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   const history = useQuery(historyQueryOptions(projectId, runId, streaming))
   const context = useQuery(historyContextQueryOptions(projectId, runId, streaming))
   const now = useNow()
+  // FR-049: older pages prepend to the same history entry, the reader held where they were.
+  const place = useKeepPlace()
+  const older = useOlderHistory(projectId, runId, history.data, place.note)
 
   useMarkRead(projectId, runId, run.data)
   // S-07: one delivery for the question card and the composer alike.
@@ -107,7 +112,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
 
   // A refusal means the session lapsed since the probe. Re-asking it hands the screen to
   // `AuthGate`, exactly as the list does.
-  const refused = [run.error, history.error, context.error].some((error) => error instanceof AuthRequiredError)
+  const refused = [run.error, history.error, context.error, older.error].some((error) => error instanceof AuthRequiredError)
   useEffect(() => {
     if (refused) void queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY })
   }, [refused, queryClient])
@@ -125,7 +130,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   )
 
   const ready = run.data !== undefined && history.data !== undefined
-  const follow = useFollowBottom(transcriptSignature(transcript), ready)
+  const follow = useFollowBottom(transcriptSignature(transcript), ready, history.data?.events[0]?.seq)
 
   const projectName =
     health.data?.projects?.find((project) => project.id === projectId)?.name ?? projectId
@@ -235,6 +240,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             transcript={transcript}
             task={run.data.task ?? ''}
             hasOlder={history.data.hasOlder}
+            older={older}
             olderHref={cockpitTaskPath(projectId, runId)}
             footer={transcriptFooter(run.data.status, run.data.error)}
             answering={{ delivery, ...(ask !== undefined ? { openAskId: ask.id } : {}) }}
