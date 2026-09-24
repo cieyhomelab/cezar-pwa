@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router'
 import App from './App.tsx'
 import { DiffScreen } from './features/diff/DiffScreen.tsx'
+import { NewTaskScreen } from './features/new-task/NewTaskScreen.tsx'
 import { RunScreen } from './features/run/RunScreen.tsx'
 import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
 import { SettingsScreen } from './features/settings/SettingsScreen.tsx'
@@ -17,6 +18,7 @@ export function AppRoutes() {
     <Routes>
       <Route element={<App />}>
         <Route index element={<RunsListScreen />} />
+        <Route path="new" element={<NewTaskScreen />} />
         <Route path="p/:projectId/runs/:runId" element={<RunScreen />} />
         <Route path="p/:projectId/runs/:runId/diff" element={<DiffScreen />} />
         <Route path="settings" element={<SettingsScreen />} />
