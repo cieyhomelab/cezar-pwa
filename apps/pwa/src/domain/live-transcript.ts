@@ -1,5 +1,5 @@
 import type { RunEvent, RunHistoryPage } from '@cezar-pwa/cezar-contract/contract'
-import type { Transcript } from './transcript.ts'
+import { mergeBySeq, type Transcript } from './transcript.ts'
 
 /**
  * S-06: the newest history page, kept current from the run's event stream
@@ -94,13 +94,75 @@ export function appendLiveEvent(page: RunHistoryPage, event: RunEvent, boundary:
  * on the server before it travelled, so anything the stream delivered past its `asOfSeq` would be
  * silently undone by writing it as-is (the list's `FrameJournal` guards the same race). Those
  * events are replayed onto it.
+ *
+ * FR-049: the fresh page is only the newest 100 items, so it would also drop every older page
+ * the operator scrolled back through, and whatever of the previous page it no longer reaches.
+ * Those earlier lines are kept, with the previous page's way further back, as long as the two
+ * pages overlap (`overlaps`). When they do not, the lines between them are on neither, and
+ * keeping the earlier ones would show a hole as if nothing happened there: the fresh page stands
+ * alone, as it always did.
  */
 export function carryOver(fresh: RunHistoryPage, previous: RunHistoryPage | undefined): RunHistoryPage {
   if (previous === undefined) return fresh
   const newer = previous.events.filter((event) => event.seq > fresh.asOfSeq)
   // No boundary for deltas here: they were accepted once already, against the connection that
   // delivered them.
-  return newer.reduce((page, event) => appendLiveEvent(page, event, -1), fresh)
+  return newer.reduce((page, event) => appendLiveEvent(page, event, -1), keepEarlier(fresh, previous))
+}
+
+/**
+ * How far back a page's lines run without a gap: the `seq` of its second line. The server may
+ * put the turn's opening line in front of the page's first item, however far back it is
+ * (`pageEventSlice`), so the first line proves nothing; the second is the page's own first item.
+ * (Where there is no opener in front, this is one line short: taken as reaching less far, which
+ * is never wrong, only cautious.) Undefined for a page of fewer than two lines.
+ *
+ * FR-049: it only moves back when older lines landed in front, never on a refetch that kept them
+ * (`carryOver`): the screen's cue that the new content is above, not at the end.
+ */
+export function pageReach(page: RunHistoryPage): number | undefined {
+  return page.events[1]?.seq
+}
+
+/** Whether `fresh` reaches back into what `previous` already holds, leaving no line unread. */
+function overlaps(fresh: RunHistoryPage, previous: RunHistoryPage): boolean {
+  const reach = pageReach(fresh)
+  return reach !== undefined && reach <= previous.asOfSeq
+}
+
+function keepEarlier(fresh: RunHistoryPage, previous: RunHistoryPage): RunHistoryPage {
+  const reach = pageReach(fresh)
+  const held = pageReach(previous)
+  // The fresh page reaches the start of the file, or at least as far back as the previous one.
+  // Compared past the openers: inside one long turn, both pages start with the same one.
+  if (!fresh.hasOlder || reach === undefined || held === undefined || held >= reach) return fresh
+  if (!overlaps(fresh, previous)) return fresh
+  // Up to the fresh page's mark it is the authority. Deltas are the stream's, never in the file:
+  // whatever of them the fresh page does not cover has been superseded by a snapshot on it.
+  const earlier = previous.events.filter((event) => event.seq <= fresh.asOfSeq && event.type !== 'item.delta')
+  return withOlder({ ...fresh, events: mergeBySeq(earlier, fresh.events) }, previous)
+}
+
+/** `page` with `from`'s way further back: its `hasOlder`, and its cursor only while there is one. */
+function withOlder(page: RunHistoryPage, from: RunHistoryPage): RunHistoryPage {
+  const next: RunHistoryPage = { ...page, hasOlder: from.hasOlder }
+  if (from.hasOlder && from.olderCursor !== undefined) next.olderCursor = from.olderCursor
+  else delete next.olderCursor
+  return next
+}
+
+/**
+ * FR-049: an older page, fetched with `cursor`, in front of the page the screen holds. The fold
+ * runs over the raw lines of both, merged by `seq` (`mergeBySeq`), never over two folded halves:
+ * a turn can span the boundary, and the v1/v2 dedup in `transcript.ts` works per turn. The server
+ * repeats a turn's opening line on the page after it, which the merge collapses.
+ *
+ * Returns the page unchanged when it has moved on since the request (a refetch replaced it, or
+ * the same page already landed): the older page then no longer ends where it begins.
+ */
+export function prependOlder(page: RunHistoryPage, older: RunHistoryPage, cursor: string): RunHistoryPage {
+  if (!page.hasOlder || page.olderCursor !== cursor) return page
+  return withOlder({ ...page, events: mergeBySeq(older.events, page.events) }, older)
 }
 
 /**

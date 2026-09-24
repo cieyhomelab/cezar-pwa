@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { turnBlocks, type TranscriptBlock } from '../../domain/transcript-blocks.ts'
 import type { Transcript, TranscriptEntry, TranscriptFooter } from '../../domain/transcript.ts'
 import { en } from '../../i18n/en.ts'
@@ -6,6 +7,7 @@ import { Markdown } from './Markdown.tsx'
 import { RunImage } from './RunImage.tsx'
 import { ToolLine } from './ToolLine.tsx'
 import type { Delivery } from './useDeliver.ts'
+import type { OlderHistory } from './useOlderHistory.ts'
 
 /** The only question that can still be answered (`openAsk`), and the way to answer it. */
 export type Answering = { delivery: Delivery; openAskId?: string }
@@ -98,15 +100,78 @@ function Footer({ footer }: { footer: TranscriptFooter }) {
   return <p className={`border-t border-border pt-3 text-sm break-words ${tone}`}>{text}</p>
 }
 
+/** How far above the screen the top of the transcript starts loading the page before it. */
+export const OLDER_PRELOAD_PX = 300
+
 /**
- * The newest stretch of the transcript (FR-015). The task prompt shows at the top only when the
- * page reaches back to the start. Otherwise the top says older entries live in the cockpit
- * (FR-049 is parked).
+ * FR-049: the top of a transcript that does not reach the start. Scrolling near it asks for the
+ * page before (an `IntersectionObserver` on the line itself); the button does the same by hand,
+ * and is all there is where the observer is missing. A failed page offers a retry and the
+ * cockpit, which can always show the whole transcript (FR-048); nothing retries on its own.
+ */
+function OlderEntries({ older, href }: { older: OlderHistory; href: string }) {
+  const line = useRef<HTMLDivElement>(null)
+  const { load, loading, error } = older
+  const failed = error !== undefined
+
+  useEffect(() => {
+    const element = line.current
+    if (element === null || loading || failed || typeof IntersectionObserver === 'undefined') return
+    // Observing reports the current state at once, so a page that landed without pushing the
+    // line off screen (a short page) asks for the next one straight away.
+    const observer = new IntersectionObserver(
+      (records) => {
+        if (records.some((record) => record.isIntersecting)) load()
+      },
+      { rootMargin: `${OLDER_PRELOAD_PX}px 0px 0px 0px` },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [load, loading, failed])
+
+  if (failed) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-1 text-center text-sm">
+        <p>{en.run.transcript.olderFailed}</p>
+        <div className="flex items-center gap-3">
+          <button type="button" className="touch-target rounded border border-border px-4" onClick={load}>
+            {en.run.retry}
+          </button>
+          <a className="touch-target inline-flex items-center text-accent" href={href}>
+            {en.run.transcript.olderInCockpit}
+          </a>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div ref={line} className="flex justify-center">
+      {loading ? (
+        <p role="status" className="touch-target inline-flex items-center text-sm text-text-muted">
+          {en.run.transcript.loadingOlder}
+        </p>
+      ) : (
+        <button type="button" className="touch-target inline-flex items-center text-sm text-accent" onClick={load}>
+          {en.run.transcript.showOlder}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The transcript, newest page first (FR-015), reaching further back as the operator scrolls up
+ * (FR-049). At the start of the file the top says so, followed by the task prompt. Where no older
+ * page can be asked for, the top points to the cockpit (FR-048).
+ *
+ * Every rendered entry carries `data-entry-key`: what `useKeepPlace` pins the reader to while
+ * older entries land above.
  */
 export function TranscriptView({
   transcript,
   task,
   hasOlder,
+  older,
   olderHref,
   footer,
   answering,
@@ -115,6 +180,8 @@ export function TranscriptView({
   transcript: Transcript
   task: string
   hasOlder: boolean
+  /** FR-049: the page before the one on screen. Absent, the top links to the cockpit. */
+  older?: OlderHistory
   /** Where the older entries are read: this task in the cockpit (FR-048). */
   olderHref: string
   footer: TranscriptFooter
@@ -130,33 +197,43 @@ export function TranscriptView({
   return (
     <section aria-label={en.run.transcript.heading} className="flex flex-col gap-3 px-4 py-4">
       {hasOlder ? (
-        <p className="text-center text-xs text-text-muted">
-          <a className="touch-target inline-flex items-center text-accent" href={olderHref}>
-            {en.run.transcript.older}
-          </a>
-        </p>
-      ) : task.trim() !== '' ? (
-        <UserBubble label={en.run.transcript.task} text={task} />
-      ) : null}
+        older?.available ? (
+          <OlderEntries older={older} href={olderHref} />
+        ) : (
+          <p className="text-center text-xs text-text-muted">
+            <a className="touch-target inline-flex items-center text-accent" href={olderHref}>
+              {en.run.transcript.older}
+            </a>
+          </p>
+        )
+      ) : (
+        <>
+          <p className="text-center text-xs text-text-muted">{en.run.transcript.start}</p>
+          {task.trim() !== '' ? <UserBubble label={en.run.transcript.task} text={task} /> : null}
+        </>
+      )}
 
       {turns.length === 0 ? <p className="text-sm text-text-muted">{en.run.transcript.empty}</p> : null}
 
       {turns.map(({ turn, blocks }) => (
         <article key={turn.id} className="flex flex-col gap-2">
           {turn.userMessage ? (
-            <UserBubble
-              label={en.run.transcript.you}
-              text={turn.userMessage.text}
-              imageCount={turn.userMessage.imageCount}
-            />
+            <div data-entry-key={`${turn.id}:user`}>
+              <UserBubble
+                label={en.run.transcript.you}
+                text={turn.userMessage.text}
+                imageCount={turn.userMessage.imageCount}
+              />
+            </div>
           ) : null}
           {blocks.map((block) => (
-            <Block
-              key={block.id}
-              block={block}
-              {...(answering !== undefined ? { answering } : {})}
-              {...(imageSrc !== undefined ? { imageSrc } : {})}
-            />
+            <div key={block.id} data-entry-key={block.id} className="empty:hidden">
+              <Block
+                block={block}
+                {...(answering !== undefined ? { answering } : {})}
+                {...(imageSrc !== undefined ? { imageSrc } : {})}
+              />
+            </div>
           ))}
         </article>
       ))}

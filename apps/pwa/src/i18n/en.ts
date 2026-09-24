@@ -277,8 +277,14 @@ export const en = {
     },
     transcript: {
       heading: 'Transcript',
-      /** FR-049 is parked: only the newest page is shown. */
+      /** The top when the server gave no way back to the page before (FR-048). */
       older: 'Older entries are available in the full cockpit.',
+      /** FR-049: the top of a transcript that reaches further back. */
+      showOlder: 'Show older entries',
+      loadingOlder: 'Loading older entries…',
+      olderFailed: 'Could not load older entries.',
+      olderInCockpit: 'Open the full cockpit',
+      start: 'The transcript starts here.',
       empty: 'The transcript is still empty.',
       loadFailed: 'Could not load the transcript.',
       task: 'Task',

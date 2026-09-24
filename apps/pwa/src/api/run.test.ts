@@ -35,6 +35,12 @@ describe('run reads', () => {
     ])
   })
 
+  it('ask for an older page with its cursor, encoded (FR-049)', async () => {
+    const fetchMock = stubFetch(() => jsonResponse({ events: [], itemCount: 0, liveCursor: 'c', asOfSeq: 0, hasOlder: false }))
+    await fetchHistory('p', 'r', undefined, 'eyJ2Ijox+/=')
+    expect(requested(fetchMock)).toEqual(['GET /api/v1/p/p/runs/r/history?cursor=eyJ2Ijox%2B%2F%3D'])
+  })
+
   it('reject a record or page without the container the screen needs', async () => {
     stubFetch(() => jsonResponse({ nothing: true }))
     await expect(fetchRun('p', 'r')).rejects.toBeInstanceOf(ApiError)
