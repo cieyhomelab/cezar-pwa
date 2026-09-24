@@ -28,5 +28,5 @@
 {"seq":28,"ts":"2026-09-21T08:05:01.000Z","type":"session.error","stepId":"task","message":"rate limited, retrying","fatal":false}
 {"seq":29,"ts":"2026-09-21T08:05:02.000Z","type":"check-output","stepId":"check","command":"npm run lint","exitCode":1,"text":"1 error"}
 {"seq":30,"ts":"2026-09-21T08:05:03.000Z","type":"step-end","stepId":"check","status":"failed","error":"lint failed"}
-{"seq":31,"ts":"2026-09-21T08:05:04.000Z","type":"image","stepId":"task","url":"/api/runs/r/images/2.png","name":"screenshot.png"}
+{"seq":31,"ts":"2026-09-21T08:05:04.000Z","type":"image","stepId":"task","url":"/api/v1/runs/r/images/2.png","name":"screenshot.png"}
 {"seq":32,"ts":"2026-09-21T08:05:05.000Z","type":"session.ended","stepId":"task","reason":"end_turn"}

@@ -303,7 +303,13 @@ export const en = {
           declined: 'declined',
         } as Record<string, string>,
       },
+      /** The line an image falls back to when it has no safe file name or fails to load (#65). */
       image: (name?: string) => `Image${name ? ` ${name}` : ''} — view it in the full cockpit`,
+      images: {
+        alt: 'Image',
+        open: (name?: string) => `Open image${name ? ` ${name}` : ''} full screen`,
+        close: 'Close',
+      },
       /** A markdown image is never loaded (`Markdown.tsx`); this stands in for a missing alt. */
       markdownImageAlt: 'image',
       providerAuth: (provider: string) =>
@@ -350,6 +356,8 @@ export const en = {
         `${count} ${plural(count, 'message added', 'messages added')} to the prompt`,
       /** #66: editing or removing a stacked message before the task starts. */
       queue: {
+        /** A stacked message's attachment that is not shown as an image (#65). */
+        attachment: (name?: string) => `Attachment${name ? ` ${name}` : ''}`,
         edit: 'Edit',
         editLabel: 'Edit the queued message',
         save: 'Save',

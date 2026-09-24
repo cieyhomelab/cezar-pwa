@@ -3,11 +3,15 @@ import type { Transcript, TranscriptEntry, TranscriptFooter } from '../../domain
 import { en } from '../../i18n/en.ts'
 import { AskCard } from './AskCard.tsx'
 import { Markdown } from './Markdown.tsx'
+import { RunImage } from './RunImage.tsx'
 import { ToolLine } from './ToolLine.tsx'
 import type { Delivery } from './useDeliver.ts'
 
 /** The only question that can still be answered (`openAsk`), and the way to answer it. */
 export type Answering = { delivery: Delivery; openAskId?: string }
+
+/** Where a stored image file is read (`runImageUrl`, #65). Absent, images stay text lines. */
+export type ImageSrc = (file: string) => string | undefined
 
 function UserBubble({ label, text, imageCount = 0 }: { label: string; text: string; imageCount?: number }) {
   return (
@@ -23,7 +27,7 @@ function UserBubble({ label, text, imageCount = 0 }: { label: string; text: stri
   )
 }
 
-function Entry({ entry, answering }: { entry: TranscriptEntry; answering?: Answering }) {
+function Entry({ entry, answering, imageSrc }: { entry: TranscriptEntry; answering?: Answering; imageSrc?: ImageSrc }) {
   switch (entry.kind) {
     case 'message':
       if (entry.role === 'user') return <UserBubble label={en.run.transcript.you} text={entry.text} />
@@ -43,8 +47,10 @@ function Entry({ entry, answering }: { entry: TranscriptEntry; answering?: Answe
           {entry.text}
         </p>
       )
-    case 'image':
-      return <p className="text-sm text-text-muted">{en.run.transcript.image(entry.name)}</p>
+    case 'image': {
+      const src = entry.file !== undefined ? imageSrc?.(entry.file) : undefined
+      return <RunImage {...(src !== undefined ? { src } : {})} {...(entry.name !== undefined ? { name: entry.name } : {})} />
+    }
     case 'provider-auth-required':
       return <p className="text-sm text-danger">{en.run.transcript.providerAuth(entry.provider)}</p>
     case 'ask':
@@ -63,11 +69,15 @@ function Entry({ entry, answering }: { entry: TranscriptEntry; answering?: Answe
   }
 }
 
-function Block({ block, answering }: { block: TranscriptBlock; answering?: Answering }) {
+function Block({ block, answering, imageSrc }: { block: TranscriptBlock; answering?: Answering; imageSrc?: ImageSrc }) {
   return block.kind === 'tool' ? (
     <ToolLine item={block.item} nested={block.children} />
   ) : (
-    <Entry entry={block.entry} {...(answering !== undefined ? { answering } : {})} />
+    <Entry
+      entry={block.entry}
+      {...(answering !== undefined ? { answering } : {})}
+      {...(imageSrc !== undefined ? { imageSrc } : {})}
+    />
   )
 }
 
@@ -100,6 +110,7 @@ export function TranscriptView({
   olderHref,
   footer,
   answering,
+  imageSrc,
 }: {
   transcript: Transcript
   task: string
@@ -109,6 +120,8 @@ export function TranscriptView({
   footer: TranscriptFooter
   /** S-07: how an open question is answered. Absent, every question is read-only. */
   answering?: Answering
+  /** #65: where the transcript's images are read. */
+  imageSrc?: ImageSrc
 }) {
   const turns = transcript.turns
     .map((turn) => ({ turn, blocks: turnBlocks(turn) }))
@@ -138,7 +151,12 @@ export function TranscriptView({
             />
           ) : null}
           {blocks.map((block) => (
-            <Block key={block.id} block={block} {...(answering !== undefined ? { answering } : {})} />
+            <Block
+              key={block.id}
+              block={block}
+              {...(answering !== undefined ? { answering } : {})}
+              {...(imageSrc !== undefined ? { imageSrc } : {})}
+            />
           ))}
         </article>
       ))}

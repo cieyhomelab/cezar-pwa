@@ -1,6 +1,9 @@
-import type { QueuedMessage } from '@cezar-pwa/cezar-contract/contract'
+import { isImageAttachmentName, type QueuedMessage } from '@cezar-pwa/cezar-contract/contract'
 import { useState } from 'react'
+import { attachmentFileName } from '../../domain/run-images.ts'
 import { en } from '../../i18n/en.ts'
+import { RunImage } from './RunImage.tsx'
+import type { ImageSrc } from './TranscriptView.tsx'
 import type { QueuedMessages } from './useQueuedMessages.ts'
 
 /**
@@ -14,11 +17,14 @@ export function QueuedMessageList({
   messages,
   editable,
   queue,
+  imageSrc,
 }: {
   messages: readonly QueuedMessage[]
   /** `false` once the task has started: nothing on the stack can change any more. */
   editable: boolean
   queue?: QueuedMessages
+  /** #65: where attached images are read. Absent, attachments are listed by name only. */
+  imageSrc?: ImageSrc
 }) {
   return (
     <>
@@ -31,6 +37,7 @@ export function QueuedMessageList({
             {messages.map((message) => (
               <li key={message.id} className="rounded bg-surface-raised px-2 py-1 text-text">
                 {editable && queue ? <EditableMessage message={message} queue={queue} /> : <MessageText text={message.text} />}
+                <Attachments urls={message.images ?? []} {...(imageSrc !== undefined ? { imageSrc } : {})} />
               </li>
             ))}
           </ul>
@@ -42,6 +49,30 @@ export function QueuedMessageList({
         </p>
       ) : null}
     </>
+  )
+}
+
+/**
+ * A stacked message's attachments. The recorded URLs are in the unscoped form, so each is read
+ * through the project-scoped route by its file name (`run-images.ts`). Images and files share the
+ * list; only an image name gets a thumbnail.
+ */
+function Attachments({ urls, imageSrc }: { urls: readonly string[]; imageSrc?: ImageSrc }) {
+  if (urls.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1 py-1">
+      {urls.map((url, index) => {
+        const file = attachmentFileName(url)
+        const src = file !== undefined && isImageAttachmentName(file) ? imageSrc?.(file) : undefined
+        return src !== undefined ? (
+          <RunImage key={`${index}:${url}`} src={src} name={file} size="small" />
+        ) : (
+          <span key={`${index}:${url}`} className="text-xs text-text-muted">
+            {en.run.compose.queue.attachment(file)}
+          </span>
+        )
+      })}
+    </div>
   )
 }
 

@@ -7,6 +7,7 @@ import { historyContextQueryOptions, historyQueryOptions, runQueryOptions } from
 import { composerOpen, openAsk } from '../../domain/answer.ts'
 import { cockpitTaskPath } from '../../domain/cockpit-link.ts'
 import { prLink } from '../../domain/run-header.ts'
+import { runImageUrl } from '../../domain/run-images.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
@@ -117,6 +118,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
     [history.data, status],
   )
   const ask = useMemo(() => openAsk(transcript), [transcript])
+  const imageSrc = (file: string) => runImageUrl(projectId, runId, file)
   const plan = useMemo(
     () => latestPlan(reduceTranscript(mergeBySeq(context.data?.contextEvents ?? [], history.data?.events ?? []))),
     [context.data, history.data],
@@ -236,6 +238,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             olderHref={cockpitTaskPath(projectId, runId)}
             footer={transcriptFooter(run.data.status, run.data.error)}
             answering={{ delivery, ...(ask !== undefined ? { openAskId: ask.id } : {}) }}
+            imageSrc={imageSrc}
           />
         ) : history.isError && !(history.error instanceof AuthRequiredError) ? (
           <section className="flex flex-col items-center gap-3 px-6 py-10 text-center">
@@ -279,6 +282,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             {...(ask !== undefined ? { openAskId: ask.id } : {})}
             queuedMessages={run.data.queuedMessages ?? []}
             queue={queue}
+            imageSrc={imageSrc}
           />
         ) : null}
       </div>

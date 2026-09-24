@@ -8,6 +8,7 @@ import type {
   UiItem,
   UiToolItem,
 } from '@cezar-pwa/cezar-contract/protocol'
+import { attachmentFileName } from './run-images.ts'
 
 /**
  * The transcript reducer (CLAUDE.md → "Transkrypt"). It folds one run's persisted lines, ordered
@@ -45,13 +46,17 @@ export interface TranscriptNote {
 }
 
 /**
- * An image the run persisted. Only its name is kept: the v1 line's URL is on the legacy
- * `/api/runs/…` surface, which this client never calls (CLAUDE.md rule 2).
+ * An image the run persisted. The v1 line records its URL in the unscoped
+ * `/api/v1/runs/:id/images/:file` form, which the live host answers with 404, so only the stored
+ * file name is kept. The view reads it from the project-scoped route (`run-images.ts`, #65).
  */
 export interface TranscriptImage {
   kind: 'image'
   id: string
+  /** The name the agent gave it, for the fallback line. */
   name?: string
+  /** The stored file name under `images/`. Absent when the recorded URL has no plain one. */
+  file?: string
 }
 
 /** A `CEZ:ASK` question. The next `user-message` resolves it and records the answer. */
@@ -573,9 +578,16 @@ export function step(draft: Draft, event: RunEvent): Draft {
     }
     case 'image': {
       // Upstream renders only the v1 line (it carries the stored file). Same gate here.
-      if (str(event.url) === undefined) break
+      const url = str(event.url)
+      if (url === undefined) break
       const name = str(event.name)
-      pushMeta(draft, { kind: 'image', id: `v1:${event.seq}`, ...(name !== undefined ? { name } : {}) })
+      const file = attachmentFileName(url)
+      pushMeta(draft, {
+        kind: 'image',
+        id: `v1:${event.seq}`,
+        ...(name !== undefined ? { name } : {}),
+        ...(file !== undefined ? { file } : {}),
+      })
       break
     }
 

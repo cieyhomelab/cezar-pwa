@@ -103,7 +103,7 @@ describe('reduceTranscript — the hand-written recording', () => {
         exitCode: 1,
       },
       { kind: 'note', id: 'v1:30', text: 'step check failed — lint failed', tone: 'danger' },
-      { kind: 'image', id: 'v1:31', name: 'screenshot.png' },
+      { kind: 'image', id: 'v1:31', name: 'screenshot.png', file: '2.png' },
     ])
     expect(transcript.sessionEnded).toEqual({ reason: 'end_turn' })
   })
