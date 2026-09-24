@@ -2,7 +2,7 @@ import type { RunActivity, RunStatus } from './types.ts'
 
 /**
  * Copy of Cezar's `packages/web/src/lib/attention.ts` (CLAUDE.md rule 8), at the commit in
- * `packages/cezar-contract/UPSTREAM` (tag `v0.11.0`).
+ * `packages/cezar-contract/UPSTREAM` (tag `v0.11.1`; unchanged from `v0.11.0`, re-diffed for #72).
  *
  * The PRD's worst failure is a phone that disagrees with the cockpit about what needs a human,
  * so this is a transcription, not a re-derivation: same ladder, same buckets, same tones, same
