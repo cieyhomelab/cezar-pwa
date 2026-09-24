@@ -1,0 +1,39 @@
+{
+  "groupId": "g-7f3a",
+  "runs": [
+    {
+      "id": "run-variant-b",
+      "variant": "B",
+      "title": "Add a dark theme toggle",
+      "status": "running",
+      "archived": false,
+      "tokensUsed": 41200,
+      "diffStat": " apps/pwa/src/features/settings/SettingsScreen.tsx | 12 ++++++++++--\n 1 file changed, 10 insertions(+), 2 deletions(-)\n",
+      "handoffExcerpt": ""
+    },
+    {
+      "id": "run-variant-a",
+      "variant": "A",
+      "title": "Add a dark theme toggle",
+      "status": "done",
+      "archived": false,
+      "tokensUsed": 88100,
+      "inputTokens": 80000,
+      "outputTokens": 8100,
+      "costUsd": 0.41,
+      "diffStat": " apps/pwa/src/domain/theme.ts                       | 20 +++++++++---\n apps/pwa/src/features/settings/SettingsScreen.tsx | 14 ++++++---\n apps/pwa/src/i18n/en.ts                            |  3 +-\n 3 files changed, 25 insertions(+), 12 deletions(-)\n",
+      "handoffExcerpt": "- 12:04 theme toggle wired, tests green"
+    },
+    {
+      "id": "run-variant-c",
+      "variant": "C",
+      "title": "Add a dark theme toggle",
+      "status": "failed",
+      "archived": true,
+      "tokensUsed": 12000,
+      "costUsd": 0.08,
+      "diffStat": "",
+      "handoffExcerpt": ""
+    }
+  ]
+}

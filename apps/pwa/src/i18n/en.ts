@@ -393,6 +393,31 @@ export const en = {
         auth: 'The session with Cezar expired — connect again.',
       },
     },
+    /** S-21 (#71): the task's sibling variants and keeping this one. Comparing diffs stays in the cockpit. */
+    variants: {
+      label: 'Variants',
+      loading: 'Loading variants…',
+      loadFailed: 'Could not load the variants.',
+      retry: 'Try again',
+      variant: (letter: string) => `Variant ${letter}`,
+      thisOne: 'this task',
+      archived: 'archived',
+      /** The worktree is gone (or unreadable), so the change count is unknown — not zero. */
+      changesUnknown: 'changes unknown',
+      changes: (count: number) => `${count} ${plural(count, 'file changed', 'files changed')}`,
+      keep: 'Keep this one',
+      keeping: 'Keeping…',
+      /** The server answers `409` until the kept variant has settled. */
+      waitToKeep: 'This variant can be kept once it has finished.',
+      confirm: {
+        title: (letter: string) => `Keep variant ${letter}?`,
+        body: (others: number) =>
+          `The other ${others === 1 ? 'variant' : `${others} variants`} will be stopped if still running, archived, and ${others === 1 ? 'its worktree and branch' : 'their worktrees and branches'} deleted. This cannot be undone.`,
+        back: 'Not yet',
+        confirm: (letter: string) => `Keep variant ${letter}`,
+      },
+      kept: (letter: string) => `Kept variant ${letter} — the others were archived.`,
+    },
   },
   settings: {
     title: 'Settings',

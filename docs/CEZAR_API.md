@@ -69,6 +69,7 @@ Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx 
 | Transkrypt – kontekst bieżący | `GET /api/v1/p/:projectId/runs/:id/history-context` | `RunHistoryContext`: `contextEvents[]` (najnowszy `plan.updated`, granice tur, otwarte elementy — gdziekolwiek leżą w pliku), `asOfSeq` |
 | Diff zadania (tekst) | `GET /api/v1/p/:projectId/runs/:id/diff` | jeden blob `text/plain`; dla zadania bez worktree **200** ze zdaniem „(no worktree — …)” zamiast diffu — PWA tego nie używa |
 | Zmienione pliki z poprawkami (S-09) | `GET /api/v1/p/:projectId/runs/:id/changes` | `ChangesPayload`: `files[]` (`ChangedFile`: `path`, `oldPath?`, `status`, `adds`, `dels`, `binary`, `image?`, `patch`), `stat`, `repointedHead?`; brak katalogu/błąd gita → **409** `{ error }` |
+| Warianty zadania (S-21) | `GET /api/v1/p/:projectId/groups/:groupId` | `GroupResponse`: `{ groupId, runs[] }`, `runs` posortowane po literze; wiersz (`GroupVariant`): `id, variant, title, status, archived, tokensUsed, inputTokens?, outputTokens?, costUsd?, diffStat, handoffExcerpt`. **`diffStat` to tekst `git diff --stat`**, nie liczby z rekordu; `''` gdy worktree nie istnieje. Brak runów z tym `groupId` → **404** |
 | Commity zadania | `GET /api/v1/p/:projectId/runs/:id/commits` | `{ commits: RunCommit[] }` |
 | Notatki przekazania | `GET /api/v1/p/:projectId/runs/:id/handoff` | Markdown |
 | Obrazek z transkryptu | `GET /api/v1/p/:projectId/runs/:id/images/:file` | bajty obrazu |
@@ -86,7 +87,7 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 - Odpowiedź **nie jest** walidowana schematem zod w runtime: enumy kontraktu są zamknięte, a słownik rośnie. Sprawdzamy tylko, że `runs` jest tablicą — inaczej błąd, nigdy pusta lista („nic nie czeka” byłoby nieprawdą). Schematy walidują fixture'y w testach (`apps/pwa/test/contract/`).
 - Sekcje PRD (FR-008): Wymaga uwagi / W toku / W kolejce (+ zaplanowane wznowienia) / Zakończone; zarchiwizowane ukryte. Kolejność w sekcji = `sortRuns` z `web/src/lib/task-groups.ts`. Numer w kolejce liczony dla całego workspace'u (semafor `maxParallel` jest wspólny dla projektów).
 - Odświeżanie: przy powrocie na pierwszy plan (`refetchOnWindowFocus: 'always'`), przyciskiem i gestem „pociągnij”; na żywo ze strumienia workspace (S-04, § 3a), z pollingiem co 30 s, gdy strumień nie działa, i co 5 min, gdy działa. 401/403 → ponowna sonda `health` → ekran „Połącz z Cezarem”.
-- `runs-index` **nie niesie** `pinned` ani `groupId` — lista PWA nie ma więc sekcji „Przypięte” ani zwijania wariantów.
+- `runs-index` **nie niesie** `pinned` ani `groupId` — lista PWA nie ma więc sekcji „Przypięte” ani zwijania wariantów. Warianty widać dopiero na ekranie zadania (S-21): z `groupId` rekordu.
 
 ### Kluczowe pola `RunIndexEntry` (lista)
 `projectId, id, title, titleSummary, status, activity, createdAt, startedAt, finishedAt, seenAt, archived, autoResumeAt, workflow, branch, pullRequestUrl, prNumber, issueNumber, costUsd, peakRssBytes, usage{cpu,rss…}`
@@ -192,6 +193,7 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 | Przypnij / odepnij | `POST …/runs/:id/pin` | `{}` lub `{ pinned:false }` → cały rekord |
 | Archiwizuj / przywróć | `POST …/runs/:id/archive` | `{}` lub `{ archived:false }` → cały rekord (archiwizacja zdejmuje też pin i zaplanowane wznowienie) |
 | Anuluj auto-wznowienie | `DELETE …/runs/:id/auto-resume` | — |
+| Zostaw ten wariant | `POST /api/v1/p/:projectId/groups/:groupId/pick` | `{ runId }` → `{ winner? }` (cały rekord; klucz może zniknąć, gdy store go nie znajdzie). Pozostałe warianty: anulowane, jeśli żyją, zarchiwizowane, worktree i gałąź usunięte. **409** `this variant is still active — wait for it to finish first`; **404** `not found` (brak grupy) / `runId is not part of this group` |
 
 ### Odpowiedź agentowi i wiadomość w PWA (S-07) — jak piszemy
 - **Odpowiedź `/messages`** to jedna z trzech: `{ delivered: true }` (żywa sesja ją przyjęła), `{ queued: true, message }` (zadanie w kolejce — dopisane do polecenia, widoczne w `queuedMessages[]` rekordu, nie w historii), `{ deferred: true }` (sesja startuje — wiadomość czeka na jej otwarcie). Wszystko inne to `409`, np. `session closed` albo powód z bramki providera.
@@ -214,6 +216,13 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 - Jedna akcja naraz; pasek czeka też na wysyłkę z S-07. Timeout 20 s, bez ponowień (akcja mogła się wykonać). Powód odmowy dosłownie (FR-032). Po każdej próbie unieważniamy `['run', …]`, `['history', …]` i `['runs-index']`; odpowiedź pin/archive trafia do cache'u **tylko jako flaga** (jak `seenAt` przy `/read`), `archived` także do wiersza listy — lista chowa zarchiwizowane od razu.
 
 Akcja na `permission.requested`: mechanizm odpowiedzi do potwierdzenia w `packages/web/src/routes/task-thread/` przed implementacją (domyślnie Cezar działa z `dontAsk`, więc prośby o uprawnienia pojawiają się tylko przy `CEZ_APPROVAL_GATE=1`).
+
+### Warianty zadania w PWA (S-21, #71) — lista i „Zostaw ten”
+- Zadanie uruchomione ×2/×3 to kilka runów z tym samym `groupId` (litera w `variant`). `runs-index` go nie niesie, więc panel „Variants” pojawia się na ekranie zadania, gdy **rekord** ma `groupId`, i czyta `GET …/groups/:groupId` (klucz `['group', projectId, groupId]`, timeout 15 s jak `/changes`, bo serwer liczy `git diff --stat` w każdym worktree). Co 30 s, dopóki któryś wariant jest aktywny; potem tylko przy powrocie na pierwszy plan — oraz od razu, gdy zmieni się status lub archiwizacja bieżącego zadania (jego rekord jest na żywo ze strumienia).
+- Wiersz: litera, status (jak na liście), liczba zmienionych plików z ostatniej linii `diffStat` (`N files changed`; `''` = „nieznane”, nie zero) i koszt. Wiersz rodzeństwa otwiera jego ekran zadania. Porównywanie diffów obok siebie zostaje w cockpicie (N07).
+- „Keep this one” tylko po potwierdzeniu i tylko gdy: bieżący wariant nie jest zarchiwizowany i co najmniej jeden inny wariant nie jest zarchiwizowany (inaczej grupa jest już rozstrzygnięta). Wariant aktywny (`running | queued | waiting`) pokazuje zamiast przycisku zdanie „można go zostawić po zakończeniu” — serwer i tak odpowiedziałby 409.
+- Timeout 20 s, bez ponowień (wybór mógł już zarchiwizować resztę). Odmowa dosłownie (FR-032). Po każdej próbie unieważniamy grupę, wszystkie `['run', projectId, …]` (przegrani zostali zarchiwizowani), historię i `['runs-index']`. Pasek akcji S-08 i panel czekają na siebie nawzajem.
+- Na hoście nie ma dziś żadnej grupy (0 z 41 runów w indeksie z `groupId`, stan 2026-09-24), więc fixture `apps/pwa/test/fixtures/group.json` jest ręczny, walidowany schematem `groupResponseSchema`.
 
 ## 5. „Wymaga uwagi” — reguła powiadomień
 

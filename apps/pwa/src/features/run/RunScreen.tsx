@@ -23,7 +23,9 @@ import { useDeliver } from './useDeliver.ts'
 import { useFollowBottom } from './useFollowBottom.ts'
 import { useLiveTranscript } from './useLiveTranscript.ts'
 import { useMarkRead } from './useMarkRead.ts'
+import { usePickVariant } from './usePickVariant.ts'
 import { useRunActions } from './useRunActions.ts'
+import { VariantsPanel } from './VariantsPanel.tsx'
 
 /** The route: `/m/p/:projectId/runs/:runId`, the same shape S-10's notifications will open. */
 export function RunScreen() {
@@ -63,6 +65,7 @@ function BackBar({ projectId, runId, children }: { projectId: string; runId: str
  * FR-015, FR-017, FR-018, FR-020). S-07: the agent's open question is answerable in place and
  * a docked composer messages the task (FR-022, FR-023, FR-032). S-08: under the header, the
  * task's own actions — cancel, finish, draft PR, continue, pin, archive (FR-025 to FR-029).
+ * S-21: a task started as variants lists its siblings and can be kept (#71).
  * Rendered behind `AuthGate`.
  *
  * S-06: kept live by the task's event stream (FR-016), following the newest entry only while the
@@ -92,6 +95,9 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   const delivery = useDeliver(projectId, runId, run.data)
   // S-08: cancel, finish, draft PR, continue, pin and archive.
   const actions = useRunActions(projectId, runId, run.data)
+  // S-21: a task started ×2 or ×3 lists its siblings and can be kept (#71).
+  const groupId = typeof run.data?.groupId === 'string' && run.data.groupId !== '' ? run.data.groupId : undefined
+  const pick = usePickVariant(projectId, runId, groupId ?? '', run.data?.variant ?? '?')
 
   // A refusal means the session lapsed since the probe. Re-asking it hands the screen to
   // `AuthGate`, exactly as the list does.
@@ -179,7 +185,17 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
 
       <div aria-busy={stale} className={stale ? 'opacity-50' : undefined}>
         <RunHeader run={run.data} projectId={projectId} projectName={projectName} />
-        <RunActionBar run={run.data} actions={actions} busy={delivery.pending} />
+        <RunActionBar run={run.data} actions={actions} busy={delivery.pending || pick.pending} />
+        {groupId !== undefined ? (
+          <VariantsPanel
+            projectId={projectId}
+            runId={runId}
+            groupId={groupId}
+            pick={pick}
+            busy={delivery.pending || actions.pending !== undefined}
+            runState={`${run.data.status}:${run.data.archived === true}`}
+          />
+        ) : null}
 
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm text-text-muted">
           <ConnectionStatus

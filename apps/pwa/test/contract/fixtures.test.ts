@@ -1,6 +1,7 @@
 import {
   apiRunSchema,
   changesPayloadSchema,
+  groupResponseSchema,
   healthResponseSchema,
   runEventSchema,
   runHistoryContextSchema,
@@ -10,6 +11,7 @@ import {
 import { describe, expect, it } from 'vitest'
 import liveChangesRepointed from '../fixtures/changes-repointed.live-0.11.0.json'
 import liveChanges from '../fixtures/changes.live-0.11.0.json'
+import group from '../fixtures/group.json'
 import liveHealth from '../fixtures/health.live-0.11.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
@@ -46,6 +48,8 @@ describe('contract fixtures', () => {
     // S-09. The first is this repo's own task, trimmed to three of its files (stat recomputed).
     ['live changes', changesPayloadSchema, liveChanges],
     ['live changes, repointed and empty', changesPayloadSchema, liveChangesRepointed],
+    // S-21. Hand-written: no run on the host carries a groupId (0 of 41 when #71 was filed).
+    ['hand-written variant group', groupResponseSchema, group],
   ] as const)('%s matches the vendored schema', (_name, schema, fixture) => {
     const result = schema.safeParse(fixture)
     expect(result.error?.issues ?? []).toEqual([])
