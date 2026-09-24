@@ -1,5 +1,7 @@
 import {
   apiRunSchema,
+  automationLogResponseSchema,
+  automationsResponseSchema,
   changesPayloadSchema,
   groupResponseSchema,
   healthResponseSchema,
@@ -9,6 +11,8 @@ import {
   runsIndexResponseSchema,
 } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
+import automationLog from '../fixtures/automation-log.json'
+import automations from '../fixtures/automations.json'
 import liveChangesRepointed from '../fixtures/changes-repointed.live-0.11.0.json'
 import liveChanges from '../fixtures/changes.live-0.11.0.json'
 import group from '../fixtures/group.json'
@@ -50,6 +54,9 @@ describe('contract fixtures', () => {
     ['live changes, repointed and empty', changesPayloadSchema, liveChangesRepointed],
     // S-21. Hand-written: no run on the host carries a groupId (0 of 41 when #71 was filed).
     ['hand-written variant group', groupResponseSchema, group],
+    // S-20. Hand-written: no project on the host has an automation (both lists empty on 2026-09-24).
+    ['hand-written automations list', automationsResponseSchema, automations],
+    ['hand-written automation log', automationLogResponseSchema, automationLog],
   ] as const)('%s matches the vendored schema', (_name, schema, fixture) => {
     const result = schema.safeParse(fixture)
     expect(result.error?.issues ?? []).toEqual([])

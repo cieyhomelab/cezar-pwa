@@ -1,0 +1,41 @@
+{
+  "available": false,
+  "reason": "GitHub availability is still being checked",
+  "scheduler": { "state": "scheduled", "nextDue": "2026-09-25T04:00:00.000Z" },
+  "timeZone": "UTC",
+  "stats": { "runs": 3, "failed": 1, "agentSeconds": 540, "costUsd": 0.62 },
+  "automations": [
+    {
+      "id": "nightly-deps",
+      "revision": 2,
+      "name": "Nightly dependency check",
+      "enabled": true,
+      "kind": "schedule",
+      "schedule": { "type": "daily", "hour": 4, "minute": 0 },
+      "task": { "prompt": "Check for outdated dependencies and open a PR.", "workflow": "quick-task", "autonomous": true },
+      "createdAt": "2026-09-20T10:00:00.000Z",
+      "updatedAt": "2026-09-22T10:00:00.000Z",
+      "state": { "revision": 2, "nextRunAt": "2026-09-25T04:00:00.000Z", "lastRunAt": "2026-09-24T04:00:00.000Z" },
+      "counts": { "matches": 0, "launched": 2, "duplicates": 0, "errors": 0 },
+      "nextRunAt": "2026-09-25T04:00:00.000Z",
+      "lastRun": { "runId": "run-nightly-1", "status": "done", "ts": "2026-09-24T04:00:02.000Z", "costUsd": 0.31 },
+      "runs7d": 2,
+      "costUsd7d": 0.62
+    },
+    {
+      "id": "triage-issues",
+      "revision": 5,
+      "name": "Triage new issues",
+      "enabled": false,
+      "kind": "github",
+      "events": ["issue.opened", "issue.labeled"],
+      "intervalSeconds": 300,
+      "filters": { "changedLabels": ["bug"], "lookbackDays": 7, "maxRecords": 20 },
+      "task": { "prompt": "Triage {{github.url}}", "workflow": "quick-task" },
+      "createdAt": "2026-09-18T10:00:00.000Z",
+      "updatedAt": "2026-09-24T09:00:00.000Z",
+      "counts": { "matches": 4, "launched": 1, "duplicates": 2, "errors": 1 },
+      "runs7d": 1
+    }
+  ]
+}

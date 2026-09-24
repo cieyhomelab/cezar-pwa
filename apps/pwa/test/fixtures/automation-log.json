@@ -1,0 +1,34 @@
+{
+  "records": [
+    {
+      "seq": 7,
+      "ts": "2026-09-24T09:00:00.000Z",
+      "automationId": "triage-issues",
+      "revision": 5,
+      "event": "issue.opened",
+      "result": "error",
+      "reason": "gh: HTTP 502",
+      "githubNumber": 41,
+      "githubTitle": "Login loops on Safari"
+    },
+    {
+      "seq": 6,
+      "ts": "2026-09-24T04:00:02.000Z",
+      "automationId": "nightly-deps",
+      "revision": 2,
+      "result": "launched",
+      "receiptId": "rcpt-6",
+      "runId": "run-nightly-1"
+    },
+    {
+      "seq": 5,
+      "ts": "2026-09-23T08:00:00.000Z",
+      "automationId": "deleted-one",
+      "revision": 1,
+      "result": "no-match"
+    }
+  ],
+  "runs": {
+    "run-nightly-1": { "title": "Nightly dependency check", "status": "done", "costUsd": 0.31, "children": [] }
+  }
+}

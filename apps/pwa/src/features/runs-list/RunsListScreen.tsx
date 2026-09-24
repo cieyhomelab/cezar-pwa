@@ -142,13 +142,24 @@ export function RunsListScreen() {
               </p>
             ) : null}
           </div>
-          {/* S-13 (FR-033): a filtered list starts the task in the project it shows. */}
-          <Link
-            to={projectId === null ? '/new' : `/new?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
-            className="touch-target inline-flex shrink-0 items-center rounded bg-accent px-3 text-sm font-semibold text-white"
-          >
-            {en.runs.newTask}
-          </Link>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            {/* S-20 (#70): only where the family answers — with the capability off it is a 409. */}
+            {health.data?.capabilities?.automations === true ? (
+              <Link
+                to={projectId === null ? '/automations' : `/automations?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
+                className="touch-target inline-flex items-center rounded border border-border px-3 text-sm"
+              >
+                {en.automations.open}
+              </Link>
+            ) : null}
+            {/* S-13 (FR-033): a filtered list starts the task in the project it shows. */}
+            <Link
+              to={projectId === null ? '/new' : `/new?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
+              className="touch-target inline-flex items-center rounded bg-accent px-3 text-sm font-semibold text-white"
+            >
+              {en.runs.newTask}
+            </Link>
+          </div>
         </div>
 
         {projects.length > 1 ? (
