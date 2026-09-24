@@ -31,7 +31,13 @@ dist-ssr
 
 # cezar cockpit runtime state: launch-key (a secret, CLAUDE.md rule 6),
 # session transcripts, and task worktrees (~330 MB of nested checkouts)
-/.ai/
+/.ai/cezar/
+
+# Agent pipeline (.ai/agentic.config.json): the config, descriptors and the
+# paths.* directories are committed; per-run QA state and credentials are not.
+/.ai/qa/artifacts_*/
+/.ai/qa/test-env.json
+/.ai/qa/test-env.env
 
 # Playwright
 /test-results/
