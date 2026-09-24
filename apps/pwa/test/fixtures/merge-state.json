@@ -1,0 +1,26 @@
+{
+  "available": true,
+  "mergeState": {
+    "number": 7,
+    "title": "feat(pwa): merge a PR from the phone",
+    "url": "https://github.com/o/r/pull/7",
+    "state": "open",
+    "isDraft": false,
+    "headRef": "cez/d04cd435",
+    "baseRef": "main",
+    "headSha": "0123456789abcdef0123456789abcdef01234567",
+    "mergeable": "mergeable",
+    "reviewDecision": "unknown",
+    "checks": [
+      { "name": "typecheck · lint · test · build", "state": "passing", "required": null, "url": "https://github.com/o/r/actions/runs/1/job/1" },
+      { "name": "e2e (webkit-iphone)", "state": "failing", "required": null, "url": "https://github.com/o/r/actions/runs/1/job/2" },
+      { "name": "shellcheck · nginx rehearsal", "state": "pending", "required": null }
+    ],
+    "methods": ["squash", "merge", "rebase"],
+    "defaultMethod": "squash",
+    "eligibility": "blocked",
+    "blockers": [{ "code": "checks-failing", "message": "One or more checks are failing." }],
+    "canMerge": false,
+    "canOverride": true
+  }
+}

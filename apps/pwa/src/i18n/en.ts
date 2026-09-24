@@ -418,6 +418,65 @@ export const en = {
       },
       kept: (letter: string) => `Kept variant ${letter} — the others were archived.`,
     },
+    /** S-19 (#69): the task's pull request — its checks, whether it can merge, and the merge. */
+    merge: {
+      label: (number: number) => `Pull request #${number}`,
+      loading: 'Loading the merge state…',
+      loadFailed: 'Could not load the merge state.',
+      retry: 'Try again',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
+      /** `available: false` — the server's own reason follows, verbatim. */
+      unavailable: 'The merge state is unavailable:',
+      unreadable: 'Cezar answered about this pull request in a form this app cannot read.',
+      /** The project's repository has a PR with this number, but it is not the one the task links to. */
+      otherPr: 'This pull request is not in the project’s repository, so it can only be merged on GitHub.',
+      headline: {
+        merged: 'Merged',
+        closed: 'Closed without merging',
+        draft: 'Draft — mark it ready on GitHub before merging',
+        conflicts: 'Has conflicts',
+        ready: 'Ready to merge',
+        failing: 'Checks failing',
+        pending: 'Checks pending',
+        blocked: 'Merge blocked',
+        unknown: 'Merge requirements unconfirmed',
+      },
+      /** Spelled out, so a check's state never rests on its colour alone. */
+      checkState: {
+        failing: 'failing',
+        pending: 'pending',
+        unknown: 'unknown',
+        passing: 'passing',
+      },
+      required: 'required',
+      checksSummary: (passing: number, total: number) => `${passing} of ${total} ${plural(total, 'check', 'checks')} passing`,
+      noChecks: 'No checks reported.',
+      details: 'details',
+      method: {
+        squash: 'Squash and merge',
+        merge: 'Create a merge commit',
+        rebase: 'Rebase and merge',
+      },
+      methodLabel: 'Merge method',
+      override: 'Merge without waiting for requirements',
+      overrideHint: 'GitHub allows this only if your permissions can bypass the repository’s rules.',
+      mergeButton: 'Merge…',
+      confirm: {
+        title: (number: number) => `Merge pull request #${number}?`,
+        body: (title: string, base: string) => `“${title}” will be merged into ${base}.`,
+        /** The server re-reads the PR and refuses a head that moved since this screen read it. */
+        head: (sha: string) => `Only commit ${sha} is merged: if anything was pushed since, Cezar refuses.`,
+        override: 'You are asking GitHub to bypass unmet requirements. It may refuse.',
+        back: 'Not yet',
+      },
+      merging: 'Merging…',
+      merged: (number: number) => `Pull request #${number} merged.`,
+      failed: {
+        /** A merge that timed out may still have happened: the state is re-read instead of a retry. */
+        timeout: 'Cezar did not answer in time. The merge may have happened — the state below was re-read.',
+      },
+    },
   },
   /** S-20 (#70): react to a project's automations. Creating and editing them stays in the cockpit (N05). */
   automations: {
