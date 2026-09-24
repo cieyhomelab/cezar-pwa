@@ -151,6 +151,42 @@ export const en = {
     retry: 'Try again',
     truncated: (limit: number, projects: string) =>
       `Showing only the ${limit} newest tasks from: ${projects}. Older ones are in the full cockpit.`,
+    newTask: 'New task',
+  },
+  /** S-13: start a task from the phone (FR-033), then land on it (FR-034). */
+  newTask: {
+    back: 'Tasks',
+    title: 'New task',
+    project: 'Project',
+    task: 'Task',
+    taskPlaceholder: 'Describe the work…',
+    workflow: 'Workflow',
+    runner: 'Agent',
+    model: 'Model',
+    /** No model named: the runner picks its own. */
+    modelAuto: 'Auto',
+    /** `modelsLocked`: the agent's own settings choose, and the cockpit makes the pick read-only. */
+    modelLocked: "Set by the agent's own settings",
+    account: 'Account',
+    accountDefault: "Project's account",
+    autonomous: 'Autonomous',
+    autonomousHint: 'Never stops to wait for you; continues until done.',
+    noRunners: 'No agent is installed on the server, so no task can start.',
+    loading: 'Loading options…',
+    loadFailed: 'Could not load the options for this project.',
+    retry: 'Try again',
+    submit: 'Start task',
+    submitting: 'Starting…',
+    failed: {
+      /** The server's own words, verbatim (FR-032). */
+      refused: (reason: string) => `Cezar refused: ${reason}`,
+      network: 'No connection to Cezar — nothing was sent.',
+      /** A create that timed out may still have started one; a blind retry would start two. */
+      timeout: 'Cezar did not answer in time. The task may have started — check the list before trying again.',
+      auth: 'The session with Cezar expired — connect again.',
+      /** A 2xx without a run id: something started, but there is nothing to open. */
+      noRun: 'Cezar accepted the task but did not say which one it is. It will appear in the list.',
+    },
   },
   /** S-05: one task — its header, its plan and the newest stretch of its transcript. */
   run: {

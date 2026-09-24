@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
 import { AuthRequiredError } from '../../api/http.ts'
 import { runsIndexQueryOptions } from '../../api/runs-index.ts'
@@ -7,6 +8,7 @@ import { clockTime } from '../../domain/run-display.ts'
 import { attentionCount, buildTaskList } from '../../domain/task-list.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
 import { en } from '../../i18n/en.ts'
+import { PROJECT_PARAM } from '../new-task/NewTaskScreen.tsx'
 import { ConnectionStatus } from './ConnectionStatus.tsx'
 import { RunRow } from './RunRow.tsx'
 import { useLiveRuns } from './useLiveRuns.ts'
@@ -129,15 +131,24 @@ export function RunsListScreen() {
       ) : null}
 
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
-        <div>
-          <h2 className={`text-lg font-semibold ${totalAttention > 0 ? 'text-pending' : ''}`}>
-            {totalAttention > 0 ? en.runs.summary.some(totalAttention) : en.runs.summary.none}
-          </h2>
-          {totalAttention > shownAttention ? (
-            <p className="text-sm text-text-muted">
-              {en.runs.summary.elsewhere(totalAttention - shownAttention)}
-            </p>
-          ) : null}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className={`text-lg font-semibold ${totalAttention > 0 ? 'text-pending' : ''}`}>
+              {totalAttention > 0 ? en.runs.summary.some(totalAttention) : en.runs.summary.none}
+            </h2>
+            {totalAttention > shownAttention ? (
+              <p className="text-sm text-text-muted">
+                {en.runs.summary.elsewhere(totalAttention - shownAttention)}
+              </p>
+            ) : null}
+          </div>
+          {/* S-13 (FR-033): a filtered list starts the task in the project it shows. */}
+          <Link
+            to={projectId === null ? '/new' : `/new?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
+            className="touch-target inline-flex shrink-0 items-center rounded bg-accent px-3 text-sm font-semibold text-white"
+          >
+            {en.runs.newTask}
+          </Link>
         </div>
 
         {projects.length > 1 ? (

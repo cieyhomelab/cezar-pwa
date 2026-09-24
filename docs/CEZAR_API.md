@@ -72,8 +72,10 @@ Zbadane bezpośrednio na VPS-ie. Zastępuje domysły; jeśli konfiguracja nginx 
 | Commity zadania | `GET /api/v1/p/:projectId/runs/:id/commits` | `{ commits: RunCommit[] }` |
 | Notatki przekazania | `GET /api/v1/p/:projectId/runs/:id/handoff` | Markdown |
 | Obrazek z transkryptu | `GET /api/v1/p/:projectId/runs/:id/images/:file` | bajty obrazu |
-| Workflowy (do composera) | `GET /api/v1/p/:projectId/workflows` | lista workflowów |
-| Modele | `GET /api/v1/p/:projectId/models` | modele per runner |
+| Workflowy (do composera) | `GET /api/v1/p/:projectId/workflows` | `workflowsResponseSchema`: `workflows[]` (`name`, `description?`, `steps[]`, `source`), `issues[]` (pliki, których nie dało się wczytać) |
+| Ustawienia agenta projektu | `GET /api/v1/p/:projectId/config` | `configResponseSchema`: `defaultRunner`, `defaultModels{claude?,codex?,…}`, `modelsLocked`, … |
+| Modele runnera | `GET /api/v1/models?runner=claude\|codex\|opencode` | `runnerModelCatalogResponseSchema`: `models[{id,label,description}]`, `source` (`live\|cache\|unavailable`), `stale`. Trasa **workspace'owa** — `GET /api/v1/p/:projectId/models` zwraca **404** (sprawdzone na `0.11.0`, 2026-09-24). `pi` nie ma katalogu (400) |
+| Konta agentów | `GET /api/v1/workspace/agent-profiles` | `agentProfilesResponseSchema`: `profiles[]` (`id`, `provider`, `label`), `selections`, `defaults`; na tym hoście (`CEZ_REMOTE`) `profiles: []` |
 
 ### RunStatus
 `queued | running | waiting | review | done | failed | cancelled`
@@ -197,6 +199,12 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 - **Format odpowiedzi na pytanie** (`ask.requested`): `"<header>: <etykiety, po przecinku>"`, kilka pytań = jedna wiadomość, linia na pytanie. Reducer rozwiązuje kartę przy **następnym** `user-message`, więc odpowiedź własnymi słowami (dowolna wiadomość) też ją zamyka. Interaktywne jest tylko najnowsze pytanie — starsze nierozwiązane nie może się już rozwiązać.
 - Kompozytor jest tylko dla zadań aktywnych oraz dla zamkniętych z otwartym pytaniem; zwykłe „kontynuuj” to S-08. Zapis ma timeout 20 s i **nie jest ponawiany**: po timeoucie wiadomość mogła dotrzeć, więc operator dostaje to zdanie zamiast drugiej wysyłki. Szkic zostaje w polu, dopóki Cezar go nie przyjmie.
 - Po każdej próbie (udanej i nie) unieważniamy `['run', …]`, `['history', …]` (z kontekstem) i `['runs-index']`.
+
+### Nowe zadanie w PWA (S-13, FR-033/034) — jak tworzymy
+- **Formularz:** projekt, opis (`task`), `workflow`, `runner`, `model`, `agentProfile`, `autonomous`. `variants`, `dispatch`, `steps`, `images`, `systemPrompt`, `issueNumber` zostają w cockpicie (#62). Body bez niewybranych kluczy (brak `model` = „Auto”, runner wybiera sam); `autonomous` wysyłane zawsze.
+- **Domyślne wybory jak w cockpicie:** workflow `quick-task` (albo pierwszy z listy), runner = `config.defaultRunner` projektu, jeśli zainstalowany, dalej `health.defaultRunner`, dalej pierwszy dostępny. Zainstalowane runnery = `health.checks[]` z `available: true` (bez `gh`/`git`); na tym hoście tylko `claude`. Model = `config.defaultModels[runner]`, jeśli jest w katalogu; przy `modelsLocked` pola modelu nie ma. Picker kont tylko, gdy `agent-profiles` ma konta dla tego runnera.
+- **Odpowiedź 201 to unia** (`createRunResponseSchema`): rekord (`id`) albo `{ runs: [...] }` — otwieramy pierwszy. Nawigacja z `replace` na `/m/p/:projectId/runs/:id` (wstecz = lista, nie wysłany formularz). Po sukcesie unieważniamy `['runs-index']`.
+- **Odmowa** (np. `400 unknown workflow: …`) → `{error}` dosłownie (FR-032), opis zostaje w polu. Timeout 20 s, bez ponowień: zadanie mogło powstać, więc operator dostaje prośbę o sprawdzenie listy.
 
 ### Akcje na zadaniu w PWA (S-08) — kiedy którą pokazujemy
 - **Polityka = kopia `runActionFlags()`** z `web/src/routes/task-thread/run-actions.ts` @ `v0.11.0` → `apps/pwa/src/domain/run-actions.ts`. „Aktywne” = `running | queued | waiting` (`review` **nie** jest aktywne). Anuluj: aktywne. Zakończ: `waiting` (zamyka sesję) albo `review` (akceptuje zmiany bez PR — ten sam endpoint, inna etykieta). Kontynuuj: nieaktywne **i** zapisana sesja (`steps[].sessionId`). Archiwizuj/przywróć: nieaktywne. Przypnij/odepnij: niezarchiwizowane.
