@@ -5,6 +5,7 @@ import { en } from './i18n/en.ts'
 import { InstallHint } from './pwa/InstallHint.tsx'
 import { OfflineBanner } from './pwa/OfflineBanner.tsx'
 import { UpdatePrompt } from './pwa/UpdatePrompt.tsx'
+import { watchForUpdates } from './pwa/sw-update.ts'
 import { useNotificationNavigation } from './pwa/useNotificationNavigation.ts'
 import { useOnlineStatus } from './pwa/useOnlineStatus.ts'
 import { useStandalone } from './pwa/useStandalone.ts'
@@ -23,7 +24,12 @@ export default function App() {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW()
+  } = useRegisterSW({
+    // FR-003: a resumed iOS app never navigates, so it has to ask for the check itself.
+    onRegisteredSW: (_url, registration) => {
+      if (registration) watchForUpdates(registration)
+    },
+  })
   const online = useOnlineStatus()
   const standalone = useStandalone()
   // S-10: a notification tapped while the app is open routes this window (FR-041).

@@ -5,7 +5,9 @@
  */
 import { useState } from 'react'
 
-export function useRegisterSW() {
+export function useRegisterSW(_options?: {
+  onRegisteredSW?: (swUrl: string, registration: ServiceWorkerRegistration | undefined) => void
+}) {
   const needRefresh = useState(false)
   const offlineReady = useState(false)
   return {
