@@ -110,21 +110,32 @@ export function carryOver(fresh: RunHistoryPage, previous: RunHistoryPage | unde
   return newer.reduce((page, event) => appendLiveEvent(page, event, -1), keepEarlier(fresh, previous))
 }
 
+/**
+ * How far back a page's lines run without a gap: the `seq` of its second line. The server may
+ * put the turn's opening line in front of the page's first item, however far back it is
+ * (`pageEventSlice`), so the first line proves nothing; the second is the page's own first item.
+ * (Where there is no opener in front, this is one line short: taken as reaching less far, which
+ * is never wrong, only cautious.) Undefined for a page of fewer than two lines.
+ *
+ * FR-049: it only moves back when older lines landed in front, never on a refetch that kept them
+ * (`carryOver`): the screen's cue that the new content is above, not at the end.
+ */
+export function pageReach(page: RunHistoryPage): number | undefined {
+  return page.events[1]?.seq
+}
+
 /** Whether `fresh` reaches back into what `previous` already holds, leaving no line unread. */
 function overlaps(fresh: RunHistoryPage, previous: RunHistoryPage): boolean {
-  // The server may put the turn's opening line in front of the page's first item, however far
-  // back it is (`pageEventSlice`), so one line at or below the mark proves nothing. Two do: the
-  // second is the page's own first item. (A page whose only such line is its first item is
-  // taken as a gap too: the fresh page alone is never wrong, only shorter.)
-  const second = fresh.events[1]
-  return second !== undefined && second.seq <= previous.asOfSeq
+  const reach = pageReach(fresh)
+  return reach !== undefined && reach <= previous.asOfSeq
 }
 
 function keepEarlier(fresh: RunHistoryPage, previous: RunHistoryPage): RunHistoryPage {
-  const first = fresh.events[0]?.seq
-  const oldest = previous.events[0]?.seq
+  const reach = pageReach(fresh)
+  const held = pageReach(previous)
   // The fresh page reaches the start of the file, or at least as far back as the previous one.
-  if (!fresh.hasOlder || first === undefined || oldest === undefined || oldest >= first) return fresh
+  // Compared past the openers: inside one long turn, both pages start with the same one.
+  if (!fresh.hasOlder || reach === undefined || held === undefined || held >= reach) return fresh
   if (!overlaps(fresh, previous)) return fresh
   // Up to the fresh page's mark it is the authority. Deltas are the stream's, never in the file:
   // whatever of them the fresh page does not cover has been superseded by a snapshot on it.

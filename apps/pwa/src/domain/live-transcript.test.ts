@@ -4,6 +4,7 @@ import {
   appendLiveEvent,
   asRunEvent,
   carryOver,
+  pageReach,
   prependOlder,
   transcriptSignature,
 } from './live-transcript.ts'
@@ -184,6 +185,17 @@ describe('carryOver', () => {
     expect(carryOver(fresh, previous)).toEqual(fresh)
   })
 
+  it('keeps what was read back inside one long turn, whose opener both pages repeat', () => {
+    // The turn opened at 2 and still runs: every page of it starts with the opener. The operator
+    // read back to 3; the refetched page reaches only 7.
+    const opener = ev(2, 'user-message', { text: 'go' })
+    const previous = older([opener, note(3), note(4), note(5), note(6), note(7), note(8)], 'c-before-3')
+    const fresh = older([opener, note(7), note(8), note(9)], 'c-before-7')
+    const merged = carryOver(fresh, previous)
+    expect(merged.events.map((e) => e.seq)).toEqual([2, 3, 4, 5, 6, 7, 8, 9])
+    expect(merged.olderCursor).toBe('c-before-3')
+  })
+
   it("drops the stream's deltas below the fresh mark: the page's snapshot supersedes them", () => {
     const previous = older([message(1, 'item.started', '', 'm0'), delta(2, 'x', 'm0'), note(3), note(4)], 'c-0')
     const fresh = older([note(3), note(4), note(5)], 'c-3')
@@ -226,6 +238,22 @@ describe('prependOlder', () => {
     const held = prependOlder(extended, second!.page, second!.cursor!)
     expect(held.events.at(-1)?.seq).toBe(newest!.page.asOfSeq + 1)
     expect(held.asOfSeq).toBe(newest!.page.asOfSeq + 1)
+  })
+})
+
+describe('pageReach', () => {
+  it('moves back when an older page lands inside the same long turn, whose opener stays first', () => {
+    const opener = ev(2, 'user-message', { text: 'go' })
+    const held = { ...page([opener, note(7), note(8)]), hasOlder: true, olderCursor: 'c-before-7' }
+    const merged = prependOlder(held, page([opener, note(3), note(4), note(5), note(6)]), 'c-before-7')
+    expect(merged.events[0]).toBe(opener)
+    expect(pageReach(merged)).toBeLessThan(pageReach(held)!)
+  })
+
+  it('stays put when a refetch keeps what was read back', () => {
+    const previous = { ...page([note(1), note(2), note(3), note(4)]), hasOlder: true, olderCursor: 'c-1' }
+    const fresh = { ...page([note(3), note(4), note(5)]), hasOlder: true, olderCursor: 'c-3' }
+    expect(pageReach(carryOver(fresh, previous))).toBe(pageReach(previous))
   })
 })
 

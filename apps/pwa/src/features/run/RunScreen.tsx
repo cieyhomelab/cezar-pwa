@@ -9,7 +9,7 @@ import { cockpitTaskPath } from '../../domain/cockpit-link.ts'
 import { prLink } from '../../domain/run-header.ts'
 import { runImageUrl } from '../../domain/run-images.ts'
 import { clockTime } from '../../domain/run-display.ts'
-import { transcriptSignature } from '../../domain/live-transcript.ts'
+import { pageReach, transcriptSignature } from '../../domain/live-transcript.ts'
 import { latestPlan, mergeBySeq, reduceTranscript, transcriptFooter } from '../../domain/transcript.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
 import { en } from '../../i18n/en.ts'
@@ -130,7 +130,11 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   )
 
   const ready = run.data !== undefined && history.data !== undefined
-  const follow = useFollowBottom(transcriptSignature(transcript), ready, history.data?.events[0]?.seq)
+  const follow = useFollowBottom(
+    transcriptSignature(transcript),
+    ready,
+    history.data === undefined ? undefined : pageReach(history.data),
+  )
 
   const projectName =
     health.data?.projects?.find((project) => project.id === projectId)?.name ?? projectId

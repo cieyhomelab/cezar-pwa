@@ -23,17 +23,18 @@ function scrollToBottom(): void {
  * re-render. `ready` opens the screen at the newest entry, once: the most recent stretch is what
  * the operator came for.
  *
- * `top` is what the transcript starts with. When it changes, the new content arrived above
- * (FR-049's older pages), not at the end: nothing is followed and nothing is announced.
+ * `reach` is how far back the transcript runs (`pageReach`). When it moves back, the new content
+ * arrived above (FR-049's older pages), not at the end: nothing is followed and nothing is
+ * announced. Moving forward (a refetch that could not keep the older lines) is ordinary news.
  *
  * The page scrolls the window, not a box: that is what gives iOS its native scroll, the status-bar
  * tap to top, and the collapsing toolbar in Safari.
  */
-export function useFollowBottom(signature: string, ready: boolean, top: unknown = undefined) {
+export function useFollowBottom(signature: string, ready: boolean, reach?: number) {
   const [unseen, setUnseen] = useState(false)
   const opened = useRef(false)
   const lastSignature = useRef(signature)
-  const lastTop = useRef(top)
+  const lastReach = useRef(reach)
   /** The content's height before the latest change. Whether the reader was at the end is judged
    *  against it, synchronously: a `scroll` event can still be queued when a line lands (WebKit
    *  dispatches them with the next frame), so the listener alone would answer too late. */
@@ -56,18 +57,17 @@ export function useFollowBottom(signature: string, ready: boolean, top: unknown 
     if (!opened.current) {
       opened.current = true
       lastSignature.current = signature
-      lastTop.current = top
       scrollToBottom()
-    } else if (top !== lastTop.current) {
-      lastTop.current = top
+    } else if (reach !== undefined && lastReach.current !== undefined && reach < lastReach.current) {
       lastSignature.current = signature
     } else if (signature !== lastSignature.current) {
       lastSignature.current = signature
       if (wasAtEnd) scrollToBottom()
       else setUnseen(true)
     }
+    lastReach.current = reach
     heightBefore.current = contentHeight()
-  }, [signature, ready, top])
+  }, [signature, ready, reach])
 
   const jump = useCallback(() => {
     setUnseen(false)
