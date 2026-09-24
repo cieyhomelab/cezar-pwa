@@ -95,7 +95,7 @@ export function ConnectScreen({
           autoCorrect="off"
           spellCheck={false}
           className="touch-target rounded border border-border bg-surface-raised px-3 py-2 text-base"
-          placeholder={en.auth.linkPlaceholder}
+          placeholder={en.auth.linkPlaceholder(origin)}
           value={link}
           onChange={(event) => {
             setLink(event.target.value)

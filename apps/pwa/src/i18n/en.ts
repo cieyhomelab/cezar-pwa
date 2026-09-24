@@ -51,7 +51,8 @@ export const en = {
     intro:
       'This app has no login of its own. Access is granted by the gateway in front of Cezar, and the installed app keeps its own cookies — which is why it has to be unlocked separately.',
     linkLabel: 'Paste the access link',
-    linkPlaceholder: 'https://cezar.ciey.studio/…?key=…',
+    /** Built from the page's own origin, so every instance shows its own host. */
+    linkPlaceholder: (origin: string) => `${origin}/…?key=…`,
     submit: 'Connect',
     /** Reassurance that pasting a secret here is safe. R-AUTH-5. */
     privacy: 'The link is not stored anywhere — it only serves to pass the gateway.',

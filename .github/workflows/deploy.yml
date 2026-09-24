@@ -31,7 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://cezar.ciey.studio/m/
+      # The repository variable PUBLIC_URL (e.g. https://<your-host>/m/), not a
+      # literal: the host is configuration. Unset, the environment has no link.
+      url: ${{ vars.PUBLIC_URL }}
     steps:
       - uses: actions/checkout@v7
 
@@ -95,6 +97,7 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
           DEPLOY_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
         run: |
           # $HOME must be expanded by the shell here: rsync execs RSYNC_RSH

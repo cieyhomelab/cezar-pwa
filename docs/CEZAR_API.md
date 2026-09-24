@@ -14,7 +14,7 @@ Pliki źródłowe prawdy (sprawdzaj je przy każdej aktualizacji Cezara):
 - Używamy **wyłącznie** powierzchni wersjonowanej `/api/v1/…`. Stare `/api/…` są zamrożone dla bookmarkletów — nie budujemy na nich.
 - Każda trasa projektowa istnieje w dwóch wariantach: `/api/v1/<path>` (projekt, w którym Cezar wystartował) i `/api/v1/p/:projectId/<path>`. **PWA zawsze używa wariantu z `projectId`**, bo pokazuje zadania ze wszystkich projektów.
 - Cezar **nie ma własnego uwierzytelniania** — perimeter to reverse proxy (u nas: nginx + cookie). `createCezarClient({ token })` ma opcję Bearer, ale serwer jej dziś nie wymaga. Szczegóły bramy: sekcja 1a.
-- **Guard same-origin (#426):** każdy `POST/PUT/PATCH/DELETE` z nagłówkiem `Origin` innym niż `Host` → `403`; `Sec-Fetch-Site: cross-site` → `403`. CORS jest otwarty tylko dla `GET /api/v1/health`. ⇒ **PWA musi być serwowana z tego samego originu** (`https://cezar.ciey.studio`), inaczej zapisy i odczyty nie zadziałają.
+- **Guard same-origin (#426):** każdy `POST/PUT/PATCH/DELETE` z nagłówkiem `Origin` innym niż `Host` → `403`; `Sec-Fetch-Site: cross-site` → `403`. CORS jest otwarty tylko dla `GET /api/v1/health`. ⇒ **PWA musi być serwowana z tego samego originu** (`https://<your-host>`, czyli `$PUBLIC_ORIGIN`), inaczej zapisy i odczyty nie zadziałają.
 - Błędy mają kształt `{ "error": string }` + kod HTTP (400 walidacja, 404 brak, 409 konflikt stanu).
 
 ## 1a. Brama nginx — zweryfikowane na żywej instancji (2026-09-20)

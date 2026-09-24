@@ -1,14 +1,18 @@
 # Cezar Mobile (PWA)
 
 An installable phone client for a
-[Cezar](https://github.com/open-mercato/cezar) instance running at
-`https://cezar.ciey.studio`. It answers one question in three seconds: **what
+[Cezar](https://github.com/open-mercato/cezar) instance. It answers one question in three seconds: **what
 are the agents doing, and is anything waiting for me?** Then it lets the operator
 act on the answer.
 
 The app is served from the same origin as Cezar, under `/m/`. That is not a
 preference: Cezar rejects cross-origin writes with 403 and ships no CORS, so
 no other arrangement works.
+
+Which host that is, is configuration. The reference deployment is
+`https://cezar.ciey.studio`; everywhere else this repo writes `<your-host>` or
+`$PUBLIC_ORIGIN`. The app itself reads its origin from the page, so the same
+build runs on any host.
 
 - `context/foundation/roadmap.md`: slices, their status and what is left on the host
 - `context/foundation/prd.md`: the product requirements
@@ -21,7 +25,7 @@ no other arrangement works.
 flowchart LR
   phone["Phone<br/>installed PWA + service worker"]
 
-  subgraph vps["VPS — cezar.ciey.studio"]
+  subgraph vps["VPS (your host)"]
     nginx["nginx"]
     shell["/var/www/cezar-mobile<br/>static shell"]
     cezar["Cezar<br/>127.0.0.1:4322"]
@@ -103,6 +107,8 @@ npm run sync:contract <sha>
 ```
 
 `npm run test:e2e` needs WebKit once: `npx playwright install webkit`.
+The suite never talks to a live Cezar: the preview's `/api` proxy points at
+`test/e2e/gate-stub.mjs`, which refuses everything the way the gateway does.
 
 A `SessionStart` hook (`.claude/settings.json` → `scripts/ensure-deps.sh`) installs
 `node_modules` the first time Claude Code opens a fresh clone, and reports what it
@@ -113,16 +119,17 @@ deliberately does not download. Running `npm install` by hand does the same thin
 Create `.env.local` in the repo root (gitignored — never commit it):
 
 ```
-CEZAR_URL=https://cezar.ciey.studio
+CEZAR_URL=https://<your-host>
 CEZAR_COOKIE=<the session cookie>
-DEPLOY_HOST=user@cezar.ciey.studio
+DEPLOY_HOST=user@<your-host>
+PUBLIC_URL=https://<your-host>/m/   # optional: printed by `npm run deploy`
 ```
 
-The dev proxy rewrites `Origin` to the Cezar URL; without that the same-origin
-guard rejects every write.
+`CEZAR_URL` is where the dev proxy sends `/api`. The proxy rewrites `Origin` to
+it; without that the same-origin guard rejects every write.
 
-Without VPS access, run a local mock instead: `CEZ_DRY_RUN=1 npx cezar-cli` with
-`CEZAR_URL=http://127.0.0.1:4321`.
+Without `CEZAR_URL` the proxy targets a local mock at `http://127.0.0.1:4321`,
+never a live instance: start one with `CEZ_DRY_RUN=1 npx cezar-cli`.
 
 ## Deploying
 
@@ -141,9 +148,9 @@ posts a warning instead of shipping:
 
 | Secret | Value |
 | --- | --- |
-| `DEPLOY_HOST` | `ubuntu@cezar.ciey.studio` — Cezar and the shell live on the same box |
+| `DEPLOY_HOST` | `user@<your-host>` — Cezar and the shell live on the same box |
 | `DEPLOY_SSH_KEY` | Private half of a dedicated passphrase-less ed25519 pair; the public half sits in the VPS user's `authorized_keys` |
-| `DEPLOY_KNOWN_HOSTS` | Output of `ssh-keyscan cezar.ciey.studio` — the host key is pinned, never blindly accepted |
+| `DEPLOY_KNOWN_HOSTS` | Output of `ssh-keyscan <your-host>` — the host key is pinned, never blindly accepted |
 
 The deploy key is not a login. Its `authorized_keys` entry pins it to a forced
 command, so a leaked secret writes files and nothing else — no shell, no reading
@@ -155,6 +162,10 @@ command="/usr/bin/rrsync -wo /var/www",restrict ssh-ed25519 AAAA… github-actio
 
 Regenerate it on the VPS with `ssh-keygen -t ed25519 -N '' -f ~/.ssh/cezar_pwa_deploy`,
 append that line, and push the private half with `gh secret set DEPLOY_SSH_KEY < ~/.ssh/cezar_pwa_deploy`.
+
+The optional repository **variable** `PUBLIC_URL` (`https://<your-host>/m/`) is
+the environment's link on the run page and what the deploy prints at the end.
+Unset, the run has no link and the deploy prints no host.
 
 Because rrsync anchors every client path inside its restricted directory, CI
 sets the repository **variable** `DEPLOY_PATH` to `/cezar-mobile` — relative to
@@ -181,7 +192,7 @@ Three steps remain manual and one-off, all run **on the VPS**:
 1. Wire up nginx:
 
    ```bash
-   sudo deploy/nginx/install.sh /etc/nginx/sites-available/cezar-cezar-ciey-studio
+   sudo deploy/nginx/install.sh /etc/nginx/sites-available/<your-vhost>
    ```
 
    It backs the vhost up, adds the `include`, and only reloads if `nginx -t`
@@ -203,7 +214,7 @@ Three steps remain manual and one-off, all run **on the VPS**:
 2. Install the push sidecar, as the user Cezar runs as (not root):
 
    ```bash
-   deploy/push/install.sh
+   PUBLIC_ORIGIN=https://<your-host> deploy/push/install.sh
    ```
 
    It builds the one-file bundle into `~/cezar-push` and creates the VAPID key
@@ -214,9 +225,13 @@ Three steps remain manual and one-off, all run **on the VPS**:
    the gate's `$cezar_gate_ok`, so it holds no secret. On a host without the
    gate, `nginx -t` fails and the installer rolls back.
 
-   The unit reads optional settings from `~/.cezar-push/env` (mode 600), for
-   example `PUBLIC_ORIGIN=https://cezar.ciey.studio`, the only origin that may
-   subscribe. `PORT=` there moves the sidecar off 4330 — systemd applies the
+   `PUBLIC_ORIGIN` is required: it is the only origin that may subscribe, and
+   the sidecar will not start without it. It must be the bare origin a browser
+   sends — `https://host[:port]`, no trailing slash — and the installer refuses
+   anything else. The installer keeps it in `~/.cezar-push/env` (mode 600), so
+   later runs can drop the prefix; on a terminal it asks when it is missing.
+
+   The same file holds the unit's other optional settings. `PORT=` there moves the sidecar off 4330 — systemd applies the
    file over the unit's own `Environment=`, and the installer's health probe
    reads whichever wins, so it checks the port the service is really on.
 
@@ -233,15 +248,19 @@ host:
 
 ```bash
 systemctl --user is-active cezar-push                                   # active
-curl -s -o /dev/null -w '%{http_code}\n' https://cezar.ciey.studio/m/push/vapid-public-key  # 403 without the cookie, JSON with it, never index.html
-curl -s -o /dev/null -w '%{http_code}\n' -X POST https://cezar.ciey.studio/m/session/end   # 403: no same-origin Origin header
+curl -s -o /dev/null -w '%{http_code}\n' "$PUBLIC_ORIGIN/m/push/vapid-public-key"  # 403 without the cookie, JSON with it, never index.html
+curl -s -o /dev/null -w '%{http_code}\n' -X POST "$PUBLIC_ORIGIN/m/session/end"   # 403: no same-origin Origin header
 ```
 
 3. Keep the include in place across `cezar server-install`, as root, once:
 
    ```bash
    sudo install -o root -g root -m 755 deploy/nginx/install.sh /usr/local/sbin/cezar-mobile-nginx-ensure
-   sudo cp deploy/systemd/cezar-mobile-nginx-ensure.{path,service,timer} /etc/systemd/system/
+   vhost=/etc/nginx/sites-available/<your-vhost>
+   for u in path service timer; do
+     sed "s|/etc/nginx/sites-available/cezar-cezar-ciey-studio|$vhost|g" deploy/systemd/cezar-mobile-nginx-ensure.$u |
+       sudo tee /etc/systemd/system/cezar-mobile-nginx-ensure.$u >/dev/null
+   done
    sudo systemctl daemon-reload
    sudo systemctl enable --now cezar-mobile-nginx-ensure.path cezar-mobile-nginx-ensure.timer
    ```
@@ -255,9 +274,9 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST https://cezar.ciey.studio/m/ses
    `/etc/nginx/snippets/` and survive the rewrite. It shares
    `cezar-gate-ensure`'s lock, so the two never edit the vhost at the same time.
    A failed run shows in `systemctl --failed` and
-   `journalctl -u cezar-mobile-nginx-ensure`. The units hard-code the vhost
-   path, `/etc/nginx/sites-available/cezar-cezar-ciey-studio`, like the gate's
-   units. Root runs a root-owned copy of the script, never the checkout, so
+   `journalctl -u cezar-mobile-nginx-ensure`. The units in the repo name the
+   reference deployment's vhost, like the gate's units; the `sed` above swaps in
+   yours (a plain `cp` is only right on the reference host). Root runs a root-owned copy of the script, never the checkout, so
    re-run the `install` line after pulling a change to `install.sh`.
 
    To see it work, delete the `include` line from the vhost and wait a few

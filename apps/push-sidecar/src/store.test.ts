@@ -19,7 +19,7 @@ describe('isPushServiceEndpoint', () => {
     ['http://web.push.apple.com/abc', false],
     ['https://push.apple.com.evil.example/abc', false],
     ['https://127.0.0.1:4322/api/v1/p/x/runs', false],
-    ['https://cezar.ciey.studio/m/', false],
+    ['https://cezar.example.test/m/', false],
     ['not a url', false],
   ])('%s → %s', (endpoint, expected) => {
     expect(isPushServiceEndpoint(endpoint)).toBe(expected)

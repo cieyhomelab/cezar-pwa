@@ -2,7 +2,7 @@ import { attentionPayload } from '@cezar-pwa/shared'
 import { describe, expect, it } from 'vitest'
 import { appPathFor, notificationFor, pickAppWindow, readPushPayload, targetUrl } from './push-message.ts'
 
-const ORIGIN = 'https://cezar.ciey.studio'
+const ORIGIN = 'https://cezar.example.test'
 
 describe('readPushPayload', () => {
   it('keeps the known string fields and drops the rest', () => {

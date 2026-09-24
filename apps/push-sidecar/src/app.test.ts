@@ -8,7 +8,7 @@ import { Pusher, PUSH_TIMEOUT_MS, PUSH_TTL_SECONDS, topicFor, type SendNotificat
 import { SubscriptionStore } from './store.ts'
 import { APPLE, subscription } from './testing.ts'
 
-const ORIGIN = 'https://cezar.ciey.studio'
+const ORIGIN = 'https://cezar.example.test'
 const vapid = { publicKey: 'BPublicKey', privateKey: 'private' }
 
 let dir: string

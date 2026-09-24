@@ -33,8 +33,11 @@ Environment=CEZAR_URL=http://127.0.0.1:4322
 # never in the repo (CLAUDE.md rule 6). The directory is 0700 because the
 # installer's `install -d -m 700` makes it so — the sidecar sets that mode when
 # it creates the directory, but leaves an existing looser one alone.
-# VAPID_SUBJECT defaults to the site's https URL; a mailto: contact can be set
-# in the optional file below.
+# PUBLIC_ORIGIN — the https:// origin the app is served from, e.g.
+# https://cezar.example.com, with no trailing slash — is REQUIRED and has no
+# default: the sidecar refuses to start without it, rather than start and then
+# 403 every write from the real origin. The installer keeps it in the env file
+# below. VAPID_SUBJECT defaults to it; a mailto: contact can be set there too.
 Environment=STATE_DIR=%h/.cezar-push
 EnvironmentFile=-%h/.cezar-push/env
 

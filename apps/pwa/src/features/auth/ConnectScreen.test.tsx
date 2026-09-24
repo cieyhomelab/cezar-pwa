@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { en } from '../../i18n/en.ts'
 import { ConnectScreen } from './ConnectScreen.tsx'
 
-const ORIGIN = 'https://cezar.ciey.studio'
+const ORIGIN = 'https://cezar.example.test'
 
 function setup(props: Partial<Parameters<typeof ConnectScreen>[0]> = {}) {
   const navigate = vi.fn()
@@ -34,6 +34,11 @@ describe('ConnectScreen', () => {
     expect(screen.getByRole('heading', { name: en.auth.title })).toBeInTheDocument()
     expect(screen.getByText(en.auth.intro)).toBeInTheDocument()
     expect(screen.getByText(en.auth.privacy)).toBeInTheDocument()
+  })
+
+  it('shows its own host as the example link, not a fixed deployment (#27)', () => {
+    setup()
+    expect(screen.getByLabelText(en.auth.linkLabel)).toHaveAttribute('placeholder', `${ORIGIN}/…?key=…`)
   })
 
   it('sends a pasted access link to the gateway at the app’s own path (FR-005)', () => {

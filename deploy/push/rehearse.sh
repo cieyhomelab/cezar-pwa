@@ -8,7 +8,8 @@
 #
 # Checks what #36 got wrong: the unit the installer writes must point at
 # CEZAR_PUSH_HOME and STATE_DIR, and the health probe must use the port the
-# service will actually listen on. Exits non-zero on the first expectation
+# service will actually listen on — and what #27 added: PUBLIC_ORIGIN is
+# required, validated, and kept in STATE_DIR/env. Exits non-zero on the first expectation
 # that fails. Run it after touching deploy/push/install.sh or
 # deploy/systemd/cezar-push.service.
 set -euo pipefail
@@ -43,6 +44,8 @@ import { join } from 'node:path'
 if (process.argv[2] !== 'init') { console.error('stub: expected `init`'); process.exit(1) }
 const dir = process.env.STATE_DIR
 if (!dir) { console.error('stub: no STATE_DIR in the environment'); process.exit(1) }
+// The real bundle's readConfig refuses to run `init` without it.
+if (!process.env.PUBLIC_ORIGIN) { console.error('stub: no PUBLIC_ORIGIN in the environment'); process.exit(1) }
 const file = join(dir, 'vapid.json')
 mkdirSync(dir, { recursive: true, mode: 0o700 })
 if (!existsSync(file)) writeFileSync(file, `{"publicKey":"stub-${Date.now()}","privateKey":"stub"}\n`, { mode: 0o600 })
@@ -71,13 +74,17 @@ echo '{"subscriptions":0}'
 SHIM
 chmod +x "$T/bin/npm" "$T/bin/systemctl" "$T/bin/loginctl" "$T/bin/curl"
 
-# A clean environment, so a STATE_DIR or PORT in the caller's shell cannot
-# decide the outcome.
-run_install() { # run_install [VAR=value ...]
+# A clean environment, so a STATE_DIR, PORT or PUBLIC_ORIGIN in the caller's
+# shell cannot decide the outcome. Every run gets an origin unless it passes
+# its own; run_install_bare passes none. stdin is not a terminal, so the
+# installer never prompts here.
+ORIGIN=https://cezar.example.test
+run_install_bare() { # run_install_bare [VAR=value ...]
   : >"$T/curl.log"
   env -i PATH="$T/bin:$PATH" HOME="$T/home" USER="${USER:-rehearsal}" "$@" \
-    "$T/repo/deploy/push/install.sh" 2>&1
+    "$T/repo/deploy/push/install.sh" 2>&1 </dev/null
 }
+run_install() { run_install_bare PUBLIC_ORIGIN="$ORIGIN" "$@"; }
 unit="$T/home/.config/systemd/user/cezar-push.service"
 probed() { tr ' ' '\n' <"$T/curl.log" | grep '^http' || true; }
 
@@ -128,6 +135,32 @@ printf 'PORT=nonsense\n' >"$T/y3/env"
 out=$(run_install CEZAR_PUSH_HOME="$T/x3" STATE_DIR="$T/y3") && fail "the installer accepted PORT=nonsense"
 [[ "$out" == *"PORT is not a port"* ]] || fail "a bad PORT was not reported as such: $out"
 pass "a PORT the service could not listen on is refused, not probed"
+
+# --- PUBLIC_ORIGIN is required, validated and kept -------------------------
+out=$(run_install_bare CEZAR_PUSH_HOME="$T/o" STATE_DIR="$T/p") && fail "the installer ran without PUBLIC_ORIGIN"
+[[ "$out" == *"PUBLIC_ORIGIN is not set"* ]] || fail "a missing PUBLIC_ORIGIN was not reported as such: $out"
+pass "with no PUBLIC_ORIGIN anywhere the install is refused"
+
+for bad in "$ORIGIN/" "$ORIGIN/m/" 'http://cezar.example.test' 'cezar.example.test' "$ORIGIN:443"; do
+  out=$(run_install_bare CEZAR_PUSH_HOME="$T/o" STATE_DIR="$T/p" PUBLIC_ORIGIN="$bad") &&
+    fail "the installer accepted PUBLIC_ORIGIN=$bad"
+  [[ "$out" == *"bare https:// origin"* ]] || fail "refusing PUBLIC_ORIGIN=$bad did not say why: $out"
+done
+pass "a trailing slash, a path, http, no scheme and a spelled-out default port are all refused"
+
+mkdir -p "$T/p"
+printf 'VAPID_SUBJECT=mailto:ops@example.test\nPUBLIC_ORIGIN=https://old.example.test\n' >"$T/p/env"
+out=$(run_install CEZAR_PUSH_HOME="$T/o" STATE_DIR="$T/p") || fail "install with PUBLIC_ORIGIN failed: $out"
+[[ "$(grep '^PUBLIC_ORIGIN=' "$T/p/env")" == "PUBLIC_ORIGIN=$ORIGIN" ]] ||
+  fail "the env file does not carry exactly the new PUBLIC_ORIGIN:"$'\n'"$(cat "$T/p/env")"
+grep -qxF 'VAPID_SUBJECT=mailto:ops@example.test' "$T/p/env" || fail "writing PUBLIC_ORIGIN lost the other lines"
+pass "PUBLIC_ORIGIN replaces the old value in STATE_DIR/env and keeps the rest"
+
+rm "$T/p/env"
+out=$(run_install CEZAR_PUSH_HOME="$T/o" STATE_DIR="$T/p") || fail "install into a fresh env file failed: $out"
+[[ "$(stat -c %a "$T/p/env")" == 600 ]] || fail "a new env file is $(stat -c %a "$T/p/env"), not 600"
+out=$(run_install_bare CEZAR_PUSH_HOME="$T/o" STATE_DIR="$T/p") || fail "a re-run did not pick up the stored PUBLIC_ORIGIN: $out"
+pass "a new env file is 0600, and a re-run without PUBLIC_ORIGIN reads the stored one"
 
 # --- the defaults still work ------------------------------------------------
 rm -rf "${T:?}/home"
