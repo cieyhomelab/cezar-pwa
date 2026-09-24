@@ -120,6 +120,20 @@ describe('keeping this one', () => {
     expect(picks).toEqual([])
   })
 
+  it('counts an archived sibling among those whose worktree goes', async () => {
+    serve(runAs('done'), {
+      groupId: 'g-1',
+      runs: [
+        variant(RUN_ID, 'A', 'done'),
+        variant('run-b', 'B', 'done'),
+        variant('run-c', 'C', 'failed', { archived: true, diffStat: ' 1 file changed, 1 insertion(+)\n' }),
+      ],
+    })
+    fireEvent.click(await (await panel()).findByRole('button', { name: t.keep }))
+    const dialog = await screen.findByRole('alertdialog', { name: t.confirm.title('A') })
+    expect(dialog.textContent).toContain(t.confirm.body(2))
+  })
+
   it('shows the pick in flight, blocks the task actions, then reports and drops the offer', async () => {
     let release: (response: Response) => void = () => {}
     const { state, picks } = serve(runAs('done'), groupOf('done'), () => new Promise<Response>((resolve) => (release = resolve)))

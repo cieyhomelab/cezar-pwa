@@ -77,7 +77,9 @@ export function VariantsPanel({
   const rows = useMemo(() => (group.data ? variantRows(group.data, runId) : []), [group.data, runId])
   const current = rows.find((row) => row.current)
   const offer = pickOffer(rows)
-  const others = rows.filter((row) => !row.current && !row.archived).length
+  // Every other variant, archived ones included: an archived task keeps its worktree, and the
+  // pick removes the worktree and branch of each loser all the same.
+  const others = rows.filter((row) => !row.current).length
 
   const refused = group.error instanceof AuthRequiredError
   useEffect(() => {
