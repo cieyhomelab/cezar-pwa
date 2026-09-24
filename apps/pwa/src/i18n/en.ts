@@ -631,6 +631,21 @@ export const en = {
       cezarUnknown: 'unknown — no connection',
       tested: 'Tested with Cezar',
     },
+    /** #68, TEMPORARY: the on-device icon badge check behind FR-042 (PRD Open Question 4). */
+    badge: {
+      section: 'Icon badge check',
+      intro:
+        'A temporary check: does the home-screen icon show a number? Set it, go to the home screen and look, then clear it. For the notification case, send a test notification with the app closed — it should set the badge to 1.',
+      /** The question is about the installed app; a Safari tab would answer a different one. */
+      tabOnly: 'Open Cezar from its home-screen icon to run this check.',
+      supported: 'This app exposes the badge API.',
+      unsupported: 'This app does not expose the badge API here.',
+      set: 'Set badge to 3',
+      clear: 'Clear badge',
+      didSet: 'Asked for 3 — look at the icon on the home screen.',
+      didClear: 'Asked to clear — the icon should have no number.',
+      failed: (message: string) => `The call failed: ${message}`,
+    },
     /** S-12, FR-006. */
     signOut: {
       section: 'Sign out',
