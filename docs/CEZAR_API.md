@@ -109,6 +109,7 @@ plus `activity: 'monitoring'` (podstan `running` — agent czeka na własną pra
 - Gdy `hasOlder`, na górze transkryptu jest odnośnik do cockpitu — starsze strony (FR-049) są odłożone.
 - Obrazy z transkryptu nie są ładowane: linia v1 `image` niesie URL z zamrożonej powierzchni `/api/runs/…` (reguła 2). Obrazy w Markdownie agenta też nie — renderujemy tekst alternatywny (żadnych żądań do stron trzecich).
 - **Przeczytane (FR-020):** `POST …/runs/:id/read` wysyłane raz, tylko gdy `isUnread(run)`. Odpowiedź to cały rekord, ale do cache'u (`['run', …]` i wiersz w `['runs-index']`) trafia **wyłącznie** `seenAt` — tak jak `useMarkRunSeen` w cockpicie (migawka sprzed lotu cofnęłaby pola, które w międzyczasie się zmieniły).
+- **Wszystkie przeczytane (#67):** lista wysyła `POST …/runs/read-all` raz na projekt, który ma nieprzeczytany wiersz **na ekranie** (`readAllPlan()` w `apps/pwa/src/domain/read-all.ts` — filtr projektu FR-013 decyduje, do kogo idzie wywołanie), równolegle, po jednym potwierdzeniu. Wyniki są niezależne: projekt, który odmówił, jest nazwany z powodem i zachowuje znaczniki. Nic nie trafia do cache'u optymistycznie — po próbie unieważniamy `['runs-index']` i prefiks `['run']`. „Archiwizuj zakończone” (`…/runs/archive-finished`) celowo pominięte: archiwizuje też `failed`, zdejmuje piny i zaplanowane wznowienia.
 - Ścieżka ekranu: `/m/p/:projectId/runs/:runId` — tę samą otwiera powiadomienie (S-10, `apps/pwa/src/pwa/push-message.ts`). Router ma `basename="/m/"` **ze slashem**: z `/m` link do listy prowadzi pod `/m`, poza scope service workera i poza `location ^~ /m/` w nginx.
 
 ### Diff zadania w PWA (S-09) — jak czytamy `/changes`
@@ -194,6 +195,7 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 | Zakończ / zaakceptuj review | `POST …/runs/:id/finish` | — → `{ finished: true }`; `409 no open session` |
 | Draft PR | `POST …/runs/:id/pr` → 201 | — → `{ url, dryRun }`; 400 bez worktree, 409 `{ error, manual }` (błąd forge'a albo run aktywny) |
 | Oznacz jako przeczytane / nieprzeczytane | `POST …/runs/:id/read` / `…/unread` | — |
+| Oznacz wszystkie jako przeczytane (#67) | `POST /api/v1/p/:projectId/runs/read-all` | — → `{ read: number }` (ile przeczytano). Stempluje `seenAt` na każdym nieprzeczytanym zakończonym runie **całego projektu** (`markAllRead()` w `runs/store.js` = kopia `isUnread` klauzula po klauzuli), także starszych niż limit indeksu; rekordy przychodzą ponownie zdarzeniem SSE `run`. Brak filtra po stronie serwera, brak cofnięcia hurtem (pojedynczo: `…/unread`). Zarejestrowana przed `/runs/:id/…`, więc `read-all` nigdy nie jest id runu |
 | Przypnij / odepnij | `POST …/runs/:id/pin` | `{}` lub `{ pinned:false }` → cały rekord |
 | Archiwizuj / przywróć | `POST …/runs/:id/archive` | `{}` lub `{ archived:false }` → cały rekord (archiwizacja zdejmuje też pin i zaplanowane wznowienie) |
 | Anuluj auto-wznowienie | `DELETE …/runs/:id/auto-resume` | — |

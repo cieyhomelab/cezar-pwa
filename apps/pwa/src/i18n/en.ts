@@ -152,6 +152,18 @@ export const en = {
     truncated: (limit: number, projects: string) =>
       `Showing only the ${limit} newest tasks from: ${projects}. Older ones are in the full cockpit.`,
     newTask: 'New task',
+    /** #67: clear the unread markers of the tasks on screen, one call per project in view. */
+    readAll: {
+      action: (count: number) => `Mark all read (${count})`,
+      confirmTitle: (count: number) => (count === 1 ? 'Mark 1 task read?' : `Mark ${count} tasks read?`),
+      confirmBody: (projects: string) =>
+        `Every unread task in ${projects} loses its marker, including older ones not listed here. You can mark a task unread again one at a time, in the cockpit.`,
+      back: 'Back',
+      confirm: 'Mark read',
+      working: 'Marking read…',
+      done: (count: number) => (count === 1 ? 'Marked 1 task read.' : `Marked ${count} tasks read.`),
+      failed: (project: string, reason: string) => `${project} was not marked read. ${reason}`,
+    },
   },
   /** S-13: start a task from the phone (FR-033), then land on it (FR-034). */
   newTask: {

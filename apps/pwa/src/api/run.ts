@@ -4,6 +4,7 @@ import type {
   ContinueResponse,
   CreatePrResponse,
   FinishResponse,
+  MarkAllReadResponse,
   MessageResponse,
   RunEvent,
   RunHistoryContext,
@@ -155,6 +156,22 @@ export function historyContextQueryOptions(projectId: string, runId: string, liv
 /** `POST …/read` (FR-020). Bodyless. It answers with the whole record. */
 export async function markRunRead(projectId: string, runId: string): Promise<ApiRun> {
   return apiFetch<ApiRun>(`${runBase(projectId, runId)}/read`, { method: 'POST' })
+}
+
+/**
+ * `POST /api/v1/p/:projectId/runs/read-all` (#67): stamps `seenAt` on every unread finished run
+ * of the project and answers how many. Bodyless. The stamped records arrive again over the
+ * `run` SSE event; there is no bulk undo (per task: `…/unread`).
+ */
+export async function markProjectRead(projectId: string): Promise<MarkAllReadResponse> {
+  const body = await apiFetch<unknown>(`/api/v1/p/${encodeURIComponent(projectId)}/runs/read-all`, {
+    method: 'POST',
+    timeoutMs: WRITE_TIMEOUT_MS,
+  })
+  if (!isRecord(body) || typeof body.read !== 'number') {
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
+  }
+  return { read: body.read }
 }
 
 /**

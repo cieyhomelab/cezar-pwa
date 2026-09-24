@@ -136,3 +136,82 @@ test.describe('Task list', () => {
     await expect(page.getByRole('heading', { name: en.auth.title })).toBeVisible()
   })
 })
+
+/**
+ * #67: "Mark all read" over the tasks on screen. The stub sweeps the way Cezar does — every
+ * unread finished run of the project gets a `seenAt` — and one project can be made to refuse.
+ */
+async function serveSweep(page: Page, refuse?: string) {
+  const swept = new Set<string>()
+  const calls: string[] = []
+  await holdEventStream(page)
+  await page.route('**/api/v1/health', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: health }),
+  )
+  await page.route('**/api/v1/workspace/runs-index', (route) => {
+    const index = JSON.parse(runsIndex) as { runs: { projectId: string; finishedAt?: string }[] }
+    const runs = index.runs.map((run) =>
+      swept.has(run.projectId) && run.finishedAt ? { ...run, seenAt: '2026-09-24T12:00:00.000Z' } : run,
+    )
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...index, runs }) })
+  })
+  await page.route('**/api/v1/p/*/runs/read-all', (route) => {
+    const projectId = new URL(route.request().url()).pathname.split('/')[4] as string
+    calls.push(`${route.request().method()} ${projectId}`)
+    if (projectId === refuse) {
+      return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"store is read-only"}' })
+    }
+    swept.add(projectId)
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"read":1}' })
+  })
+  return calls
+}
+
+test.describe('Mark all read (#67)', () => {
+  const t = en.runs.readAll
+  // 1× keeps the evidence screenshots small; layout does not depend on the pixel ratio.
+  test.use({ deviceScaleFactor: 1 })
+
+  test('one confirmation clears every marker on screen, one call per project in view', async ({ page }) => {
+    const calls = await serveSweep(page)
+    await page.goto('.')
+
+    await page.getByRole('button', { name: t.action(2) }).tap()
+    const dialog = page.getByRole('alertdialog', { name: t.confirmTitle(2) })
+    await expect(dialog).toContainText(t.confirmBody('cezar-pwa, kai-phone'))
+    await dialog.getByRole('button', { name: t.confirm }).tap()
+
+    await expect(page.getByText(t.done(2))).toBeVisible()
+    await expect(page.getByText(`(${en.runs.unread})`)).toHaveCount(0)
+    expect(calls.sort()).toEqual(['POST cezar-pwa', 'POST kai-phone'])
+  })
+
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`fits 390×844 in the ${scheme} theme, and names the project that failed`, async ({ page }) => {
+      await serveSweep(page, 'kai-phone')
+      await page.emulateMedia({ colorScheme: scheme })
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.goto('.')
+      const evidence = process.env.E2E_EVIDENCE_DIR
+      const noSideways = async () =>
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+        ).toBeLessThanOrEqual(0)
+
+      await expect(page.getByRole('button', { name: t.action(2) })).toBeVisible()
+      await noSideways()
+      if (evidence) await page.screenshot({ path: `${evidence}/offer-${scheme}.png` })
+
+      await page.getByRole('button', { name: t.action(2) }).tap()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await noSideways()
+      if (evidence) await page.screenshot({ path: `${evidence}/confirm-${scheme}.png` })
+
+      await page.getByRole('alertdialog').getByRole('button', { name: t.confirm }).tap()
+      await expect(page.getByRole('alert')).toHaveText(t.failed('kai-phone', 'Cezar refused: store is read-only'))
+      await expect(page.getByRole('button', { name: t.action(1) })).toBeVisible()
+      await noSideways()
+      if (evidence) await page.screenshot({ path: `${evidence}/partial-failure-${scheme}.png` })
+    })
+  }
+})
