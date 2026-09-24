@@ -2,6 +2,7 @@
   "name": "@cezar-pwa/cezar-contract",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "description": "Vendored copy of Cezar's zod contract, pinned to the commit in UPSTREAM",
   "dependencies": {
