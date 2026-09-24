@@ -107,6 +107,8 @@ npm run sync:contract <sha>
 ```
 
 `npm run test:e2e` needs WebKit once: `npx playwright install webkit`.
+The suite never talks to a live Cezar: the preview's `/api` proxy points at
+`test/e2e/gate-stub.mjs`, which refuses everything the way the gateway does.
 
 A `SessionStart` hook (`.claude/settings.json` → `scripts/ensure-deps.sh`) installs
 `node_modules` the first time Claude Code opens a fresh clone, and reports what it

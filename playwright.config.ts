@@ -8,6 +8,9 @@ import { defineConfig, devices } from '@playwright/test'
 // wrong build while reporting green. Set `E2E_PORT` to get an isolated server.
 const port = Number(process.env.E2E_PORT ?? 4173)
 const origin = `http://localhost:${port}`
+// The stand-in for the gateway the preview proxies /api to (test/e2e/gate-stub.mjs),
+// so no request from this suite can reach a live Cezar.
+const gatePort = Number(process.env.E2E_GATE_PORT ?? port + 1)
 
 export default defineConfig({
   testDir: './test/e2e',
@@ -31,12 +34,21 @@ export default defineConfig({
       use: { ...devices['iPhone 14'], defaultBrowserType: 'webkit' },
     },
   ],
-  webServer: {
-    // E2E runs against the built artifact, not the dev server: the manifest link
-    // and the service worker only exist in a production build.
-    command: `npm run build -w @cezar-pwa/pwa && npm run preview -w @cezar-pwa/pwa -- --port ${port} --strictPort`,
-    url: `${origin}/m/`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: `node test/e2e/gate-stub.mjs ${gatePort}`,
+      // Playwright counts a 403 as "up", which is all this server ever says.
+      url: `http://127.0.0.1:${gatePort}/`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      // E2E runs against the built artifact, not the dev server: the manifest link
+      // and the service worker only exist in a production build.
+      command: `npm run build -w @cezar-pwa/pwa && npm run preview -w @cezar-pwa/pwa -- --port ${port} --strictPort`,
+      url: `${origin}/m/`,
+      env: { CEZAR_URL: `http://127.0.0.1:${gatePort}` },
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 })
