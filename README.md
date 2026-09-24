@@ -27,7 +27,7 @@ You need one thing first: the **secret link** to your Cezar. It looks like
 1. Open `https://<your-host>/m/` in **Safari** (iPhone) or **Chrome** (Android).
 2. Put it on your home screen:
    - iPhone: tap **Share**, then **Add to Home Screen**.
-   - Android: tap the menu (⋮), then **Install app**.
+   - Android: tap the menu (⋮), then **Install app** (or **Add to Home screen**).
 3. Close the browser. Tap the new **Cezar** icon on your home screen.
 4. The app asks you to connect. Paste the whole secret link and tap **Connect**.
 
