@@ -62,7 +62,7 @@ In this order — a finding higher up outranks any number below it:
 ### Deploy (`deploy/`, `scripts/`)
 
 - Every nested nginx `location` repeats the security headers (`add_header` does not inherit once a block sets its own).
-- Shell scripts pass shellcheck and keep the rrsync path anchoring documented in `README.md`.
+- Shell scripts pass shellcheck and keep the rrsync path anchoring documented in `OLD_README.md`.
 - `deploy/nginx/rehearse.sh` and `deploy/push/rehearse.sh` must pass; a change to an installer updates its rehearsal.
 
 ### Tests
