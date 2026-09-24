@@ -29,7 +29,7 @@ import runsIndex from '../fixtures/runs-index.json'
 
 /**
  * The fixtures the screens are tested against must be shapes the server can
- * actually send (CLAUDE.md → "testy kontraktowe"). Two kinds:
+ * actually send (CLAUDE.md → "contract tests"). Two kinds:
  *
  *  - `*.live-<version>.json` — captured from the instance on the VPS, so a
  *    failure here means the vendored contract no longer describes the server

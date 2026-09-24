@@ -2,7 +2,7 @@ import type { RunsIndexResponse } from '@cezar-pwa/cezar-contract/contract'
 import { ApiError, apiFetch } from './http.ts'
 import { workspaceJournal } from './workspace-events.ts'
 
-/** Query key, per CLAUDE.md → "Klucze query". */
+/** Query key, per CLAUDE.md → "Query keys". */
 export const RUNS_INDEX_QUERY_KEY = ['runs-index'] as const
 
 /**

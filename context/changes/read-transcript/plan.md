@@ -94,7 +94,7 @@ FR-018, FR-020, and Cezar's cockpit source at `v0.11.0`. See `change.md`.
 - [x] **E2E (WebKit, iPhone 14)**: 30 passing, 7 of them new. A row opens the task. The plan
       stays pinned while scrolling. A tool is one ≥ 44 px line until tapped. No sideways scroll
       with a tool open. The receipt is sent once. A deep link survives a reload and the way
-      back works. A lapsed session lands on "Połącz z Cezarem".
+      back works. A lapsed session lands on "Connect to Cezar".
 - [x] **Both themes at 390×844**: `evidence/`.
 - [x] **Live data**: rendered against the instance's real run and history
       (`evidence/live-dark.png`, `evidence/live-transcript-light.png`), with the receipt blocked

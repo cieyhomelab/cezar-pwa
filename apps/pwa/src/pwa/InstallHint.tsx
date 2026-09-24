@@ -4,7 +4,7 @@ import { en } from '../i18n/en.ts'
 /**
  * FR-001, the iOS branch. Safari never fires `beforeinstallprompt` and Android
  * is a PRD non-goal, so the affordance is a static instruction rather than a
- * captured browser prompt (CLAUDE.md → "Specyfika iOS").
+ * captured browser prompt (CLAUDE.md → "iOS specifics").
  *
  * Rendered only outside standalone mode: once the app runs from the icon there
  * is nothing left to install. Dismissal is per-session on purpose — persisting

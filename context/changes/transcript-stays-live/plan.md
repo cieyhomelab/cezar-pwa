@@ -77,7 +77,7 @@ Cezar's server and cockpit at `v0.11.0`. See `change.md`.
   `afterSeq = page.asOfSeq`. After an attempt that never opened, it connects without the cursor:
   a cursor the server rejects (409) fails every attempt, and EventSource cannot say why.
 - `src/features/run/useFollowBottom.ts` follows only while the reader is within 96 px of the
-  end. Otherwise it raises `unseen`, which shows the "Nowe wiadomości ↓" button.
+  end. Otherwise it raises `unseen`, which shows the "New messages ↓" button.
 - Refetching: while live, the record is polled every 5 min as a safety net, and the page and
   context are not refetched at all. The replay covers them. While not live, S-05's 30 s polling
   and focus refetch apply as before.
@@ -106,7 +106,7 @@ Cezar's server and cockpit at `v0.11.0`. See `change.md`.
 - [x] **Typecheck and lint**: `npm run typecheck`, `npm run lint` clean.
 - [x] **E2E (WebKit, iPhone 14)**: 40 passing, 3 of them new, on the browser's real
       `EventSource`. An answer streams in within the 2 s NF and the screen follows it. Scrolled
-      up, the screen does not move, and a ≥ 44 px "Nowe wiadomości" button appears and takes the
+      up, the screen does not move, and a ≥ 44 px "New messages" button appears and takes the
       reader to the end. A dropped stream reconnects with `afterSeq` at the last line, and an
       overlapping replay shows nothing twice. `run.spec.ts` now holds the stream silent.
 - [x] **Both themes at 390×844, live data**: `evidence/` shows this task's own run streaming

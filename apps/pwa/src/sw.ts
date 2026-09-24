@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
 import { createHandlerBoundToURL, precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
-import { NAVIGATE_MESSAGE, notificationFor, pickAppWindow, readPushPayload } from './pwa/push-message.ts'
+import { applyBadge } from './pwa/app-badge.ts'
+import { NAVIGATE_MESSAGE, notificationFor, pickAppWindow, readPushPayload, TEST_TAG } from './pwa/push-message.ts'
 import { replaceSubscription } from './pwa/subscription-sync.ts'
 
 declare const self: ServiceWorkerGlobalScope
@@ -50,8 +51,16 @@ self.addEventListener('push', (event) => {
     // Not JSON: shown as a bare "needs attention", never as whatever text arrived.
     raw = undefined
   }
-  const { title, options } = notificationFor(readPushPayload(raw))
-  event.waitUntil(self.registration.showNotification(title, options))
+  const payload = readPushPayload(raw)
+  const { title, options } = notificationFor(payload)
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      // #68, TEMPORARY: case 2 of the badge check — the worker sets it while handling a push.
+      // A test push only, so no real notification ever leaves a number behind.
+      payload.kind === 'test' ? applyBadge(self.navigator, 1) : undefined,
+    ]),
+  )
 })
 
 /**
@@ -61,11 +70,14 @@ self.addEventListener('push', (event) => {
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+  // #68, TEMPORARY: the test push's badge goes with the test notification.
+  const clearTestBadge = event.notification.tag === TEST_TAG ? applyBadge(self.navigator, null) : undefined
   const target = (event.notification.data as { url?: unknown } | undefined)?.url
   const url = typeof target === 'string' ? target : '/m/'
 
   event.waitUntil(
     (async () => {
+      await clearTestBadge
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const existing = pickAppWindow(windows)
       if (existing) {

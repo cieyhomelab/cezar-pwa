@@ -100,7 +100,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // Dev against the live Cezar. `changeOrigin` fixes the Host header;
         // `origin` has to be set by hand as well, or the same-origin guard
-        // rejects every write with 403 (CLAUDE.md → "Dev na żywym Cezarze").
+        // rejects every write with 403 (CLAUDE.md → "Dev against a live Cezar").
         '/api': {
           target: cezarUrl,
           changeOrigin: true,

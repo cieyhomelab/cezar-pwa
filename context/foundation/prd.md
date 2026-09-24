@@ -38,8 +38,9 @@ cost, whether anything broke is unknown until the full cockpit is opened on a de
 usable surface for answering an agent.
 
 The insight is an existence proof rather than a proprietary one, and the operator states
-it directly: *"Pomysł został zrealizowany przez kogoś, ale nie mam do niego dostępu, tylko
-dowiedziałem się, że można coś takiego zrobić jak PWA na iPhone z frameworkiem Cezar."*
+it directly: *"Someone has built the idea, but I have no access to it — I only learned that
+something like this can be done as a PWA on the iPhone with the Cezar framework."*
+(translated from the operator's Polish)
 Someone has already built a comparable phone client against Cezar; the operator has no
 access to it and knows only that the shape is feasible. Feasibility risk is therefore low
 and competitive advantage is nil — and irrelevant, because this is a tool for one person.
@@ -454,7 +455,8 @@ Non-functional non-goals:
 4. **Does an icon badge actually work in an installed web app on this phone?** Platform
    support has historically been uneven. It is only a nice-to-have, so it blocks nothing —
    but it should be verified on the real device before any work goes into it, rather than
-   after.
+   after. Tracked as #68; the installed app carries a temporary Settings → "Icon badge
+   check" for the three cases (roadmap Open Question 3 says how). Answer: pending.
 5. **Is 12 weeks still the right number?** The estimate predates the Socratic cuts:
    backwards paging through transcript history, keeping a very long transcript smooth, the
    persisted offline snapshot, Android support, camera attachments and the version warning

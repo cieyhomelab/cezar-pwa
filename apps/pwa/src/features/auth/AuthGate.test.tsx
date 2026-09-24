@@ -77,7 +77,7 @@ describe('AuthGate', () => {
   it('re-probes when the app comes back to the foreground, with nothing pressed', async () => {
     // The session changed while the app was frozen — it expired, or (in a
     // browser tab) the operator opened the access link and switched back. The
-    // only trigger available is the visibility change (CLAUDE.md → "Specyfika iOS").
+    // only trigger available is the visibility change (CLAUDE.md → "iOS specifics").
     let authorized = false
     stubFetch(() => (authorized ? healthResponse() : refusalResponse()))
     renderGate()

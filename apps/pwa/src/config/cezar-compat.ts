@@ -4,8 +4,8 @@
  * Source: the live instance's `GET /api/v1/health` → `version` on 2026-09-24,
  * and the contract vendored for it (`packages/cezar-contract/UPSTREAM` = tag
  * `v0.11.1` of `open-mercato/cezar`). Bump this together with
- * `npm run sync:contract <sha>` whenever the VPS moves (CLAUDE.md → "Gdy API
- * Cezara się zmieni").
+ * `npm run sync:contract <sha>` whenever the VPS moves (CLAUDE.md → "When
+ * Cezar's API changes").
  */
 export const TESTED_CEZAR_VERSION = '0.11.1'
 

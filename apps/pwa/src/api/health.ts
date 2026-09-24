@@ -2,7 +2,7 @@ import type { HealthResponse } from '@cezar-pwa/cezar-contract/contract'
 import type { QueryClient } from '@tanstack/react-query'
 import { AuthRequiredError, apiFetch } from './http.ts'
 
-/** Query key, per CLAUDE.md → "Klucze query". */
+/** Query key, per CLAUDE.md → "Query keys". */
 export const HEALTH_QUERY_KEY = ['health'] as const
 
 /**

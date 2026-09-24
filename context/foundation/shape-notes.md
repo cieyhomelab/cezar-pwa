@@ -64,9 +64,9 @@ Three distinct pains were confirmed as co-existing, all real:
 3. **The cockpit does not work under a thumb.** Even with Safari open on the phone, the
    full desktop tool is not a usable surface for answering an agent.
 
-**Insight (captured verbatim from the owner):** "Pomysł został zrealizowany przez kogoś,
-ale nie mam do niego dostępu, tylko dowiedziałem się, że można coś takiego zrobić jak PWA
-na iPhone z frameworkiem Cezar." — i.e. this is an *existence proof*, not a proprietary
+**Insight (from the owner, translated from Polish):** "Someone has built the idea, but I
+have no access to it — I only learned that something like this can be done as a PWA on
+the iPhone with the Cezar framework." — i.e. this is an *existence proof*, not a proprietary
 insight. Someone has built a comparable PWA against Cezar; the owner has no access to it
 and only knows the shape is feasible. Consequence: feasibility risk is low, competitive
 advantage is nil — and irrelevant, because this is a single-operator tool.

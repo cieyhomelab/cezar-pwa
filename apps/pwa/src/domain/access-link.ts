@@ -20,7 +20,7 @@
  *    either (R-AUTH-5, PRD § Access Control).
  *
  * The functions below are pure so this reasoning can be tested rather than
- * trusted (CLAUDE.md → "logika domenowa jako czyste funkcje w src/domain/").
+ * trusted (CLAUDE.md → "domain logic as pure functions in src/domain/").
  */
 
 /** The parameter nginx's guard tests. */

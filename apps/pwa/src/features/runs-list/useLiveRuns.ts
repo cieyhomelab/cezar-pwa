@@ -23,7 +23,7 @@ export type LiveRuns = {
 /**
  * S-04: keep `['runs-index']` current from the workspace event stream (FR-010) and say whether
  * that is happening (FR-012). Server state stays in TanStack Query — frames land through
- * `setQueryData`, never a store of their own (CLAUDE.md → "Konwencje kodu").
+ * `setQueryData`, never a store of their own (CLAUDE.md → "Code conventions").
  *
  * The stream is closed while the page is hidden and reopened when it is shown (`bindLifecycle`).
  */

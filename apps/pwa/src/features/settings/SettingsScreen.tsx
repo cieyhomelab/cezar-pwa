@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { en } from '../../i18n/en.ts'
+import { BadgeCheckSection } from './BadgeCheckSection.tsx'
 import { NotificationsSection } from './NotificationsSection.tsx'
 import { SignOutSection } from './SignOutSection.tsx'
 import { ThemeSection } from './ThemeSection.tsx'
@@ -27,6 +28,7 @@ export function SettingsScreen() {
       <ThemeSection key={`theme-${signOut.attempt}`} />
       <NotificationsSection key={`push-${signOut.attempt}`} />
       <VersionsSection />
+      <BadgeCheckSection />
       <SignOutSection signOut={signOut} />
     </div>
   )

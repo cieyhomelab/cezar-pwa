@@ -10,6 +10,9 @@ import { en } from '../i18n/en.ts'
 /** The router's basename. A notification's URL is absolute; the app's paths are under it. */
 const BASE = '/m'
 
+/** The test notification's tag: one at a time, and the worker recognises it on a tap. */
+export const TEST_TAG = 'cezar-test'
+
 /** The message the worker posts to an open window instead of reloading it. */
 export const NAVIGATE_MESSAGE = 'cezar:navigate'
 
@@ -58,7 +61,7 @@ export function notificationFor(payload: PushPayload): NotificationSpec {
   if (payload.kind === 'test') {
     return {
       title: en.push.testTitle,
-      options: { body: en.push.testBody, tag: 'cezar-test', icon, data: { url: `${BASE}/` } },
+      options: { body: en.push.testBody, tag: TEST_TAG, icon, data: { url: `${BASE}/` } },
     }
   }
   const reason = payload.reason

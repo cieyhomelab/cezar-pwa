@@ -86,7 +86,7 @@ do NOT re-scaffold them.
 
 - **Frontend:** ~~partial — React 19 + Vite 8 + Tailwind v4 shell; router and server-state
   providers wired in `apps/pwa/src/main.tsx`; no feature screens exist.~~ **present as of
-  2026-09-21**. Screens are the install/offline/update chrome (S-01), "Połącz z Cezarem"
+  2026-09-21**. Screens are the install/offline/update chrome (S-01), "Connect to Cezar"
   (S-02), the task list (S-03) and the task screen (S-05, `apps/pwa/src/features/run/`), which
   is live since S-06, where the agent can be answered and messaged since S-07, and where the
   task can be cancelled, finished, continued, sent to a draft PR, pinned and archived since
@@ -278,7 +278,7 @@ do NOT re-scaffold them.
   the PRD names as the worst failure this product can produce.
 - **Status:** ~~implemented via PR #15; device pass pending~~ **done** 2026-09-21 (`context/changes/task-list/`), device-verified by the operator
 - **Note (2026-09-21):** the list reads `GET /api/v1/workspace/runs-index`, sorted into
-  Wymaga uwagi / W toku / W kolejce / Zakończone by the cockpit's own rules, ported 1:1. It
+  Needs attention / In progress / Queued / Finished by the cockpit's own rules, ported 1:1. It
   is filterable by project and refreshes on pull, on return and every 30 s. One consequence
   worth knowing: the top section follows the *notification* answer (`wantsAttention`), as the
   PRD requires, so a failed task stays there until it is continued or archived, while the
@@ -305,14 +305,14 @@ do NOT re-scaffold them.
 - **Status:** ~~implemented via PR #16; device pass pending~~ **done** 2026-09-21 (`context/changes/live-status/`), device-verified by the operator
 - **Note (2026-09-21):** the list now updates from `GET /api/v1/workspace/events`. A `run`
   frame is projected to the exact row `runs-index` serves, and frames that arrive while a
-  refetch is in flight are replayed onto it. The header says `Na żywo` / `Łączę ponownie…` /
-  `Brak połączenia na żywo` in words, and shows the list's age whenever it isn't live. It only
+  refetch is in flight are replayed onto it. The header says `Live` / `Reconnecting…` /
+  `No live connection` in words, and shows the list's age whenever it isn't live. It only
   counts as live once a fetch has landed after the stream opened, because the stream has no
   replay. A live change above the reader no longer moves their rows. Verified in WebKit on the
   real `EventSource` (30 E2E) and against the live instance over loopback (live in under 1 s).
   Two findings: `docs/CEZAR_API.md` had the frame stamp wrong (`project`, not `projectId`),
   and every stream drop now re-checks the session, so a lapsed session reaches
-  "Połącz z Cezarem" with nothing pressed. Left as implemented rather than Done: the
+  "Connect to Cezar" with nothing pressed. Left as implemented rather than Done: the
   indicator across a lock/unlock and Airplane Mode on the phone, and a cockpit status flip
   arriving on the installed app, still need the device. The live transport S-06 and S-10
   build on is in place.
@@ -375,7 +375,7 @@ do NOT re-scaffold them.
   growing with its middle missing. The resume itself is S-04's lifecycle: the stream closes on
   hidden and reopens on visible, with the stream manager now shared
   (`apps/pwa/src/api/live-stream.ts`). The screen follows new content only within 96 px of the
-  end and otherwise raises "Nowe wiadomości". WebKit's late `scroll` event made that judgement
+  end and otherwise raises "New messages". WebKit's late `scroll` event made that judgement
   wrong until it was measured synchronously. Verified with 401 unit and 40 E2E tests (WebKit)
   and against this task's own run streaming live from the instance. The last check is on the
   phone: lock it mid-answer and unlock it a minute later.
@@ -605,7 +605,7 @@ do NOT re-scaffold them.
   from the cookie name in the unlock guard it already copies, so neither the secret nor the name is
   in the repo. The app first has the sidecar forget the device, while the gate still lets it
   through. It then unsubscribes the device, ends the session, clears storage and restarts on
-  "Połącz z Cezarem". It says which part did not take rather than claiming a sign-out. Verified with
+  "Connect to Cezar". It says which part did not take rather than claiming a sign-out. Verified with
   731 unit and 60 E2E tests (WebKit), the nginx rehearsal (the cockpit and the sidecar 403 after
   sign-out), a dry run against the live gate (read-only), and screens at 390×844 in both themes.
   Still open: re-running the nginx installer on the VPS (a production change, left to the
@@ -715,6 +715,13 @@ order below is the agent's proposal; the operator can reorder it.
 3. **Does an icon badge work in an installed web app on this phone?** Should be verified on
    the device before any work goes into it. — Owner: operator. Block: nothing; FR-042 is
    parked. *(PRD Open Question 4.)* Tracked as #68 (2026-09-24).
+   **How to check (2026-09-24):** the installed app now carries a temporary Settings →
+   "Icon badge check" section. Case 1 is "Set badge to 3"; case 2 is "Send a test
+   notification" with the app closed — the worker sets the badge to 1 while handling that
+   push; case 3 is "Clear badge". Record yes/no per case with the iOS version here and in
+   the PRD. If the answer is yes, open the FR-042 issue (it also needs the sidecar to add the
+   count to the push payload). Either way, delete the check afterwards (`pwa/app-badge.ts`,
+   `BadgeCheckSection.tsx`, the test-push badge in `sw.ts`) or grow it into FR-042.
 4. **Is 12 weeks still the right number?** The estimate predates the Socratic cuts and now
    carries slack. — Owner: operator. Block: nothing; it affects planning honesty, not
    scope. *(PRD Open Question 5.)*

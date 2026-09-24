@@ -68,7 +68,7 @@ and Cezar's cockpit source at `v0.11.0`. See `change.md` for why F-02 lands here
 - [x] **Typecheck and lint** — `npm run typecheck`, `npm run lint` clean.
 - [x] **E2E (WebKit, iPhone 14)** — 23 passing, 5 of them new: three-second headline, no
       sideways scroll at 390 px, filter surviving a reload, button and foreground refresh, a
-      lapsed session landing on "Połącz z Cezarem".
+      lapsed session landing on "Connect to Cezar".
 - [x] **Both themes at 390×844** — `evidence/`.
 - [x] **Live data** — rendered against the instance's real `runs-index` (`evidence/live-dark.png`).
 - [ ] **Manual: on the phone** — pull to refresh and return-from-background on the installed

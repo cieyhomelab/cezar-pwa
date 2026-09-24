@@ -69,7 +69,7 @@ See `change.md`.
   unbroken 250-character token still wraps. The E2E checks that the page does not scroll
   sideways.
 - **Not colour alone.** Each line carries its `+`/`−` marker, and a screen reader hears
-  "dodana:" / "usunięta:". The counts read as words.
+  "added:" / "removed:". The counts read as words.
 - **The file header stays on screen** (`sticky`) while its patch scrolls under it.
 
 ## Progress

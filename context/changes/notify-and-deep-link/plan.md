@@ -100,8 +100,8 @@ Cezar's source at `v0.11.0`. See `change.md`.
       production change, so it waits for the operator.
 - [ ] **Device pass (iPhone, iOS 16.4+)**, which no simulator substitutes for:
   - [ ] In Safari, Settings shows the install instructions and no button.
-  - [ ] From the icon, "Włącz powiadomienia" prompts. Allow → "włączone".
-  - [ ] "Wyślij powiadomienie testowe" arrives with the app closed and the phone locked.
+  - [ ] From the icon, "Turn on notifications" prompts. Allow → "Notifications are on".
+  - [ ] "Send a test notification" arrives with the app closed and the phone locked.
   - [ ] A real task entering waiting/review/failed rings once, reading title · project · reason.
   - [ ] Tap with the app closed → that task's transcript. Tap with the app open on another screen →
         the same window moves to the task.

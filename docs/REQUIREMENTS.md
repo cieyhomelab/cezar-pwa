@@ -1,141 +1,141 @@
-# Cezar Mobile — wymagania (PRD)
+# Cezar Mobile — requirements (PRD)
 
-Wersja 0.1 · 2026-09-20 · właściciel: Maciej Kulesza
-Cel dokumentu: jedno źródło prawdy dla budowy PWA, z którego Claude Code (i człowiek) może pracować bez dopytywania.
+Version 0.1 · 2026-09-20 · owner: Maciej Kulesza
+Purpose of this document: a single source of truth for building the PWA, so Claude Code (and humans) can work from it without asking around.
 
-## 1. Cel i kontekst
+## 1. Goal and context
 
-Cezar (`open-mercato/cezar`) to orkiestrator agentów kodujących działający na VPS pod `https://<your-host>`, za nginx z ochroną przez cookie. Jego cockpit jest responsywny, ale to pełne narzędzie desktopowe. **Cezar Mobile** to lekka, instalowalna aplikacja PWA na iPhone'a (priorytet) i Androida, której główne zadanie to: **w 3 sekundy od otwarcia wiedzieć, co robią agenci i czy coś czeka na mnie** — a gdy czeka, móc to załatwić kciukiem.
+Cezar (`open-mercato/cezar`) is a coding-agent orchestrator running on a VPS at `https://<your-host>`, behind nginx with cookie protection. Its cockpit is responsive, but it's a full desktop tool. **Cezar Mobile** is a lightweight, installable PWA for iPhone (priority) and Android, whose main job is: **within 3 seconds of opening it, know what the agents are doing and whether anything needs me** — and when it does, be able to handle it with a thumb.
 
-### Sukces wygląda tak
-- Otwieram ikonę na ekranie głównym → widzę listę zadań z żywymi statusami, zadania wymagające uwagi na górze.
-- Dostaję push, gdy zadanie przechodzi w `waiting` / `review` / `failed`, nawet gdy aplikacja jest zamknięta.
-- Klikam push → ląduję w transkrypcie tego zadania, odpowiadam agentowi albo akceptuję.
+### Success looks like this
+- I open the home-screen icon → I see a task list with live statuses, tasks needing attention at the top.
+- I get a push notification when a task moves into `waiting` / `review` / `failed`, even while the app is closed.
+- I tap the push → I land in that task's transcript, reply to the agent or approve it.
 
-### Poza zakresem (świadomie)
-Edycja workflowów, skilli, ustawień, automatyzacji; zarządzanie projektami i klonowanie; pełny widok Git/GitHub; porównywanie wariantów; paleta ⌘K. Do tego jest cockpit — PWA ma link „Otwórz w pełnym cockpicie”.
+### Out of scope (deliberately)
+Editing workflows, skills, settings, automations; project management and cloning; a full Git/GitHub view; comparing variants; the ⌘K palette. The cockpit is there for that — the PWA has an "Open in the full cockpit" link.
 
-## 2. Architektura (decyzje)
+## 2. Architecture (decisions)
 
-| # | Decyzja | Uzasadnienie |
+| # | Decision | Rationale |
 |---|---|---|
-| A1 | PWA serwowana z **tego samego originu**: `https://<your-host>/m/` | Cezar odrzuca zapisy cross-origin (guard #426), CORS ma tylko `/health`; cookie auth działa bez zmian |
-| A2 | Statyczny build (Vite) w `/var/www/cezar-mobile`, nginx `location /m/` **przed** `location /` (proxy do Cezara) | Zero zmian w samym Cezarze, niezależne wdrażanie |
-| A3 | Scope manifestu i Service Workera = `/m/` | SW nie może przechwytywać cockpitu ani `/api` |
-| A4 | Dane: bezpośrednio `/api/v1/…` Cezara (REST + SSE) | Nie ma potrzeby backendu pośredniego dla odczytu |
-| A5 | Push: mały **sidecar `cezar-push`** (Node) na VPS, słucha `http://127.0.0.1:4321/api/v1/workspace/events` (loopback, z pominięciem proxy), wysyła Web Push (VAPID) | Cezar nie ma Web Push; sidecar nie wymaga forka Cezara |
-| A6 | Sidecar wystawia `POST/DELETE /m/push/subscription` i `GET /m/push/vapid-public-key` za tym samym cookie | Subskrypcje chronione tak samo jak cockpit |
-| A7 | Typy i schematy zod **vendorowane** z repo Cezara (`packages/contract/src` + `ui-events.ts`) przypięte do commita; walidacja odpowiedzi zodem w trybie dev | Na npm są tylko prerelease'y 0.10.0-pr…, starsze niż serwer 0.11.x; vendoring daje zgodność z tym, co faktycznie działa na VPS |
-| A8 | Stack: Vite + React 19 + TypeScript strict + Tailwind v4 + TanStack Query + React Router + `vite-plugin-pwa` (strategia `injectManifest`) | Ten sam stack co cockpit Cezara → łatwe przenoszenie komponentów; `injectManifest` bo potrzebujemy własnego handlera `push` |
+| A1 | PWA served from **the same origin**: `https://<your-host>/m/` | Cezar rejects cross-origin writes (guard #426), CORS only covers `/health`; cookie auth works unchanged |
+| A2 | Static build (Vite) at `/var/www/cezar-mobile`, nginx `location /m/` **before** `location /` (proxy to Cezar) | Zero changes to Cezar itself, independent deployment |
+| A3 | Manifest and Service Worker scope = `/m/` | The SW must not intercept the cockpit or `/api` |
+| A4 | Data: directly from Cezar's `/api/v1/…` (REST + SSE) | No need for an intermediate backend for reads |
+| A5 | Push: a small **`cezar-push` sidecar** (Node) on the VPS, listens to `http://127.0.0.1:4321/api/v1/workspace/events` (loopback, bypassing the proxy), sends Web Push (VAPID) | Cezar has no Web Push; the sidecar doesn't require forking Cezar |
+| A6 | The sidecar exposes `POST/DELETE /m/push/subscription` and `GET /m/push/vapid-public-key` behind the same cookie | Subscriptions are protected the same way as the cockpit |
+| A7 | Types and zod schemas **vendored** from the Cezar repo (`packages/contract/src` + `ui-events.ts`) pinned to a commit; zod validation of responses in dev mode | On npm there are only 0.10.0-pr… prereleases, older than the 0.11.x server; vendoring keeps compatibility with what actually runs on the VPS |
+| A8 | Stack: Vite + React 19 + TypeScript strict + Tailwind v4 + TanStack Query + React Router + `vite-plugin-pwa` (`injectManifest` strategy) | Same stack as Cezar's cockpit → components move over easily; `injectManifest` because we need our own `push` handler |
 
-Alternatywa rozważona i odrzucona na MVP: dodanie manifestu + SW do samego cockpitu Cezara (PR upstream). Dałoby instalowalność, ale nie „mobile-first” widok ani push. Można to zgłosić upstream później.
+Alternative considered and rejected for the MVP: adding a manifest + SW to Cezar's own cockpit (upstream PR). It would give installability, but not a "mobile-first" view or push. Could be proposed upstream later.
 
-### Schemat
+### Diagram
 ```
-iPhone (PWA /m/) ──HTTPS+cookie──► nginx ─┬─ /m/          → statyczne pliki PWA
+iPhone (PWA /m/) ──HTTPS+cookie──► nginx ─┬─ /m/          → static PWA files
                                           ├─ /m/push/     → cezar-push :4330 (loopback)
                                           └─ /, /api/...  → Cezar :4321 (loopback)
-cezar-push ──SSE (loopback, bez auth)──► Cezar /api/v1/workspace/events
+cezar-push ──SSE (loopback, no auth)──► Cezar /api/v1/workspace/events
 cezar-push ──Web Push (VAPID)──────────► Apple/Google push service ──► iPhone
 ```
 
-## 3. Uwierzytelnianie — wymagania i ograniczenia iOS
+## 3. Authentication — requirements and iOS constraints
 
-- **R-AUTH-1** Na iOS aplikacja zainstalowana na ekranie głównym ma **osobny słoik cookies** od Safari. Cookie ustawione w Safari **nie** przechodzi do PWA. Logowanie musi zadziać się wewnątrz zainstalowanej aplikacji.
-- **R-AUTH-2** PWA wykrywa brak autoryzacji (odpowiedź 401/403 od nginx albo odpowiedź HTML zamiast JSON) i pokazuje ekran „Połącz z Cezarem”. Sondą jest `GET /api/v1/health` (§1a), a rozpoznanie siedzi w jednym miejscu: `apps/pwa/src/api/http.ts` → `AuthRequiredError`. **Brak sieci to nie brak autoryzacji** — `NetworkError` daje osobny ekran, bo wysyłanie operatora po link dostępowy w tunelu byłoby kłamstwem.
-- **R-AUTH-3** ~~Ekran logowania: pole „Wklej link dostępowy” → aplikacja przechodzi na ten link w bieżącym kontekście (nie w nowej karcie), nginx ustawia cookie i przekierowuje z powrotem na `/m/`. Wymaga to, by mechanizm nginx wspierał parametr powrotu (np. `?next=/m/`). **Do potwierdzenia z właścicielem — patrz §9 Q1.**~~
-  **Doprecyzowane po zbadaniu bramy (2026-09-20, §1a `CEZAR_API.md`).** Parametr powrotu nie istnieje i istnieć nie może — guard robi `return 302 https://$host$uri`, więc cały query string ginie, a **celem powrotu jest ścieżka linku**. Ekran „Połącz z Cezarem” bierze więc wklejony link, zostawia z niego wyłącznie parametr `key`, **podmienia ścieżkę na `/m/`** i przechodzi tam w bieżącym kontekście (`location.replace`, nigdy nowa karta — zainstalowana PWA ma własne ciasteczka). Implementacja: `apps/pwa/src/domain/access-link.ts` + `apps/pwa/src/features/auth/`.
-- **R-AUTH-3a** ~~Jeśli brama nie obsłuży `?key=` pod `/m/` (guard może siedzieć w `location /`, a nie w `server` — z klienta tego nie widać), aplikacja wraca na `/m/` z niezużytym `key` w URL-u. Wtedy: **natychmiast usuwa `key` z wpisu historii** (`history.replaceState`) i pokazuje instrukcję „otwórz link w Safari i wróć”. Powrót do aplikacji sam ponawia sondę sesji (`visibilitychange`), więc operator nie musi niczego naciskać.~~
-  **Poprawione 2026-09-21.** Rada „otwórz link w Safari i wróć” jest **fałszywa w zainstalowanej aplikacji** — ma ona własne ciasteczka (R-AUTH-1), więc sesja z Safari nigdy do niej nie trafi. W zainstalowanej PWA **nie ma drogi zapasowej**: odblokowanie działa pod `/m/` albo wcale. Gdy `key` wraca niezużyty, aplikacja nadal od razu usuwa go z historii, ale mówi prawdę: link jest niepełny albo serwer nie ma odblokowania pod `/m/` (`deploy/nginx/install.sh`). Radę „otwórz link w tej przeglądarce” pokazuje tylko w zwykłej karcie, gdzie słoik ciasteczek jest wspólny.
-- **R-AUTH-3b** Klucz trafia do bramy **bajt w bajt tak, jak go wklejono**. nginx porównuje `$arg_key` z surowym query stringiem, więc przekodowanie (`/` → `%2F`, `=` → `%3D`, co robi `URLSearchParams.set`) zamienia poprawny klucz base64 w błędny. Pierwsza wersja S-02 miała dokładnie ten błąd.
-- **R-AUTH-4** Cookie: `Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age` ≥ 90 dni. Session cookie (bez Max-Age) zginie przy ubiciu aplikacji przez iOS.
-- **R-AUTH-5** Link dostępowy nigdy nie trafia do manifestu, `localStorage`, logów ani repozytorium.
-- **R-AUTH-6** Statyczny shell `/m/` (HTML, JS, ikony, manifest) może być publiczny — nie zawiera danych. Wszystko pod `/api` i `/m/push/` wymaga cookie. Dzięki temu manifest i ikony pobierają się poprawnie przy instalacji (Safari pobiera manifest bez cookies, o ile nie ma `crossorigin="use-credentials"`).
+- **R-AUTH-1** On iOS, an app installed on the home screen has a **separate cookie jar** from Safari. A cookie set in Safari does **not** carry over to the PWA. Sign-in must happen inside the installed app.
+- **R-AUTH-2** The PWA detects a missing authorization (a 401/403 response from nginx, or an HTML response instead of JSON) and shows a "Connect to Cezar" screen. The probe is `GET /api/v1/health` (§1a), and the detection lives in one place: `apps/pwa/src/api/http.ts` → `AuthRequiredError`. **No network is not the same as no authorization** — `NetworkError` gets a separate screen, because sending the operator after an access link over a broken tunnel would be a lie.
+- **R-AUTH-3** ~~Sign-in screen: a "Paste the access link" field → the app navigates to that link in the current context (not a new tab), nginx sets the cookie and redirects back to `/m/`. This requires the nginx mechanism to support a return parameter (e.g. `?next=/m/`). **To be confirmed with the owner — see §9 Q1.**~~
+  **Clarified after inspecting the gateway (2026-09-20, §1a `CEZAR_API.md`).** A return parameter doesn't exist and can't exist — the guard does `return 302 https://$host$uri`, so the whole query string is lost, and **the return target is the link's path**. The "Connect to Cezar" screen therefore takes the pasted link, keeps only its `key` parameter, **swaps the path for `/m/`**, and navigates there in the current context (`location.replace`, never a new tab — an installed PWA has its own cookies). Implementation: `apps/pwa/src/domain/access-link.ts` + `apps/pwa/src/features/auth/`.
+- **R-AUTH-3a** ~~If the gateway doesn't handle `?key=` under `/m/` (the guard may live in `location /` rather than `server` — invisible from the client), the app comes back to `/m/` with an unused `key` in the URL. In that case: it **immediately strips `key` from the history entry** (`history.replaceState`) and shows instructions to "open the link in Safari and come back". Returning to the app re-runs the session probe on its own (`visibilitychange`), so the operator doesn't have to tap anything.~~
+  **Corrected 2026-09-21.** The advice "open the link in Safari and come back" is **false in the installed app** — it has its own cookies (R-AUTH-1), so a Safari session never reaches it. In the installed PWA there is **no fallback path**: unlocking works under `/m/` or not at all. When `key` comes back unused, the app still strips it from history right away, but it tells the truth: the link is incomplete, or the server has no unlock at `/m/` (`deploy/nginx/install.sh`). The advice "open the link in this browser" is shown only in a regular tab, where the cookie jar is shared.
+- **R-AUTH-3b** The key reaches the gateway **byte for byte, exactly as pasted**. nginx compares `$arg_key` against the raw query string, so re-encoding it (`/` → `%2F`, `=` → `%3D`, which `URLSearchParams.set` does) turns a valid base64 key into an invalid one. The first version of S-02 had exactly this bug.
+- **R-AUTH-4** Cookie: `Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age` ≥ 90 days. A session cookie (without Max-Age) would die when iOS kills the app.
+- **R-AUTH-5** The access link never ends up in the manifest, `localStorage`, logs, or the repository.
+- **R-AUTH-6** The static `/m/` shell (HTML, JS, icons, manifest) can be public — it contains no data. Everything under `/api` and `/m/push/` requires a cookie. This lets the manifest and icons load correctly on install (Safari fetches the manifest without cookies, as long as there's no `crossorigin="use-credentials"`).
 
-## 4. Wymagania funkcjonalne
+## 4. Functional requirements
 
-Priorytety: **P0** = MVP, **P1** = zaraz po MVP, **P2** = później.
+Priorities: **P0** = MVP, **P1** = right after MVP, **P2** = later.
 
-### 4.1 Lista zadań (ekran główny) — P0
-- **F-LIST-1** Pobiera `GET /api/v1/workspace/runs-index` i pokazuje zadania ze wszystkich projektów.
-- **F-LIST-2** Sekcje w kolejności: **Wymaga uwagi** (permission → waiting → review → failed), **Działa** (running, w tym monitoring), **W kolejce** (queued, z pozycją), **Zakończone** (done/cancelled, ostatnie 24 h, reszta pod „Pokaż więcej”). Zarchiwizowane ukryte.
-- **F-LIST-3** Wiersz: tytuł (`titleSummary` ?? `title`), projekt, status (kolor + ikona + tekst, nie tylko kolor), czas trwania / „x min temu”, koszt (`costUsd`, jeśli capabilities.costMetrics), znacznik nieprzeczytanego, numer PR/issue.
-- **F-LIST-4** Żywe aktualizacje przez `GET /api/v1/workspace/events` (`run`, `run-deleted`) — aktualizacja pojedynczego wiersza w cache, bez refetchu całej listy.
-- **F-LIST-5** Pull-to-refresh i automatyczny refetch przy powrocie aplikacji na pierwszy plan (`visibilitychange`).
-- **F-LIST-6** Wskaźnik połączenia: zielony (live), szary (łączenie), czerwony (offline / brak autoryzacji).
-- **F-LIST-7** Filtr po projekcie (chipy) — zapamiętany lokalnie.
+### 4.1 Task list (home screen) — P0
+- **F-LIST-1** Fetches `GET /api/v1/workspace/runs-index` and shows tasks from all projects.
+- **F-LIST-2** Sections in order: **Needs attention** (permission → waiting → review → failed), **Running** (running, including monitoring), **Queued** (queued, with position), **Finished** (done/cancelled, last 24 h, the rest under "Show more"). Archived ones are hidden.
+- **F-LIST-3** Row: title (`titleSummary` ?? `title`), project, status (color + icon + text, not color alone), duration / "x min ago", cost (`costUsd`, if capabilities.costMetrics), unread marker, PR/issue number.
+- **F-LIST-4** Live updates via `GET /api/v1/workspace/events` (`run`, `run-deleted`) — updates a single row in the cache, without refetching the whole list.
+- **F-LIST-5** Pull-to-refresh and automatic refetch when the app comes back to the foreground (`visibilitychange`).
+- **F-LIST-6** Connection indicator: green (live), gray (connecting), red (offline / not authorized).
+- **F-LIST-7** Filter by project (chips) — remembered locally.
 
-### 4.2 Szczegóły zadania — P0
-- **F-RUN-1** Nagłówek: tytuł, projekt, status, workflow, kroki (`steps[]` jako pasek postępu z aktualnym `currentStepId`), runner/model, koszt, tokeny, gałąź, link do PR.
-- **F-RUN-2** Transkrypt: ostatnia strona z `GET …/runs/:id/history`, starsze doładowywane przy przewinięciu w górę (`olderCursor`), wirtualizowana lista.
-- **F-RUN-3** Live: `GET …/runs/:id/events?afterSeq=<asOfSeq>`; obsługa `ui-event` (item.started/delta/completed, plan.updated, turn.completed, ask.requested, session.*) oraz `run` (nagłówek).
-- **F-RUN-4** Renderowanie itemów: wiadomości agenta jako Markdown; wywołania narzędzi zwinięte do jednej linii (ikona wg `toolKind` + `title` + status), rozwijane po tapnięciu (input/output, przycięte do ~4 KB z „pokaż całość”); reasoning zwinięty domyślnie; plan jako checklista przypięta u góry.
-- **F-RUN-5** Auto-scroll na dół tylko gdy użytkownik jest przy dole; w przeciwnym razie przycisk „↓ nowe”.
-- **F-RUN-6** Wejście w szczegóły wywołuje `POST …/runs/:id/read`.
-- **F-RUN-7** Nieznane typy zdarzeń nie mogą wywalić widoku — renderuj ogólny wpis lub pomiń.
+### 4.2 Task details — P0
+- **F-RUN-1** Header: title, project, status, workflow, steps (`steps[]` as a progress bar with the current `currentStepId`), runner/model, cost, tokens, branch, link to the PR.
+- **F-RUN-2** Transcript: last page from `GET …/runs/:id/history`, older entries loaded on scroll-up (`olderCursor`), virtualized list.
+- **F-RUN-3** Live: `GET …/runs/:id/events?afterSeq=<asOfSeq>`; handles `ui-event` (item.started/delta/completed, plan.updated, turn.completed, ask.requested, session.*) and `run` (header).
+- **F-RUN-4** Item rendering: agent messages as Markdown; tool calls collapsed to a single line (icon by `toolKind` + `title` + status), expandable on tap (input/output, truncated to ~4 KB with "show all"); reasoning collapsed by default; plan as a checklist pinned at the top.
+- **F-RUN-5** Auto-scroll to the bottom only when the user is already at the bottom; otherwise a "↓ new messages" button.
+- **F-RUN-6** Entering the details screen triggers `POST …/runs/:id/read`.
+- **F-RUN-7** Unknown event types must not crash the view — render a generic entry or skip it.
 
-### 4.3 Akcje — P1
-- **F-ACT-1** Odpowiedź na `ask.requested`: karta z pytaniami i opcjami (single/multi-select + „inna odpowiedź”), wysyłana jako jedna wiadomość `POST …/runs/:id/messages`.
-- **F-ACT-2** Pole wiadomości do działającego/czekającego zadania (tekst, opcjonalnie zdjęcie z aparatu, max 4).
-- **F-ACT-3** Przyciski kontekstowe: Anuluj (running/queued, z potwierdzeniem), Zaakceptuj/Zakończ (review), Utwórz draft PR (review, ma zmiany), Kontynuuj (done/failed), Przypnij, Archiwizuj.
-- **F-ACT-4** Każda akcja: stan ładowania, błąd z treścią `error` z API, optymistyczna aktualizacja tylko tam, gdzie SSE i tak potwierdzi.
-- **F-ACT-5** Podgląd diffu (`GET …/runs/:id/diff`) — tylko do odczytu, plik po pliku, zawijanie linii.
+### 4.3 Actions — P1
+- **F-ACT-1** Answering `ask.requested`: a card with questions and options (single/multi-select + "other answer"), sent as a single `POST …/runs/:id/messages`.
+- **F-ACT-2** A message field for a running/waiting task (text, optionally a photo from the camera, max 4).
+- **F-ACT-3** Contextual buttons: Cancel (running/queued, with confirmation), Accept/Finish (review), Create draft PR (review, has changes), Continue (done/failed), Pin, Archive.
+- **F-ACT-4** Every action: loading state, error with the `error` text from the API, optimistic update only where SSE will confirm it anyway.
+- **F-ACT-5** Diff preview (`GET …/runs/:id/diff`) — read-only, file by file, line wrapping.
 
-### 4.4 Szybkie nowe zadanie — P1
-- **F-NEW-1** Formularz: projekt, treść zadania, workflow (domyślnie `quick-task`), przełącznik Autonomous, runner (z `health.checks` dostępnych).
-- **F-NEW-2** `POST /api/v1/p/:projectId/runs`; po sukcesie przejście do szczegółów nowego zadania.
-- **F-NEW-3** Share target (Android; iOS nie wspiera) — udostępnienie linku do issue GitHub do aplikacji prefilluje zadanie. P2.
+### 4.4 Quick new task — P1
+- **F-NEW-1** Form: project, task content, workflow (default `quick-task`), Autonomous toggle, runner (from the available `health.checks`).
+- **F-NEW-2** `POST /api/v1/p/:projectId/runs`; on success, navigate to the new task's details.
+- **F-NEW-3** Share target (Android; iOS doesn't support it) — sharing a GitHub issue link into the app prefills a task. P2.
 
-### 4.5 Powiadomienia push — P1 (klient) + sidecar
-- **F-PUSH-1** Ekran Ustawień → „Włącz powiadomienia” (prośba o zgodę **tylko** z gestu użytkownika — wymóg iOS).
-- **F-PUSH-2** Na iOS przycisk widoczny tylko gdy aplikacja działa w trybie standalone (`display-mode: standalone`); w Safari pokazujemy instrukcję „Dodaj do ekranu początkowego”.
-- **F-PUSH-3** Subskrypcja `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → `POST /m/push/subscription`.
-- **F-PUSH-4** Sidecar wysyła push przy **przejściu** zadania do stanu wymagającego uwagi (reguła z `CEZAR_API.md §5`); treść: tytuł zadania, projekt, powód („czeka na odpowiedź”, „do przeglądu”, „błąd”). Bez treści kodu ani transkryptu w payloadzie.
-- **F-PUSH-5** Opcjonalnie push przy `done` (przełącznik w ustawieniach, domyślnie wyłączony).
-- **F-PUSH-6** Kliknięcie powiadomienia → `clients.openWindow('/m/run/<projectId>/<runId>')` lub fokus istniejącego okna.
-- **F-PUSH-7** Deduplikacja: jeden push na przejście (sidecar pamięta ostatni status per run); `tag` = runId, żeby kolejne powiadomienia o tym samym zadaniu zastępowały poprzednie.
-- **F-PUSH-8** Badge ikony (`navigator.setAppBadge`) = liczba zadań wymagających uwagi; ustawiany przez aplikację i przez SW przy pushu.
-- **F-PUSH-9** Sidecar usuwa subskrypcje, dla których push service zwraca 404/410.
+### 4.5 Push notifications — P1 (client) + sidecar
+- **F-PUSH-1** Settings screen → "Enable notifications" (permission request **only** from a user gesture — an iOS requirement).
+- **F-PUSH-2** On iOS the button is visible only when the app is running in standalone mode (`display-mode: standalone`); in Safari we show instructions to "Add to Home Screen".
+- **F-PUSH-3** Subscription `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` → `POST /m/push/subscription`.
+- **F-PUSH-4** The sidecar sends a push on a task's **transition** into a state needing attention (rule from `CEZAR_API.md §5`); content: task title, project, reason ("waiting for a reply", "to review", "failed"). No code content or transcript in the payload.
+- **F-PUSH-5** Optionally, push on `done` (a settings toggle, off by default).
+- **F-PUSH-6** Tapping a notification → `clients.openWindow('/m/run/<projectId>/<runId>')` or focuses the existing window.
+- **F-PUSH-7** Deduplication: one push per transition (the sidecar remembers the last status per run); `tag` = runId, so subsequent notifications about the same task replace the previous one.
+- **F-PUSH-8** Icon badge (`navigator.setAppBadge`) = count of tasks needing attention; set by the app and by the SW on push.
+- **F-PUSH-9** The sidecar removes subscriptions for which the push service returns 404/410.
 
-### 4.6 Instalacja i offline — P0
-- **F-PWA-1** Manifest: `name` „Cezar”, `short_name` „Cezar”, `start_url` `/m/`, `scope` `/m/`, `display` `standalone`, `theme_color`/`background_color` z ciemnego motywu, ikony 192/512 + maskable 512.
-- **F-PWA-2** iOS: `apple-touch-icon` 180×180, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style` = `black-translucent`, `viewport-fit=cover`, obsługa `env(safe-area-inset-*)`.
-- **F-PWA-3** SW precache'uje tylko shell (`/m/**`). **Nigdy** nie cache'uje `/api/**` ani strumieni SSE (network-only, bez `respondWith`).
-- **F-PWA-4** ~~Ostatni snapshot listy zadań trzymany w IndexedDB; offline → pokazujemy snapshot z datą i banner „offline”.~~
-  **Zmienione przez PRD (FR-002).** Runda sokratejska odrzuciła trwały snapshot: „telefon prawie zawsze jest online, a dane sprzed godziny mylą bardziej niż ich brak”. Zostaje sam banner „offline” — bez IndexedDB, bez snapshotu. Patrz `context/foundation/prd.md` § FR-002 oraz Non-Goals.
-- **F-PWA-5** Aktualizacja SW: „Nowa wersja — odśwież” zamiast cichego `skipWaiting` w trakcie użycia.
+### 4.6 Installation and offline — P0
+- **F-PWA-1** Manifest: `name` "Cezar", `short_name` "Cezar", `start_url` `/m/`, `scope` `/m/`, `display` `standalone`, `theme_color`/`background_color` from the dark theme, 192/512 icons + maskable 512.
+- **F-PWA-2** iOS: `apple-touch-icon` 180×180, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style` = `black-translucent`, `viewport-fit=cover`, support for `env(safe-area-inset-*)`.
+- **F-PWA-3** The SW precaches only the shell (`/m/**`). It **never** caches `/api/**` or SSE streams (network-only, no `respondWith`).
+- **F-PWA-4** ~~The last task-list snapshot is kept in IndexedDB; offline → we show the snapshot with a date and an "offline" banner.~~
+  **Changed by the PRD (FR-002).** The Socratic round rejected a persistent snapshot: "the phone is almost always online, and data from an hour ago misleads more than its absence would." What's left is just the "offline" banner — no IndexedDB, no snapshot. See `context/foundation/prd.md` § FR-002 and Non-Goals.
+- **F-PWA-5** SW update: "New version — refresh" instead of a silent `skipWaiting` mid-session.
 
-### 4.7 Ustawienia — P0/P1
-Motyw (system/ciemny/jasny), powiadomienia (P1), filtr projektów, „Wyloguj” (czyści lokalne dane + usuwa subskrypcję push), wersja PWA i wersja Cezara (`health.version`) z ostrzeżeniem, gdy Cezar jest nowszy niż przetestowana wersja.
+### 4.7 Settings — P0/P1
+Theme (system/dark/light), notifications (P1), project filter, "Sign out" (clears local data + removes the push subscription), PWA version and Cezar version (`health.version`) with a warning when Cezar is newer than the tested version.
 
-**Wdrożone w S-12 (2026-09-21), z dwiema różnicami wobec tego zdania.** Ostrzeżenia „Cezar jest nowszy” nie ma — PRD (FR-047) je wycięło; obie wersje są pokazane, obok wersja, z którą build sprawdzono. „Wyloguj” kończy też sesję: `POST /m/session/end` na bramie wygasza ciasteczko (`docs/CEZAR_API.md` § 1a). Wersja PWA to commit, z którego zbudowano aplikację. Filtr projektów jest na liście zadań (S-03), nie w Ustawieniach.
+**Implemented in S-12 (2026-09-21), with two differences from this sentence.** There is no "Cezar is newer" warning — the PRD (FR-047) cut it; both versions are shown side by side, next to the version the build was checked against. "Sign out" also ends the session: `POST /m/session/end` on the gateway expires the cookie (`docs/CEZAR_API.md` § 1a). The PWA version is the commit the app was built from. The project filter is on the task list (S-03), not in Settings.
 
-## 5. Wymagania niefunkcjonalne
+## 5. Non-functional requirements
 
-- **NF-1 Wydajność:** pierwszy render listy z cache < 1 s na iPhone 12+; JS shell < 200 KB gzip (bez shiki; podświetlanie składni tylko w rozwiniętym diffie, ładowane leniwie).
-- **NF-2 Odporność SSE:** iOS zamraża aplikację w tle i zrywa połączenia. Przy `visibilitychange → visible`: zamknij stare EventSource, refetch `runs-index` / `history`, otwórz nowe z `afterSeq`. Backoff reconnect 1 s → 30 s z jitterem. Maksymalnie 2 jednoczesne strumienie SSE (lista + otwarte zadanie).
-- **NF-3 HTTP/2** na nginx (limit 6 połączeń na host w HTTP/1.1 blokowałby SSE).
-- **NF-4 Dostępność:** statusy nie tylko kolorem, cele dotyku ≥ 44 pt, Dynamic Type (rem), kontrast AA w obu motywach.
-- **NF-5 Bezpieczeństwo:** brak `innerHTML` z danych agenta (Markdown przez sanitizujący renderer), CSP dla `/m/` (`default-src 'self'; connect-src 'self'; img-src 'self' data: blob:`), brak zewnętrznych CDN.
-- **NF-6 Kompatybilność:** iOS 16.4+ (Web Push), Safari/Chrome Android aktualne. Testowana wersja Cezara zapisana w `src/config/cezar-compat.ts`.
-- **NF-7 Prywatność:** zero telemetrii, zero zewnętrznych usług poza push service Apple/Google.
-- **NF-8 Język UI:** angielski (teksty w jednym pliku `src/i18n/en.ts`; aplikacja jest jednojęzyczna — brak przełącznika języka).
+- **NF-1 Performance:** first render of the list from cache < 1 s on iPhone 12+; JS shell < 200 KB gzip (no shiki; syntax highlighting only in an expanded diff, lazy-loaded).
+- **NF-2 SSE resilience:** iOS freezes the app in the background and drops connections. On `visibilitychange → visible`: close the old EventSource, refetch `runs-index` / `history`, open a new one with `afterSeq`. Reconnect backoff 1 s → 30 s with jitter. At most 2 concurrent SSE streams (list + an open task).
+- **NF-3 HTTP/2** on nginx (an HTTP/1.1 limit of 6 connections per host would block SSE).
+- **NF-4 Accessibility:** statuses conveyed by more than color alone, touch targets ≥ 44 pt, Dynamic Type (rem), AA contrast in both themes.
+- **NF-5 Security:** no `innerHTML` with agent data (Markdown via a sanitizing renderer), CSP for `/m/` (`default-src 'self'; connect-src 'self'; img-src 'self' data: blob:`), no external CDNs.
+- **NF-6 Compatibility:** iOS 16.4+ (Web Push), current Safari/Chrome on Android. The tested Cezar version is recorded in `src/config/cezar-compat.ts`.
+- **NF-7 Privacy:** zero telemetry, zero external services besides the Apple/Google push service.
+- **NF-8 UI language:** English (text in a single file, `src/i18n/en.ts`; the app is single-locale — no language switcher).
 
-## 6. Sidecar `cezar-push` — specyfikacja
+## 6. `cezar-push` sidecar — specification
 
-- Node 20+, TypeScript, Hono, `web-push`, bez bazy — subskrypcje w `~/.cezar-push/subscriptions.json` (zapis atomowy), stan statusów w pamięci.
-- Nasłuchuje na `127.0.0.1:4330`; nginx proxy `location /m/push/` → sidecar, za tym samym cookie.
-- Łączy się z `http://127.0.0.1:4322/api/v1/workspace/events` (port żywej instancji; `CEZAR_URL` w unicie) (Host: `127.0.0.1` — przechodzi host-guard w trybie loopback; jeśli Cezar działa w trybie hosted, też przechodzi). Reconnect z backoffem; po reconnect pobiera `runs-index` i **nie** wysyła pushy za stany zastane (tylko przejścia).
-- Klucze VAPID generowane raz (`cezar-push init`), trzymane w `~/.cezar-push/vapid.json` (0600); `subject` = `mailto:` właściciela z env.
-- Endpointy: `GET /m/push/vapid-public-key`, `POST /m/push/subscription`, `DELETE /m/push/subscription`, `POST /m/push/test` (wysyła testowy push), `GET /m/push/health`.
-- Serwis systemd `cezar-push.service` (user), logi przez journald, bez logowania treści zadań.
+- Node 20+, TypeScript, Hono, `web-push`, no database — subscriptions in `~/.cezar-push/subscriptions.json` (atomic writes), status state in memory.
+- Listens on `127.0.0.1:4330`; nginx proxies `location /m/push/` → sidecar, behind the same cookie.
+- Connects to `http://127.0.0.1:4322/api/v1/workspace/events` (port of the live instance; `CEZAR_URL` in the unit) (Host: `127.0.0.1` — passes the host-guard in loopback mode; also passes if Cezar runs in hosted mode). Reconnects with backoff; after reconnecting, fetches `runs-index` and does **not** send pushes for pre-existing states (only transitions).
+- VAPID keys generated once (`cezar-push init`), kept in `~/.cezar-push/vapid.json` (0600); `subject` = the owner's `mailto:` from an env var.
+- Endpoints: `GET /m/push/vapid-public-key`, `POST /m/push/subscription`, `DELETE /m/push/subscription`, `POST /m/push/test` (sends a test push), `GET /m/push/health`.
+- systemd service `cezar-push.service` (user), logs via journald, no task content in logs.
 
-## 7. Konfiguracja nginx (docelowa, do zaadaptowania)
+## 7. nginx configuration (target, to be adapted)
 
 ```nginx
-# w istniejącym server { } dla <your-host>, PRZED location /
+# inside the existing server { } for <your-host>, BEFORE location /
 location /m/push/ {
-    # ta sama weryfikacja cookie co dla / (wstaw istniejący mechanizm)
+    # the same cookie check as for / (insert the existing mechanism)
     proxy_pass http://127.0.0.1:4330;
 }
 location /m/ {
@@ -146,28 +146,28 @@ location /m/ {
     location /m/assets/ { add_header Cache-Control "public, max-age=31536000, immutable"; }
 }
 ```
-`listen 443 ssl http2;` musi być włączone.
+`listen 443 ssl http2;` must be enabled.
 
-## 8. Plan etapów
+## 8. Milestone plan
 
-| Etap | Zakres | Kryterium ukończenia |
+| Milestone | Scope | Completion criterion |
 |---|---|---|
-| **M0 — Szkielet** | Repo, Vite+React+TS+Tailwind, manifest, ikony, SW (shell), nginx `/m/`, deploy skrypt | Ikona na ekranie głównym iPhone'a otwiera pusty shell w trybie standalone |
-| **M1 — Lista live** | Auth-detection + ekran logowania, `runs-index`, workspace SSE, sekcje, offline snapshot | Na telefonie widzę zadania i zmiany statusu w < 2 s |
-| **M2 — Szczegóły** | Historia + SSE zadania, renderer itemów, plan, kroki, read | Obserwuję działającego agenta na żywo, po powrocie z tła nic nie ginie |
-| **M3 — Akcje** | Ask/wiadomość, cancel/finish/PR/continue, diff, nowe zadanie | Obsłużę zadanie w stanie `waiting` i `review` bez laptopa |
-| **M4 — Push** | Sidecar, subskrypcja, badge, deep-link z powiadomienia | Zablokowany telefon dostaje push, tap otwiera właściwe zadanie |
-| **M5 — Szlif** | A11y, motywy, testy E2E na WebKit, dokumentacja wdrożenia | Checklista §5 spełniona |
+| **M0 — Skeleton** | Repo, Vite+React+TS+Tailwind, manifest, icons, SW (shell), nginx `/m/`, deploy script | The home-screen icon on an iPhone opens an empty shell in standalone mode |
+| **M1 — Live list** | Auth detection + sign-in screen, `runs-index`, workspace SSE, sections, offline snapshot | On the phone I see tasks and status changes in < 2 s |
+| **M2 — Details** | Task history + SSE, item renderer, plan, steps, read | I watch an agent working live; nothing is lost after returning from the background |
+| **M3 — Actions** | Ask/message, cancel/finish/PR/continue, diff, new task | I can handle a task in `waiting` and `review` state without a laptop |
+| **M4 — Push** | Sidecar, subscription, badge, deep link from a notification | A locked phone gets a push, tapping it opens the right task |
+| **M5 — Polish** | Accessibility, themes, E2E tests on WebKit, deployment docs | The checklist in §5 is satisfied |
 
-## 9. Otwarte pytania (do właściciela)
+## 9. Open questions (for the owner)
 
-- **Q1** ~~Jak dokładnie działa ochrona cookie na VPS? (nginx `map` na cookie, `auth_request`, oauth2-proxy, Cloudflare Access…?) Czy link dostępowy przyjmuje parametr powrotu (`?next=`)? Jaki `Max-Age` ma cookie? → wpływa na R-AUTH-3/4.~~
-  **ROZSTRZYGNIĘTE 2026-09-20** przez odczyt żywej konfiguracji — nginx + statyczny sekret w `?key=`, cookie 30 dni, bez parametru powrotu (cel powrotu = ścieżka). Mechanika w `docs/CEZAR_API.md` §1a, konsekwencje w R-AUTH-3/3a.
-  ~~**Zostaje jedno pytanie do właściciela:** czy guard `if ($arg_key = …)` stoi w bloku `server` (…), czy wewnątrz `location /` (…)?~~
-  **ODPOWIEDŹ 2026-09-21: w `location /`.** Operator wkleił prawdziwy link w zainstalowanej PWA i dostał odmowę dla obu postaci linku. Potwierdza to pomiar bez klucza: `/m/` odpowiada 200 bez ciasteczka, więc kontrola bramy nie działa na poziomie `server` — a guard `?key=` stoi obok niej. `location ^~ /m/` nigdy nie wchodzi do `location /`, więc klucz pod `/m/` był po prostu ignorowany. **Naprawa jest po stronie bramy**, jak przewidywał PRD („that is fixed in the perimeter”): snippet `/m/` includuje kopię guarda (`/etc/nginx/snippets/cezar-mobile-unlock.conf`), którą `deploy/nginx/install.sh` wycina z vhosta na serwerze — sekret nie trafia do repo. Odtworzone i sprawdzone na lokalnym nginx 1.28.3 (ta sama wersja co na VPS): `deploy/nginx/rehearse.sh`. Z repo nie da się tego zainstalować — klucz wdrożeniowy to `rrsync -wo /var/www`; instalator trzeba uruchomić na VPS.
-  **Zainstalowane i zweryfikowane 2026-09-21.** Guard nie siedzi w samym vhoście, tylko w `/etc/nginx/snippets/cezar-gate.conf`, includowanym w `location /` (kontrola ciasteczka czyta `map` z `conf.d/cezar-gate.conf`); ekstraktor przeszukuje więc vhost i pliki, które on includuje. Na żywej bramie: `/m/?key=<prawdziwy>` → 302 na `/m/` + `Set-Cookie`, zły klucz → powłoka bez ciasteczka, `/` i `/api/v1/health` bez ciasteczka → 403, sesja z `/m/` otwiera `/api/v1/health`. Wklejenie prawdziwego linku w aplikacji (WebKit, żywy host) kończy się na ekranie za bramką i przeżywa przeładowanie.
-- **Q2** Czy nginx jest instalowany przez `cezar server-install` (wtedy vhost jest zarządzany przez Cezara i przy `server-install --reinstall` może zostać nadpisany), czy przez zewnętrzne proxy (`--external-proxy`)?
-  **ODPOWIEDŹ 2026-09-21:** vhost generuje `cezar server-install` („Managed by cezar server-install — do not edit by hand”) i przepisuje go przy reinstalacji. Bramka przeżywa to dzięki `cezar-gate-ensure.path` + `.timer`, które przywracają **tylko** `include …/cezar-gate.conf`. **Nasz `include …/cezar-mobile.conf` nie jest przywracany** — po reinstalacji Cezara `/m/` trafi do `location /` i dostanie 403, więc ekran „Połącz z Cezarem” zniknie. Zautomatyzowane w #29: `cezar-mobile-nginx-ensure.path` + `.timer` uruchamiają `install.sh --ensure`, które przywraca nasz include (README §Deploying, krok 3).
-- **Q3** Ile projektów jest zarejestrowanych i czy Cezar działa na stabilnej, nightly czy develop? (wpływa na tempo zmian API)
-- **Q4** Czy Android jest równorzędnym celem, czy tylko „ma działać”?
-- **Q5** Push też przy `done`, czy wyłącznie gdy potrzebna jest reakcja?
+- **Q1** ~~How exactly does the cookie protection on the VPS work? (nginx `map` on a cookie, `auth_request`, oauth2-proxy, Cloudflare Access…?) Does the access link accept a return parameter (`?next=`)? What `Max-Age` does the cookie have? → affects R-AUTH-3/4.~~
+  **RESOLVED 2026-09-20** by reading the live configuration — nginx + a static secret in `?key=`, a 30-day cookie, no return parameter (the return target is the path). Mechanics in `docs/CEZAR_API.md` §1a, consequences in R-AUTH-3/3a.
+  ~~**One question remains for the owner:** does the guard `if ($arg_key = …)` sit in the `server` block, or inside `location /`?~~
+  **ANSWER 2026-09-21: in `location /`.** The operator pasted the real link into the installed PWA and got rejected for both forms of the link. This is confirmed by a measurement without a key: `/m/` answers 200 without a cookie, so the gateway check doesn't run at the `server` level — and the `?key=` guard sits next to it. `location ^~ /m/` never falls through to `location /`, so the key under `/m/` was simply ignored. **The fix is on the gateway side**, as the PRD predicted ("that is fixed in the perimeter"): the `/m/` snippet includes a copy of the guard (`/etc/nginx/snippets/cezar-mobile-unlock.conf`), which `deploy/nginx/install.sh` cuts out of the vhost on the server — the secret never enters the repo. Reproduced and verified on a local nginx 1.28.3 (the same version as on the VPS): `deploy/nginx/rehearse.sh`. It can't be installed from the repo — the deploy key is `rrsync -wo /var/www`; the installer has to be run on the VPS.
+  **Installed and verified 2026-09-21.** The guard doesn't live in the vhost itself, but in `/etc/nginx/snippets/cezar-gate.conf`, included in `location /` (the cookie check reads a `map` from `conf.d/cezar-gate.conf`); the extractor therefore searches the vhost and the files it includes. On the live gateway: `/m/?key=<real>` → 302 to `/m/` + `Set-Cookie`, a wrong key → a shell without a cookie, `/` and `/api/v1/health` without a cookie → 403, a session from `/m/` opens `/api/v1/health`. Pasting the real link into the app (WebKit, live host) lands on the screen behind the gate and survives a reload.
+- **Q2** Is nginx installed via `cezar server-install` (in which case the vhost is managed by Cezar and may be overwritten on `server-install --reinstall`), or via an external proxy (`--external-proxy`)?
+  **ANSWER 2026-09-21:** the vhost is generated by `cezar server-install` ("Managed by cezar server-install — do not edit by hand") and rewritten on reinstall. The gate survives this thanks to `cezar-gate-ensure.path` + `.timer`, which restore **only** `include …/cezar-gate.conf`. **Our `include …/cezar-mobile.conf` is not restored** — after a Cezar reinstall, `/m/` falls into `location /` and gets a 403, so the "Connect to Cezar" screen disappears. Automated in #29: `cezar-mobile-nginx-ensure.path` + `.timer` run `install.sh --ensure`, which restores our include (README §Deploying, step 3).
+- **Q3** How many projects are registered, and is Cezar running on a stable, nightly, or develop build? (affects how fast the API changes)
+- **Q4** Is Android an equal target, or does it just need to "work"?
+- **Q5** Push on `done` too, or only when a reaction is actually needed?
