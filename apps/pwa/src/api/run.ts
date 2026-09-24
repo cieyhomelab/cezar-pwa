@@ -1,5 +1,6 @@
 import type {
   ApiRun,
+  CancelAutoResumeResponse,
   CancelResponse,
   ContinueResponse,
   CreatePrResponse,
@@ -281,6 +282,17 @@ const write = <T>(projectId: string, runId: string, action: string, body?: unkno
 /** `POST …/cancel`. `{ cancelled: false }` is a 200 too: the run had already settled. */
 export function cancelRun(projectId: string, runId: string): Promise<CancelResponse> {
   return write(projectId, runId, 'cancel')
+}
+
+/**
+ * `DELETE …/auto-resume` (FR-030): call off a booked usage-limit resume. Idempotent — a run with
+ * nothing pending answers `{ cancelled: true }` too; only an unknown run refuses, with 404.
+ */
+export function cancelAutoResume(projectId: string, runId: string): Promise<CancelAutoResumeResponse> {
+  return apiFetch<CancelAutoResumeResponse>(`${runBase(projectId, runId)}/auto-resume`, {
+    method: 'DELETE',
+    timeoutMs: WRITE_TIMEOUT_MS,
+  })
 }
 
 /** `POST …/finish`: accept a review, or close a waiting session. `409 no open session` otherwise. */

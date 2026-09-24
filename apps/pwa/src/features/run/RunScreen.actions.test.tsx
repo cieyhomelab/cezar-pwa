@@ -10,8 +10,8 @@ import { actionFailureMessage } from './useRunActions.ts'
 
 /**
  * S-08 on the task screen: cancel behind a confirmation (FR-025), accept a review (FR-026), open
- * a draft PR (FR-027), continue (FR-028), pin and archive (FR-029), each showing it is in flight
- * and why it failed (FR-032).
+ * a draft PR (FR-027), continue (FR-028), pin and archive (FR-029), cancel a booked auto-resume
+ * behind a confirmation (FR-030), each showing it is in flight and why it failed (FR-032).
  */
 
 const BASE_RUN = liveRun as unknown as ApiRun
@@ -44,8 +44,9 @@ function serve(initial: ApiRun, writeHandlers: Record<string, Handler> = {}) {
     if (path === `${BASE}/history`) return jsonResponse({ events: [], itemCount: 0, liveCursor: 'live', asOfSeq: 0, hasOlder: false })
     if (path === `${BASE}/history-context`) return jsonResponse({ contextEvents: [], asOfSeq: 0 })
     if (path === `${BASE}/read`) return jsonResponse(state.run)
-    if (method === 'POST' && path.startsWith(`${BASE}/`)) {
-      const action = path.slice(BASE.length + 1)
+    if ((method === 'POST' || method === 'DELETE') && path.startsWith(`${BASE}/`)) {
+      // A POST is named by its path alone, as every action but one is; a DELETE says so.
+      const action = `${method === 'DELETE' ? 'DELETE ' : ''}${path.slice(BASE.length + 1)}`
       writes.push({ action, body: init?.body ? JSON.parse(String(init.body)) : undefined })
       const handler = writeHandlers[action]
       if (!handler) throw new Error(`unrouted write in test: ${action}`)
@@ -124,6 +125,75 @@ describe('cancel (FR-025)', () => {
     fireEvent.click((await bar()).getByRole('button', { name: t.cancel }))
     fireEvent.click(screen.getByRole('button', { name: t.confirmCancel.confirm }))
     expect(await screen.findByText(t.done.alreadySettled)).toBeInTheDocument()
+  })
+})
+
+describe('cancel auto-resume (FR-030)', () => {
+  const AT = '2026-09-24T12:00:00.000Z'
+
+  it('is offered on a failed task with a booked resume, next to its other actions', async () => {
+    serve(runAs('failed', { autoResumeAt: AT }))
+    const actions = await bar()
+    expect(actions.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      t.continue,
+      t.pin,
+      t.archive,
+      t.cancelAutoResume,
+    ])
+  })
+
+  it('is not offered on a plain failed task', async () => {
+    serve(runAs('failed'))
+    const actions = await bar()
+    expect(actions.getByRole('button', { name: t.continue })).toBeInTheDocument()
+    expect(actions.queryByRole('button', { name: t.cancelAutoResume })).not.toBeInTheDocument()
+  })
+
+  it('asks first, and "keep it scheduled" sends nothing', async () => {
+    const { writes } = serve(runAs('failed', { autoResumeAt: AT }))
+    fireEvent.click((await bar()).getByRole('button', { name: t.cancelAutoResume }))
+
+    const dialog = screen.getByRole('alertdialog', { name: t.confirmCancelAutoResume.title })
+    expect(dialog).toHaveAccessibleDescription(t.confirmCancelAutoResume.body)
+    fireEvent.click(within(dialog).getByRole('button', { name: t.confirmCancelAutoResume.keep }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(writes).toEqual([])
+  })
+
+  it('confirmed, it shows it is in flight, then the refetched plain failure drops the button', async () => {
+    let release: (response: Response) => void = () => {}
+    const { state, writes } = serve(runAs('failed', { autoResumeAt: AT }), {
+      'DELETE auto-resume': () =>
+        new Promise<Response>((resolve) => {
+          release = (response) => {
+            state.run = runAs('failed')
+            resolve(response)
+          }
+        }),
+    })
+    fireEvent.click((await bar()).getByRole('button', { name: t.cancelAutoResume }))
+    fireEvent.click(screen.getByRole('button', { name: t.confirmCancelAutoResume.confirm }))
+
+    const actions = await bar()
+    expect(await actions.findByRole('button', { name: t.cancellingAutoResume })).toBeDisabled()
+    expect(actions.getByRole('button', { name: t.continue })).toBeDisabled()
+    fireEvent.click(actions.getByRole('button', { name: t.continue }))
+    expect(writes).toEqual([{ action: 'DELETE auto-resume', body: undefined }])
+
+    release(jsonResponse({ cancelled: true }))
+    expect(await screen.findByText(t.done.cancelAutoResume)).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: t.cancelAutoResume })).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: t.continue })).toBeEnabled()
+  })
+
+  it("shows the server's own reason when it refuses (FR-032)", async () => {
+    serve(runAs('failed', { autoResumeAt: AT }), { 'DELETE auto-resume': () => jsonResponse({ error: 'not found' }, 404) })
+    fireEvent.click((await bar()).getByRole('button', { name: t.cancelAutoResume }))
+    fireEvent.click(screen.getByRole('button', { name: t.confirmCancelAutoResume.confirm }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(t.failed.refused('not found'))
+    // Still scheduled, so still offered.
+    expect(screen.getByRole('button', { name: t.cancelAutoResume })).toBeEnabled()
   })
 })
 

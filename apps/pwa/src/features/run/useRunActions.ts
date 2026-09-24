@@ -4,6 +4,7 @@ import { HEALTH_QUERY_KEY } from '../../api/health.ts'
 import { ApiError, AuthRequiredError, NetworkError, TimeoutError } from '../../api/http.ts'
 import {
   applyRunFlag,
+  cancelAutoResume,
   cancelRun,
   continueRun,
   createDraftPr,
@@ -12,7 +13,7 @@ import {
   setRunArchived,
   setRunPinned,
 } from '../../api/run.ts'
-import type { ActionRun, RunActionId } from '../../domain/run-actions.ts'
+import type { ActionRun, ConfirmedActionId, RunActionId } from '../../domain/run-actions.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
 import { en } from '../../i18n/en.ts'
 
@@ -23,9 +24,10 @@ export interface RunActions {
   error?: string
   /** What a successful action did, when the record alone would not say it. */
   notice?: string
-  /** Cancel is behind a confirmation (FR-025): the first tap only asks. */
-  confirmingCancel: boolean
-  askCancel: () => void
+  /** Cancel (FR-025) and cancel auto-resume (FR-030) are behind a confirmation: the first tap
+   *  only asks. This is the one being asked about. */
+  confirming?: ConfirmedActionId
+  ask: (action: ConfirmedActionId) => void
   keep: () => void
   run: (action: RunActionId) => Promise<void>
 }
@@ -42,11 +44,13 @@ export function actionFailureMessage(error: unknown): string {
 }
 
 /**
- * S-08: the task's own actions (FR-025 to FR-029), one at a time, each showing it is in flight
+ * S-08: the task's own actions (FR-025 to FR-030), one at a time, each showing it is in flight
  * and, on failure, the reason the server gave (FR-032).
  *
  * After every attempt the run, its history and the list are re-asked, as after a send (S-07): a
- * cancel, finish, continue or draft PR moves the status, and the stream may not be open to carry
+ * cancel, finish, continue or draft PR moves the status, a cancelled auto-resume drops
+ * `autoResumeAt` (so the list stops showing the task as scheduled and the attention rule sees a
+ * plain failure), and the stream may not be open to carry
  * it. A pin or archive answer is written into the caches first, flag only, so the button flips
  * on the answer rather than on the refetch.
  *
@@ -58,7 +62,7 @@ export function useRunActions(projectId: string, runId: string, run: ActionRun |
   const [pending, setPending] = useState<RunActionId>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
-  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [confirming, setConfirming] = useState<ConfirmedActionId>()
   const inFlight = useRef(false)
   // The flags toggle off the record the operator is looking at when they tap.
   const runRef = useRef(run)
@@ -75,6 +79,9 @@ export function useRunActions(projectId: string, runId: string, run: ActionRun |
           const answer = await cancelRun(projectId, runId)
           return answer.cancelled ? done.cancel : done.alreadySettled
         }
+        case 'cancelAutoResume':
+          await cancelAutoResume(projectId, runId)
+          return done.cancelAutoResume
         case 'finish':
           await finishRun(projectId, runId)
           return current?.status === 'review' ? done.accepted : done.finished
@@ -108,7 +115,7 @@ export function useRunActions(projectId: string, runId: string, run: ActionRun |
     async (action: RunActionId): Promise<void> => {
       if (inFlight.current) return
       inFlight.current = true
-      setConfirmingCancel(false)
+      setConfirming(undefined)
       setPending(action)
       setError(undefined)
       setNotice(undefined)
@@ -132,13 +139,13 @@ export function useRunActions(projectId: string, runId: string, run: ActionRun |
     ...(pending !== undefined ? { pending } : {}),
     ...(error !== undefined ? { error } : {}),
     ...(notice !== undefined ? { notice } : {}),
-    confirmingCancel,
-    askCancel: useCallback(() => {
+    ...(confirming !== undefined ? { confirming } : {}),
+    ask: useCallback((action: ConfirmedActionId) => {
       setError(undefined)
       setNotice(undefined)
-      setConfirmingCancel(true)
+      setConfirming(action)
     }, []),
-    keep: useCallback(() => setConfirmingCancel(false), []),
+    keep: useCallback(() => setConfirming(undefined), []),
     run: runAction,
   }
 }

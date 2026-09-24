@@ -408,11 +408,20 @@ export const en = {
       archive: 'Archive',
       unarchive: 'Restore from archive',
       archiving: 'Saving…',
+      cancelAutoResume: 'Cancel auto-resume',
+      cancellingAutoResume: 'Cancelling…',
       confirmCancel: {
         title: 'Cancel this task?',
         body: 'The agent will be stopped and the task will end as cancelled. The worktree stays.',
         keep: 'Keep it',
         confirm: 'Cancel the task',
+      },
+      /** FR-030: a failed task booked to resume itself once the provider's usage limit lifts. */
+      confirmCancelAutoResume: {
+        title: 'Cancel the auto-resume?',
+        body: 'The task will stay failed and will not resume by itself. You can still continue it by hand.',
+        keep: 'Keep it scheduled',
+        confirm: 'Cancel auto-resume',
       },
       done: {
         cancel: 'Task cancelled.',
@@ -422,6 +431,7 @@ export const en = {
         draftPr: 'Draft PR opened — the link is in the header.',
         draftPrDryRun: "Cezar's dry-run mode: the PR was not really opened.",
         continued: 'Session resumed.',
+        cancelAutoResume: 'Auto-resume cancelled — the task stays failed.',
         archived: 'Task archived — it is gone from the list.',
       },
       failed: {
