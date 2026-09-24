@@ -75,6 +75,6 @@ fi
 if [[ -n "${PUBLIC_URL:-}" ]]; then
   echo "==> done. Shell is live at $PUBLIC_URL"
 else
-  echo "==> done. Shell is live under /m/ on $DEPLOY_HOST's vhost."
+  echo "==> done. Shell is live under /m/."
 fi
 echo "    Installed clients pick up the new build on next launch (F-PWA-5 prompt)."
