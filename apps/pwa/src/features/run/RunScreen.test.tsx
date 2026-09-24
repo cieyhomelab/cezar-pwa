@@ -174,7 +174,7 @@ describe('RunScreen — the transcript (FR-015, FR-017)', () => {
     expect(link?.getAttribute('href') ?? '').not.toMatch(/javascript:/i)
   })
 
-  it('says older entries live in the cockpit when the page does not reach the start (FR-049 parked)', async () => {
+  it('points to the cockpit when the page reaches further back but gives no cursor to get there', async () => {
     renderRun({ history: recordingPage })
     expect(await screen.findByRole('link', { name: en.run.transcript.older })).toHaveAttribute(
       'href',
