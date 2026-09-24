@@ -1,104 +1,18 @@
-# Cezar Mobile (PWA)
+# Deploying Cezar Mobile
 
-An installable phone client for a
-[Cezar](https://github.com/open-mercato/cezar) instance. It answers one question
-in three seconds: **what are the agents doing, and is anything waiting for me?**
-Then it lets you act on the answer, and it can send you a push notification
-when a task starts waiting for you.
-
-The app is served from the same origin as Cezar, under `/m/`. That is not a
-preference: Cezar rejects cross-origin writes with 403 and ships no CORS, so
-no other arrangement works. You install it on the server that already runs
-Cezar, next to it. The app reads its origin from the page, so one build runs on
-any host. The reference deployment is `https://cezar.ciey.studio`. Everywhere
-below, replace `<your-host>` with your own host.
+The operator reference for installing, configuring, updating and repairing Cezar
+Mobile on the host that runs Cezar. For what the app is, how the parts fit
+together and the short install sequence, start with the [README](../README.md).
+The reference deployment is `https://cezar.ciey.studio`. Everywhere below, replace `<your-host>` with your own host and `<your-vhost>`
+with the vhost file Cezar's installer manages.
 
 ## Contents
 
-- [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Configuration reference](#configuration-reference)
 - [Installation](#installation)
-- [Install on the phone](#install-on-the-phone)
 - [Updating and rotating the access key](#updating-and-rotating-the-access-key)
 - [Troubleshooting](#troubleshooting)
-- [Local development](#local-development)
-- [License](#license)
-
-## Architecture
-
-```mermaid
-flowchart LR
-  phone["Phone<br/>installed PWA + service worker"]
-
-  subgraph vps["VPS (your host)"]
-    nginx["nginx"]
-    shell["/var/www/cezar-mobile<br/>static shell"]
-    cezar["Cezar<br/>127.0.0.1:4322"]
-    push["cezar-push sidecar<br/>127.0.0.1:4330"]
-  end
-
-  pushsvc["Browser push service<br/>(APNs / FCM)"]
-
-  phone -- "/m/ (public, unlocks the session)" --> nginx
-  phone -- "/api/v1/… + SSE (gated)" --> nginx
-  phone -- "/m/push/ (gated)" --> nginx
-  nginx --> shell
-  nginx --> cezar
-  nginx --> push
-  push -- "workspace events over loopback" --> cezar
-  push -- "Web Push (VAPID)" --> pushsvc
-  pushsvc --> phone
-```
-
-There are three parts:
-
-- **The shell**: static files in `/var/www/cezar-mobile`, served by nginx at
-  `/m/`. It sits outside Cezar's cookie gate, so the app can load and explain
-  itself before it has a session.
-- **Cezar's own API**: `/api/v1/…` and its event streams, behind the gate. The
-  app talks to it directly, on the same origin.
-- **cezar-push**: a small sidecar that watches Cezar and sends Web Push. nginx
-  serves it at `/m/push/`, also behind the gate.
-
-The service worker caches only the shell. It never touches `/api/**` or the
-streams.
-
-When a task starts needing you, this happens:
-
-```mermaid
-sequenceDiagram
-  participant C as Cezar
-  participant S as cezar-push
-  participant P as Push service
-  participant W as Service worker
-  participant A as App
-
-  S->>C: GET /api/v1/workspace/runs-index (silent baseline)
-  S->>C: GET /api/v1/workspace/events (SSE)
-  C-->>S: run frame: task enters waiting / review / failed
-  S->>P: Web Push, Topic = task, payload = title, project, reason
-  P-->>W: push
-  W->>W: show notification (tag = task)
-  W->>A: tap opens /m/p/:projectId/runs/:runId
-```
-
-The sidecar pushes on the *transition* into a state that needs you. Each
-reconnect re-seeds a silent baseline, so work that was already waiting never
-rings twice. No code and no transcript content leave the server.
-
-Installation goes in this order:
-
-```mermaid
-flowchart LR
-  a["Step 1: Clone + build<br/>(build machine)"] --> b["Step 2: Clone on the VPS"]
-  b --> c["Step 3: nginx snippet"]
-  c --> d["Step 4: Push sidecar"]
-  d --> e["Step 5: Keep the include<br/>(ensure units)"]
-  e --> f["Step 6: First deploy"]
-  f --> g["Step 7: Verify"]
-  g --> h["Step 8: Install on the phone"]
-```
 
 ## Prerequisites
 
@@ -168,8 +82,9 @@ command line, not in the file (the file lives inside `STATE_DIR`):
 
 ### GitHub repository secrets and variables (CI deploy)
 
-Only needed if you let `.github/workflows/deploy.yml` deploy on every merge to
-`main`. Until all three secrets exist, the job stays green and posts a warning
+Only needed if you let
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) deploy on
+every merge to `main`. Until all three secrets exist, the job stays green and posts a warning
 instead of shipping. If only some of them exist, it fails.
 
 | Name | Kind | Required | Example |
@@ -259,7 +174,7 @@ installs and starts the `cezar-push` user unit on `127.0.0.1:4330`. Lingering
 keeps the unit running after you log out. If you run the installer on a
 terminal without `PUBLIC_ORIGIN`, it asks for it. After the first run it reads
 the value from the env file. More detail on the sidecar is in
-[`apps/push-sidecar/README.md`](apps/push-sidecar/README.md).
+[`apps/push-sidecar/README.md`](../apps/push-sidecar/README.md).
 
 **Check:** the installer ends with `==> healthy on 127.0.0.1:4330: …`, and
 `systemctl --user is-active cezar-push` prints `active`.
@@ -345,27 +260,9 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$PUBLIC_ORIGIN/m/session/end" 
 **Check:** the output is `active`, `403`, `403`. If `vapid-public-key` returns
 `200` with HTML, see [Troubleshooting](#troubleshooting).
 
-## Install on the phone
+### 8. Install on the phone
 
-You need the access link for your Cezar instance, `https://<your-host>/?key=…`.
-It is the same link you use to open the cockpit.
-
-1. **Open the app.** In Safari (iPhone) or Chrome (Android), go to
-   `https://<your-host>/m/`.
-2. **Add it to the home screen.**
-   - iPhone: tap **Share**, then **Add to Home Screen**.
-   - Android: open the Chrome menu, then **Add to Home screen** or
-     **Install app**.
-3. **Open Cezar from the home screen icon.** The installed app keeps its own
-   cookies, separate from the browser, so it asks you to connect even if you
-   are already signed in to the cockpit in Safari.
-4. **Connect.** On the "Connect to Cezar" screen, paste the whole access link,
-   including the `key` at the end, and tap **Connect**. The link is not stored
-   on the phone.
-5. **Turn on notifications.** Go to **Settings → Notifications**, tap
-   **Turn on notifications**, and allow them when asked. Then tap
-   **Send a test notification**. On an iPhone, this works only in the app opened
-   from the home screen icon, on iOS 16.4 or newer.
+Follow [Install on the phone](../README.md#install-on-the-phone) in the README.
 
 ## Updating and rotating the access key
 
@@ -419,41 +316,3 @@ with Cezar's own installer first.
 icon, not from Safari, and check that the phone runs iOS 16.4 or newer. If you
 blocked notifications earlier, turn them back on in iOS
 **Settings → Notifications → Cezar**.
-
-## Local development
-
-```bash
-npm ci
-npm run dev          # the PWA on http://localhost:5173/m/, proxying /api
-npm run typecheck
-npm test             # vitest across pwa, sidecar and shared
-npm run lint         # oxlint
-npm run test:e2e     # Playwright on WebKit, against a production build
-```
-
-`npm run dev` proxies `/api` to `CEZAR_URL` from `.env.local`. To work against a
-live instance, set `CEZAR_URL=https://<your-host>` and `CEZAR_COOKIE`. The proxy
-also rewrites `Origin`, so Cezar's same-origin guard accepts the writes. Without
-`CEZAR_URL`, the proxy goes to a local mock on `http://127.0.0.1:4321`. Start it
-with `CEZ_DRY_RUN=1 npx cezar-cli`.
-
-`npm run test:e2e` needs WebKit once: `npx playwright install webkit`. The suite
-never talks to a live Cezar.
-
-```
-apps/pwa/                 # the PWA
-apps/push-sidecar/        # cezar-push, the Web Push sidecar
-packages/shared/          # attention rule + types shared by app and sidecar
-packages/cezar-contract/  # Cezar's contract, vendored and pinned
-deploy/                   # nginx snippet and installer, sidecar installer, systemd units
-scripts/                  # deploy, contract sync, icon generation
-```
-
-Before you change anything, read [`CLAUDE.md`](CLAUDE.md) for the project rules
-and [`docs/CEZAR_API.md`](docs/CEZAR_API.md) for the API the app talks to.
-
-## License
-
-[MIT](LICENSE). `packages/cezar-contract/` is vendored from
-[Cezar](https://github.com/open-mercato/cezar) and keeps its own MIT notice in
-[`packages/cezar-contract/LICENSE`](packages/cezar-contract/LICENSE).

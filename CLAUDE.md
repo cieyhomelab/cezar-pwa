@@ -1,6 +1,6 @@
 # CLAUDE.md — Cezar Mobile (PWA)
 
-A mobile PWA (iPhone first, Android) for watching and steering a **Cezar** instance (`open-mercato/cezar`) running on the operator's host (the host is configuration: `<your-host>` / `$PUBLIC_ORIGIN` in the repo; `OLD_README.md` gives the reference deployment). The app is served from the same origin under `/m/`.
+A mobile PWA (iPhone first, Android) for watching and steering a **Cezar** instance (`open-mercato/cezar`) running on the operator's host (the host is configuration: `<your-host>` / `$PUBLIC_ORIGIN` in the repo; `docs/DEPLOYMENT.md` gives the reference deployment). The app is served from the same origin under `/m/`.
 
 Read before you start:
 - `docs/REQUIREMENTS.md` — what we are building, priorities (P0/P1/P2), milestones M0–M5, open questions
