@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient, jsonResponse, stubFetch } from '../../test/query.tsx'
 import { ApiError } from './http.ts'
 import {
+  applyQueuedMessage,
   applyReadReceipt,
   fetchHistory,
   fetchHistoryContext,
@@ -85,5 +86,34 @@ describe('applyReadReceipt', () => {
     client.setQueryData(runQueryKey('p', 'r'), { id: 'r' })
     applyReadReceipt(client, 'p', 'r', {})
     expect(client.getQueryData(runQueryKey('p', 'r'))).toEqual({ id: 'r' })
+  })
+})
+
+describe('applyQueuedMessage (#66)', () => {
+  const q = (id: string, text: string) => ({ id, text, createdAt: 't' })
+  const seed = () => {
+    const client = createTestQueryClient()
+    client.setQueryData(runQueryKey('p', 'r'), { id: 'r', status: 'queued', queuedMessages: [q('a', 'one'), q('b', 'two')] })
+    return client
+  }
+  const stack = (client: ReturnType<typeof seed>) => client.getQueryData<ApiRun>(runQueryKey('p', 'r'))?.queuedMessages
+
+  it('replaces the edited entry in place', () => {
+    const client = seed()
+    applyQueuedMessage(client, 'p', 'r', { replaced: q('a', 'ONE') })
+    expect(stack(client)).toEqual([q('a', 'ONE'), q('b', 'two')])
+  })
+
+  it('drops the removed entry', () => {
+    const client = seed()
+    applyQueuedMessage(client, 'p', 'r', { removed: 'a' })
+    expect(stack(client)).toEqual([q('b', 'two')])
+  })
+
+  it('leaves the record alone when the entry is already gone', () => {
+    const client = seed()
+    const before = client.getQueryData(runQueryKey('p', 'r'))
+    applyQueuedMessage(client, 'p', 'r', { removed: 'z' })
+    expect(client.getQueryData(runQueryKey('p', 'r'))).toBe(before)
   })
 })

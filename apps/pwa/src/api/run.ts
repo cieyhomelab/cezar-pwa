@@ -3,9 +3,12 @@ import type {
   CancelResponse,
   ContinueResponse,
   CreatePrResponse,
+  EditQueuedMessageResponse,
   FinishResponse,
   MarkAllReadResponse,
   MessageResponse,
+  QueuedMessage,
+  RemoveQueuedMessageResponse,
   RunEvent,
   RunHistoryContext,
   RunHistoryPage,
@@ -13,6 +16,7 @@ import type {
 } from '@cezar-pwa/cezar-contract/contract'
 import type { QueryClient } from '@tanstack/react-query'
 import { carryOver } from '../domain/live-transcript.ts'
+import { dropQueuedMessage, replaceQueuedMessage } from '../domain/queued-messages.ts'
 import { ApiError, apiFetch } from './http.ts'
 import { RUNS_INDEX_QUERY_KEY } from './runs-index.ts'
 
@@ -201,6 +205,57 @@ export async function continueRunWith(projectId: string, runId: string, text: st
     method: 'POST',
     body: { text },
     timeoutMs: WRITE_TIMEOUT_MS,
+  })
+}
+
+/**
+ * `PATCH …/queued-messages/:msgId` (#66): new text for a message stacked onto a queued task. Its
+ * attachments are left as they are (no `images` key). The server checks the text against the
+ * prompt's length limit and answers with the replaced entry. `404` means the message is no
+ * longer on the stack, `409 run already started` that the task took it.
+ */
+export async function editQueuedMessage(
+  projectId: string,
+  runId: string,
+  msgId: string,
+  text: string,
+): Promise<EditQueuedMessageResponse> {
+  const body = await apiFetch<unknown>(`${runBase(projectId, runId)}/queued-messages/${encodeURIComponent(msgId)}`, {
+    method: 'PATCH',
+    body: { text },
+    timeoutMs: WRITE_TIMEOUT_MS,
+  })
+  if (!isRecord(body) || !isRecord(body.message) || typeof body.message.id !== 'string' || typeof body.message.text !== 'string') {
+    throw new ApiError('unexpected response shape', 200, 'unexpected-shape')
+  }
+  return body as EditQueuedMessageResponse
+}
+
+/** `DELETE …/queued-messages/:msgId` (#66): `{ removed: true }`, with the same 404 and 409. */
+export function removeQueuedMessage(projectId: string, runId: string, msgId: string): Promise<RemoveQueuedMessageResponse> {
+  return apiFetch<RemoveQueuedMessageResponse>(
+    `${runBase(projectId, runId)}/queued-messages/${encodeURIComponent(msgId)}`,
+    { method: 'DELETE', timeoutMs: WRITE_TIMEOUT_MS },
+  )
+}
+
+/**
+ * Write an edit or removal into the run's record: that one stack entry only, for the reason
+ * `applyReadReceipt` gives below. The `run` SSE event carries the whole stack a moment later.
+ */
+export function applyQueuedMessage(
+  queryClient: QueryClient,
+  projectId: string,
+  runId: string,
+  change: { replaced: QueuedMessage } | { removed: string },
+): void {
+  queryClient.setQueryData<ApiRun>(runQueryKey(projectId, runId), (run) => {
+    if (!run?.queuedMessages) return run
+    const next =
+      'replaced' in change
+        ? replaceQueuedMessage(run.queuedMessages, change.replaced)
+        : dropQueuedMessage(run.queuedMessages, change.removed)
+    return next === run.queuedMessages ? run : { ...run, queuedMessages: [...next] }
   })
 }
 

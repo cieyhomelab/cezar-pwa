@@ -194,6 +194,8 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 | Kontynuuj (zakończony run) | `POST …/runs/:id/continue` | — lub `{ text?, runner?, model? }` → `{ continued: true }`; odmowa silnika = 409 |
 | Zakończ / zaakceptuj review | `POST …/runs/:id/finish` | — → `{ finished: true }`; `409 no open session` |
 | Draft PR | `POST …/runs/:id/pr` → 201 | — → `{ url, dryRun }`; 400 bez worktree, 409 `{ error, manual }` (błąd forge'a albo run aktywny) |
+| Edytuj wiadomość w kolejce (#66) | `PATCH …/runs/:id/queued-messages/:msgId` | `{ text?, images?(max 4) }` (co najmniej jedno) → `{ message }` (zastąpiony wpis, to samo `id` i `createdAt`). **400**: pusty tekst bez załączników, limit załączników stosu, `prompt too long — … character limit across the task and its queued messages`; **404** `not found` (brak runu albo wiadomości); **409** `run already started`. PWA wysyła tylko `{ text }` — załączniki zostają |
+| Usuń wiadomość z kolejki (#66) | `DELETE …/runs/:id/queued-messages/:msgId` | — → `{ removed: true }`; **404** `not found`, **409** `run already started` |
 | Oznacz jako przeczytane / nieprzeczytane | `POST …/runs/:id/read` / `…/unread` | — |
 | Oznacz wszystkie jako przeczytane (#67) | `POST /api/v1/p/:projectId/runs/read-all` | — → `{ read: number }` (ile przeczytano). Stempluje `seenAt` na każdym nieprzeczytanym zakończonym runie **całego projektu** (`markAllRead()` w `runs/store.js` = kopia `isUnread` klauzula po klauzuli), także starszych niż limit indeksu; rekordy przychodzą ponownie zdarzeniem SSE `run`. Brak filtra po stronie serwera, brak cofnięcia hurtem (pojedynczo: `…/unread`). Zarejestrowana przed `/runs/:id/…`, więc `read-all` nigdy nie jest id runu |
 | Przypnij / odepnij | `POST …/runs/:id/pin` | `{}` lub `{ pinned:false }` → cały rekord |
@@ -210,6 +212,12 @@ SSE natomiast przechodzi potwierdzenie: `/api/v1/events` i `/api/v1/p/:projectId
 - **Format odpowiedzi na pytanie** (`ask.requested`): `"<header>: <etykiety, po przecinku>"`, kilka pytań = jedna wiadomość, linia na pytanie. Reducer rozwiązuje kartę przy **następnym** `user-message`, więc odpowiedź własnymi słowami (dowolna wiadomość) też ją zamyka. Interaktywne jest tylko najnowsze pytanie — starsze nierozwiązane nie może się już rozwiązać.
 - Kompozytor jest tylko dla zadań aktywnych oraz dla zamkniętych z otwartym pytaniem; zwykłe „kontynuuj” to S-08. Zapis ma timeout 20 s i **nie jest ponawiany**: po timeoucie wiadomość mogła dotrzeć, więc operator dostaje to zdanie zamiast drugiej wysyłki. Szkic zostaje w polu, dopóki Cezar go nie przyjmie.
 - Po każdej próbie (udanej i nie) unieważniamy `['run', …]`, `['history', …]` (z kontekstem) i `['runs-index']`.
+
+### Wiadomości w kolejce w PWA (#66) — edycja i usuwanie
+- Działa tylko dla `status: queued`. Cezar skleja stos z poleceniem przy starcie, ale `queuedMessages[]` zostaje w rekordzie do końca życia runu — po starcie PWA pokazuje stos tylko do odczytu (`queuedMessagesEditable()` w `apps/pwa/src/domain/queued-messages.ts`), bo obie trasy odpowiadałyby `409`.
+- Edycja w miejscu, te same reguły co kompozytor: pusty tekst i brak zmiany nie wysyłają; szkic zostaje przy odmowie. Usuwanie za potwierdzeniem. Jeden zapis naraz, 20 s timeoutu, bez ponawiania.
+- Odpowiedź trafia do `['run', projectId, runId]` przez `setQueryData` (tylko ten wpis stosu, `applyQueuedMessage()`); zdarzenie SSE `run` przynosi po chwili cały stos.
+- `404`/`409` z własnym `{ error }` Cezara = wiadomość już poszła (zadanie wystartowało z nią) → spokojny komunikat „już wysłana”, nie błąd; rekord jest pobierany ponownie. Inna odmowa pokazuje powód Cezara dosłownie (FR-032).
 
 ### Nowe zadanie w PWA (S-13, FR-033/034) — jak tworzymy
 - **Formularz:** projekt, opis (`task`), `workflow`, `runner`, `model`, `agentProfile`, `autonomous`. `variants`, `dispatch`, `steps`, `images`, `systemPrompt`, `issueNumber` zostają w cockpicie (#62). Body bez niewybranych kluczy (brak `model` = „Auto”, runner wybiera sam); `autonomous` wysyłane zawsze.

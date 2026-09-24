@@ -348,6 +348,20 @@ export const en = {
       sending: 'Sending…',
       queuedTitle: (count: number) =>
         `${count} ${plural(count, 'message added', 'messages added')} to the prompt`,
+      /** #66: editing or removing a stacked message before the task starts. */
+      queue: {
+        edit: 'Edit',
+        editLabel: 'Edit the queued message',
+        save: 'Save',
+        saving: 'Saving…',
+        cancel: 'Cancel',
+        remove: 'Remove',
+        removing: 'Removing…',
+        confirmRemove: 'Remove this message from the prompt?',
+        keep: 'Keep',
+        /** A 404 or 409: the task started and took the message with it. Not a failure. */
+        alreadySent: 'Already sent — the task has started with this message.',
+      },
       deferred: 'The session is starting — the message will reach the agent as soon as it opens.',
       failed: {
         /** The server's own words, verbatim (FR-032). */
