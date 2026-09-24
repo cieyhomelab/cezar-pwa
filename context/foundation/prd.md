@@ -367,9 +367,15 @@ Carried over from the source requirements, where the operator had already ruled 
 
 - **No editing of workflows, skills, settings, or automations.** Authoring belongs in the
   cockpit; this product is for reacting to work already defined.
+  *Narrowed 2026-09-24 by the operator:* pausing, enabling and running an existing
+  automation is reacting, and allowed (#70). Editing its definition stays out.
 - **No project management or cloning.** Same reason.
 - **No repository browsing.** A link out to the pull request is the boundary.
+  *Narrowed 2026-09-24 by the operator:* merging a PR behind a confirmation, with its CI
+  checks and merge state, is allowed (#69). Browsing files, reviews and comments stays out.
 - **No comparing task variants.** A desktop-sized comparison problem.
+  *Narrowed 2026-09-24 by the operator:* keeping one variant of a group is allowed (#71).
+  Side-by-side diff comparison stays out.
 - **No command palette.** A keyboard affordance on a device with no keyboard.
 
 Added during shaping, each ruled out deliberately so it cannot creep back:

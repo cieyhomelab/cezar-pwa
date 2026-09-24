@@ -3,7 +3,7 @@ project: "Cezar Mobile"
 version: 1
 status: draft
 created: 2026-09-20
-updated: 2026-09-21
+updated: 2026-09-24
 prd_version: 1
 main_goal: low-complexity
 top_blocker: capacity
@@ -56,6 +56,15 @@ attention rule → a readable phone screen.
 | S-10 | `notify-and-deep-link`     | be notified on a locked phone and land in that task               | F-01, S-05    | US-01, FR-036, FR-037, FR-038, FR-041, FR-043 | done (PR #22), device-tested per the operator; sidecar installed on the host 2026-09-22 (#30) |
 | S-11 | `notifications-stay-honest` | trust that notifications never repeat or target a dead device     | S-10          | FR-039, FR-044                               | done (PR #23), device-tested per the operator; sidecar installed on the host 2026-09-22 (#30) |
 | S-12 | `settings-and-sign-out`    | set the theme, see both versions, jump to the cockpit, sign out   | S-03, S-10    | FR-006, FR-046, FR-047, FR-048               | done (PR #24), device-tested per the operator; nginx re-install applied on the host 2026-09-22 (#30) |
+| S-13 | `start-a-task`             | start a new task from the phone and land in it                    | S-05, S-07    | FR-033, FR-034                               | proposed (#62) |
+| S-14 | `cancel-auto-resume`       | cancel a scheduled auto-resume on a failed task                   | S-08          | FR-030                                       | proposed (#63) |
+| S-15 | `older-history`            | scroll up into older transcript history                           | S-05, S-06    | FR-049                                       | proposed (#64) |
+| S-16 | `transcript-images`        | see the images an agent attached, in the transcript               | S-05          | FR-017                                       | proposed (#65) |
+| S-17 | `edit-queued-messages`     | edit or remove a message still waiting in the queue               | S-07          | FR-023                                       | proposed (#66) |
+| S-18 | `mark-all-read`            | clear every unread marker in view at once                         | S-03          | FR-020                                       | proposed (#67) |
+| S-19 | `merge-from-phone`         | see CI and merge state, and merge a PR behind a confirmation      | S-05, S-08    | FR-027; Non-Goals (narrowed 2026-09-24)      | proposed (#69) |
+| S-20 | `react-to-automations`     | pause, enable or run an automation, and read its log              | S-03          | Non-Goals (narrowed 2026-09-24)              | proposed (#70) |
+| S-21 | `pick-a-variant`           | keep one variant of a task                                        | S-05          | Non-Goals (narrowed 2026-09-24)              | proposed (#71) |
 
 ## Streams
 
@@ -615,6 +624,36 @@ do NOT re-scaffold them.
   cross-origin `POST` → 403, a same-origin `POST` → 204 with a `Set-Cookie` that expires the gate
   cookie (`Max-Age=0; Secure; HttpOnly`). The caveat above is closed. Still for the operator: sign out on
   the phone once and confirm that the cockpit asks for the key again.
+## Second round (2026-09-24)
+
+Source: the operator's note "Cezar Mobile — what to add next" (2026-09-24), put through a discovery
+session. The operator's answers: no provider sign-out noticed, no unmet need on the phone noticed,
+and the three non-goals touching automations, PR merge and variants narrowed (PRD § Non-Goals). The
+order below is the agent's proposal; the operator can reorder it.
+
+- **Now:** S-13 to S-18, plus the icon-badge device check (#68). S-13 to S-15 are the PRD's own
+  nice-to-haves, promoted from Parked. S-16 has recorded use behind it: 12 of 44 task recordings
+  contain images, which the phone shows only as a file name. S-17 and S-18 are single routes already
+  on the 0.11.0 host.
+- **Next:** S-19, S-20, S-21, in that order. They are allowed by the narrowed non-goals, but no need
+  has been noticed yet, so they follow Now. S-19 comes first because it finishes the PRD's
+  review → draft PR loop.
+- **Waiting on the host:** the contract sync to 0.11.1 (#72). CLAUDE.md pins the contract to the
+  version the host runs, and the host reports 0.11.0.
+- **Considered and deferred**, with the condition that brings each back:
+  - Provider signed-out banner: when a sign-out is first observed. Cezar records one only after a
+    running task hits it, and that task probably already reaches the phone as a "failed" push. A
+    separate push channel was rejected: it would add a second notification rule beside the attention
+    copy. When it is built, it re-reads `GET /providers/status` on every stream open.
+  - "Archive finished": when the operator decides whether it may hide failed tasks.
+    `POST …/runs/archive-finished` also archives `failed` tasks, cancels their auto-resumes and
+    removes pins.
+  - Dispatch trees: after #72, and once a dispatched task exists. None of the 41 indexed runs had one
+    on 2026-09-24.
+  - Follow-up inbox: when `capabilities.followups` is on. It is off on the host.
+  - Composer drafts across devices, the handoff and commit views, CPU and memory display: low value
+    and no noticed need.
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                                  | Ready for `/10x-plan` | Notes                                             |
@@ -633,6 +672,17 @@ do NOT re-scaffold them.
 | S-10       | `notify-and-deep-link`      | Notify on a locked phone and deep-link to the task      | n/a                   | Done — PR #22, device-tested per operator; sidecar not yet installed |
 | S-11       | `notifications-stay-honest` | No duplicate notifications; drop dead destinations      | n/a                   | Done — PR #23, device-tested per operator; sidecar not yet installed |
 | S-12       | `settings-and-sign-out`     | Theme, versions, cockpit link, sign-out                 | n/a                   | Done — PR #24, device-tested per operator; nginx re-install pending |
+| S-13       | `start-a-task`              | Start a new task from the phone                          | yes                   | #62                                               |
+| S-14       | `cancel-auto-resume`        | Cancel a scheduled auto-resume                           | yes                   | #63                                               |
+| S-15       | `older-history`             | Load older transcript history                            | yes                   | #64                                               |
+| S-16       | `transcript-images`         | Show transcript images                                   | yes                   | #65                                               |
+| S-17       | `edit-queued-messages`      | Edit or remove a queued message                          | yes                   | #66                                               |
+| S-18       | `mark-all-read`             | Mark all shown tasks read                                | yes                   | #67                                               |
+| S-19       | `merge-from-phone`          | Merge a PR with CI and merge state                       | yes                   | #69                                               |
+| S-20       | `react-to-automations`      | Pause, enable, run an automation                         | yes                   | #70                                               |
+| S-21       | `pick-a-variant`            | Keep one variant of a task                               | yes                   | #71                                               |
+| —          | —                           | Icon badge device check (FR-042)                         | n/a                   | #68 — operator, on the device                     |
+| —          | —                           | Contract sync to 0.11.1                                  | blocked               | #72 — waits for the host upgrade                  |
 
 ## Open Roadmap Questions
 
@@ -664,7 +714,7 @@ do NOT re-scaffold them.
    step 3).
 3. **Does an icon badge work in an installed web app on this phone?** Should be verified on
    the device before any work goes into it. — Owner: operator. Block: nothing; FR-042 is
-   parked. *(PRD Open Question 4.)*
+   parked. *(PRD Open Question 4.)* Tracked as #68 (2026-09-24).
 4. **Is 12 weeks still the right number?** The estimate predates the Socratic cuts and now
    carries slack. — Owner: operator. Block: nothing; it affects planning honesty, not
    scope. *(PRD Open Question 5.)*
@@ -683,7 +733,7 @@ do NOT re-scaffold them.
 Nice-to-have in the PRD, deferred behind everything the PRD marks must-have — consistent with a
 low-complexity goal and one operator working after hours. Any of these can be promoted:
 
-- **Starting a new task from the phone** (FR-033, FR-034) — Why parked: the PRD demoted it
+- ~~**Starting a new task from the phone** (FR-033, FR-034)~~ **Promoted 2026-09-24 to S-13 (#62).** Why parked: the PRD demoted it
   on the argument that prompt quality drives agent output, and firing off a three-sentence
   task from a tram may cost more than it gives.
 - **Icon badge** (FR-042) — Why parked: it restates what the notification already said, and
@@ -691,14 +741,16 @@ low-complexity goal and one operator working after hours. Any of these can be pr
 - ~~**Test notification** (FR-045) — Why parked: useful while building S-10, not a product
   requirement; fold it in there if it helps.~~ **Folded into S-10** (PR #22): the device
   checklist needs it.
-- **Cancelling a scheduled auto-resume** (FR-030) — Why parked: nice-to-have on a state the
+- ~~**Cancelling a scheduled auto-resume** (FR-030)~~ **Promoted 2026-09-24 to S-14 (#63).** Why parked: nice-to-have on a state the
   attention rule deliberately treats as "not needing a human".
-- **Paging backwards through transcript history** (FR-049) — Why parked: the largest scope
+- ~~**Paging backwards through transcript history** (FR-049)~~ **Promoted 2026-09-24 to S-15 (#64).** Why parked: the largest scope
   cut of the Socratic round; only the latest page is required.
 
 Ruled out in the PRD's Non-Goals, recorded here so they cannot creep back: modifying Cezar
 in any way; a second user or a second instance; Android; authoring workflows, skills,
-settings or automations; project management; repository browsing; comparing task variants;
+settings or automations (reacting to an automation is allowed since 2026-09-24); project
+management; repository browsing (merging a PR is allowed since 2026-09-24); side-by-side
+comparison of task variants (keeping one is allowed since 2026-09-24);
 a command palette; syntax highlighting in the diff; background work of any kind other than
 the notification; a persisted offline snapshot; camera attachments; a "Cezar is newer"
 warning; app-store distribution; telemetry and third-party services.
