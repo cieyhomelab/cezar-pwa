@@ -3,8 +3,9 @@
 The operator reference for installing, configuring, updating and repairing Cezar
 Mobile on the host that runs Cezar. For what the app is, how the parts fit
 together and the short install sequence, start with the [README](../README.md).
-The reference deployment is `https://cezar.ciey.studio`. Everywhere below, replace `<your-host>` with your own host and `<your-vhost>`
-with the vhost file Cezar's installer manages.
+The reference deployment is `https://cezar.ciey.studio`. Everywhere below,
+replace `<your-host>` with your own host and `<your-vhost>` with the vhost file
+Cezar's installer manages.
 
 ## Contents
 
