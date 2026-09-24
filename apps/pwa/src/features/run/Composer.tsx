@@ -1,7 +1,10 @@
 import type { QueuedMessage } from '@cezar-pwa/cezar-contract/contract'
 import { type FormEvent, useState } from 'react'
+import { queuedMessagesEditable } from '../../domain/queued-messages.ts'
 import { en } from '../../i18n/en.ts'
+import { QueuedMessageList } from './QueuedMessageList.tsx'
 import type { Delivery } from './useDeliver.ts'
+import type { QueuedMessages } from './useQueuedMessages.ts'
 
 /**
  * The free-text message (FR-023), docked under the transcript. Also the "write your own answer"
@@ -16,11 +19,14 @@ export function Composer({
   delivery,
   openAskId,
   queuedMessages = [],
+  queue,
 }: {
   status: string
   delivery: Delivery
   openAskId?: string
   queuedMessages?: readonly QueuedMessage[]
+  /** Edit and remove for the stacked messages (#66), offered while the task is queued. */
+  queue?: QueuedMessages
 }) {
   const [draft, setDraft] = useState('')
   const resuming = delivery.mode === 'resume'
@@ -47,20 +53,11 @@ export function Composer({
       onSubmit={(event) => void submit(event)}
       className="sticky bottom-0 z-10 flex flex-col gap-2 border-t border-border bg-surface px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
     >
-      {queuedMessages.length > 0 ? (
-        <details className="text-sm text-text-muted">
-          <summary className="touch-target flex cursor-pointer list-none items-center">
-            {en.run.compose.queuedTitle(queuedMessages.length)}
-          </summary>
-          <ul className="flex flex-col gap-1 pb-1">
-            {queuedMessages.map((message) => (
-              <li key={message.id} className="rounded bg-surface-raised px-2 py-1 break-words whitespace-pre-wrap text-text">
-                {message.text}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      <QueuedMessageList
+        messages={queuedMessages}
+        editable={queuedMessagesEditable(status)}
+        {...(queue !== undefined ? { queue } : {})}
+      />
       {hint ? <p className="text-xs text-text-muted">{hint}</p> : null}
       <div className="flex items-end gap-2">
         <textarea

@@ -25,6 +25,7 @@ import { useDeliver } from './useDeliver.ts'
 import { useFollowBottom } from './useFollowBottom.ts'
 import { useLiveTranscript } from './useLiveTranscript.ts'
 import { useMarkRead } from './useMarkRead.ts'
+import { useQueuedMessages } from './useQueuedMessages.ts'
 import { usePickVariant } from './usePickVariant.ts'
 import { useRunActions } from './useRunActions.ts'
 import { VariantsPanel } from './VariantsPanel.tsx'
@@ -96,6 +97,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
   useMarkRead(projectId, runId, run.data)
   // S-07: one delivery for the question card and the composer alike.
   const delivery = useDeliver(projectId, runId, run.data)
+  const queue = useQueuedMessages(projectId, runId)
   // S-08: cancel, finish, draft PR, continue, pin and archive.
   const actions = useRunActions(projectId, runId, run.data)
   // S-21: a task started ×2 or ×3 lists its siblings and can be kept (#71).
@@ -276,6 +278,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             delivery={delivery}
             {...(ask !== undefined ? { openAskId: ask.id } : {})}
             queuedMessages={run.data.queuedMessages ?? []}
+            queue={queue}
           />
         ) : null}
       </div>
