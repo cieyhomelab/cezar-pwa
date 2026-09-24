@@ -5,7 +5,8 @@ import { en } from '../../apps/pwa/src/i18n/en.ts'
 /**
  * S-08 acceptance in mobile Safari: the operator acts on a task under a thumb. Cancel sits behind
  * a confirmation (FR-025), a review is accepted (FR-026), a draft PR is opened or refused with the
- * forge's reason (FR-027, FR-032), and a task is archived (FR-029).
+ * forge's reason (FR-027, FR-032), a task is archived (FR-029), and a booked auto-resume is
+ * cancelled behind a confirmation (FR-030).
  *
  * The record is the live capture with its status changed. Nothing is written to the instance:
  * every action reaches a real agent or a real forge.
@@ -23,8 +24,15 @@ const steps = [{ id: 'task', name: 'Do the task', kind: 'agent', status: 'done',
 type Reply = { status: number; body: unknown }
 
 /** Serves the task screen with a mutable record. `writes` answers each action by name. */
-async function serveCezar(page: Page, status: string, writes: Record<string, (state: { run: Record<string, unknown> }) => Reply>) {
-  const state = { run: { ...liveRun, status, steps, currentStepId: 'task', pullRequestUrl: undefined } as Record<string, unknown> }
+async function serveCezar(
+  page: Page,
+  status: string,
+  writes: Record<string, (state: { run: Record<string, unknown> }) => Reply>,
+  extra: Record<string, unknown> = {},
+) {
+  const state = {
+    run: { ...liveRun, status, steps, currentStepId: 'task', pullRequestUrl: undefined, ...extra } as Record<string, unknown>,
+  }
   const log: string[] = []
   const json = (body: unknown, code = 200) => ({ status: code, contentType: 'application/json', body: JSON.stringify(body) })
   await page.route('**/api/v1/health', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: health }))
@@ -42,7 +50,7 @@ async function serveCezar(page: Page, status: string, writes: Record<string, (st
   await page.route(`${base}/read`, (route) => route.fulfill(json(state.run)))
   for (const [action, reply] of Object.entries(writes)) {
     await page.route(`${base}/${action}`, (route) => {
-      log.push(action)
+      log.push(`${route.request().method()} ${action}`)
       const answer = reply(state)
       return route.fulfill(json(answer.body, answer.status))
     })
@@ -79,7 +87,7 @@ test('cancel asks first, then stops the task (FR-025)', async ({ page }) => {
 
   await expect(page.getByText(en.run.actions.done.cancel)).toBeVisible()
   await expect(page.getByRole('button', { name: en.run.actions.continue })).toBeVisible()
-  expect(log).toEqual(['cancel'])
+  expect(log).toEqual(['POST cancel'])
   await noSidewaysScroll(page)
 })
 
@@ -95,7 +103,7 @@ test('a review is accepted in one tap (FR-026)', async ({ page }) => {
   await page.getByRole('button', { name: en.run.actions.finish.review }).tap()
   await expect(page.getByText(en.run.actions.done.accepted)).toBeVisible()
   await expect(page.getByRole('button', { name: en.run.actions.finish.review })).toHaveCount(0)
-  expect(log).toEqual(['finish'])
+  expect(log).toEqual(['POST finish'])
 })
 
 test("a refused draft PR shows the forge's reason (FR-027, FR-032)", async ({ page }) => {
@@ -120,5 +128,38 @@ test('archive marks the task and can be undone (FR-029)', async ({ page }) => {
   await expect(page.getByText(en.run.actions.archivedBadge, { exact: true })).toBeVisible()
   await page.getByRole('button', { name: en.run.actions.unarchive }).tap()
   await expect(page.getByRole('button', { name: en.run.actions.archive })).toBeVisible()
-  expect(log).toEqual(['archive', 'archive'])
+  expect(log).toEqual(['POST archive', 'POST archive'])
+})
+
+test('a booked auto-resume is cancelled behind a confirmation (FR-030)', async ({ page }) => {
+  const t = en.run.actions
+  const log = await serveCezar(
+    page,
+    'failed',
+    {
+      'auto-resume': (state) => {
+        const { autoResumeAt: _cancelled, ...plain } = state.run
+        state.run = plain
+        return { status: 200, body: { cancelled: true } }
+      },
+    },
+    { autoResumeAt: '2099-01-01T12:00:00.000Z' },
+  )
+  await page.goto(RUN_PATH)
+
+  const cancel = page.getByRole('button', { name: t.cancelAutoResume, exact: true })
+  const box = await cancel.boundingBox()
+  expect(box?.height).toBeGreaterThanOrEqual(44)
+  await cancel.tap()
+
+  const dialog = page.getByRole('alertdialog', { name: t.confirmCancelAutoResume.title })
+  await expect(dialog).toBeVisible()
+  await noSidewaysScroll(page)
+  expect(log).toEqual([])
+  await dialog.getByRole('button', { name: t.confirmCancelAutoResume.confirm }).tap()
+
+  await expect(page.getByText(t.done.cancelAutoResume)).toBeVisible()
+  await expect(page.getByRole('button', { name: t.cancelAutoResume })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: t.continue })).toBeVisible()
+  expect(log).toEqual(['DELETE auto-resume'])
 })

@@ -1,8 +1,10 @@
-import { type ActionRun, type RunActionId, runActionFlags } from '../../domain/run-actions.ts'
+import { type ActionRun, type ConfirmedActionId, type RunActionId, runActionFlags } from '../../domain/run-actions.ts'
 import { en } from '../../i18n/en.ts'
 import type { RunActions } from './useRunActions.ts'
 
 const BASE = 'touch-target inline-flex items-center justify-center rounded px-4 text-sm disabled:opacity-60'
+const isConfirmed = (id: RunActionId): id is ConfirmedActionId => id === 'cancel' || id === 'cancelAutoResume'
+
 const STYLE = {
   primary: `${BASE} bg-accent font-semibold text-white`,
   outline: `${BASE} border border-border bg-surface-raised text-text`,
@@ -11,9 +13,9 @@ const STYLE = {
 } as const
 
 /**
- * S-08: the task's own actions under the header (FR-025 to FR-029). Which buttons exist is
- * `runActionFlags`, the cockpit's policy. The component only lays them out, gates cancel behind
- * a confirmation, and shows what is in flight and why a tap failed (FR-032).
+ * S-08: the task's own actions under the header (FR-025 to FR-030). Which buttons exist is
+ * `runActionFlags`, the cockpit's policy. The component only lays them out, gates cancel and
+ * cancel auto-resume behind a confirmation, and shows what is in flight and why a tap failed (FR-032).
  *
  * `busy` is a send in flight from the composer or the question card. An action waits for it: a
  * continue racing a resumed answer would reach the agent in an order nobody chose.
@@ -28,38 +30,41 @@ export function RunActionBar({ run, actions, busy }: { run: ActionRun; actions: 
       type="button"
       className={style}
       disabled={disabled}
-      onClick={() => (id === 'cancel' ? actions.askCancel() : void actions.run(id))}
+      onClick={() => (isConfirmed(id) ? actions.ask(id) : void actions.run(id))}
       {...(id === 'pin' ? { 'aria-pressed': run.pinned === true } : {})}
     >
       {actions.pending === id ? working : idle}
     </button>
   )
 
-  if (actions.confirmingCancel && flags.cancel) {
+  // The flag is re-checked: a record that moved on while the question was open withdraws it.
+  const confirming = actions.confirming
+  if (confirming !== undefined && flags[confirming]) {
+    const copy = confirming === 'cancel' ? t.confirmCancel : t.confirmCancelAutoResume
     return (
       <section
         role="alertdialog"
-        aria-labelledby="cancel-title"
-        aria-describedby="cancel-body"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-body"
         className="flex flex-col gap-2 border-b border-border bg-surface-raised px-4 py-3"
       >
-        <h3 id="cancel-title" className="font-semibold">
-          {t.confirmCancel.title}
+        <h3 id="confirm-title" className="font-semibold">
+          {copy.title}
         </h3>
-        <p id="cancel-body" className="text-sm text-text-muted">
-          {t.confirmCancel.body}
+        <p id="confirm-body" className="text-sm text-text-muted">
+          {copy.body}
         </p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={STYLE.outline} onClick={actions.keep}>
-            {t.confirmCancel.keep}
+            {copy.keep}
           </button>
           <button
             type="button"
             className={STYLE.dangerSolid}
             disabled={disabled}
-            onClick={() => void actions.run('cancel')}
+            onClick={() => void actions.run(confirming)}
           >
-            {t.confirmCancel.confirm}
+            {copy.confirm}
           </button>
         </div>
       </section>
@@ -74,6 +79,9 @@ export function RunActionBar({ run, actions, busy }: { run: ActionRun; actions: 
         {flags.continueRun ? button('continue', STYLE.outline, t.continue, t.continuing) : null}
         {flags.pin ? button('pin', STYLE.outline, run.pinned ? t.unpin : t.pin, t.pinning) : null}
         {flags.archive ? button('archive', STYLE.outline, run.archived ? t.unarchive : t.archive, t.archiving) : null}
+        {flags.cancelAutoResume
+          ? button('cancelAutoResume', STYLE.danger, t.cancelAutoResume, t.cancellingAutoResume)
+          : null}
         {flags.cancel ? button('cancel', STYLE.danger, t.cancel, t.cancelling) : null}
       </div>
       {actions.error ? (

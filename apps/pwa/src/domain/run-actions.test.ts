@@ -7,7 +7,7 @@ const noSession: ActionRun['steps'] = [{ id: 'task', name: 'Task', kind: 'agent'
 const run = (status: string, extra: Partial<ActionRun> = {}): ActionRun =>
   ({ status, steps: session, archived: false, ...extra }) as ActionRun
 
-const none: RunActionFlags = { cancel: false, finish: false, draftPr: false, continueRun: false, pin: false, archive: false }
+const none: RunActionFlags = { cancel: false, finish: false, draftPr: false, continueRun: false, pin: false, archive: false, cancelAutoResume: false }
 const flags = (on: Partial<RunActionFlags>): RunActionFlags => ({ ...none, ...on })
 
 describe('runActionFlags (upstream runActionFlags + the review panel)', () => {
@@ -36,6 +36,23 @@ describe('runActionFlags (upstream runActionFlags + the review panel)', () => {
     expect(runActionFlags(run('review', { pullRequestUrl: 'https://github.com/o/r/pull/7' })).draftPr).toBe(false)
     // A value that is not a web link does not count as a PR (upstream `isHttpUrl`).
     expect(runActionFlags(run('review', { pullRequestUrl: 'javascript:alert(1)' })).draftPr).toBe(true)
+  })
+
+  it.each<[string, ActionRun, boolean]>([
+    ['failed with a booked resume', run('failed', { autoResumeAt: '2026-09-24T12:00:00.000Z' }), true],
+    ['failed without one', run('failed'), false],
+    // `autoResumeAt` only means "scheduled" on a failed run (`isScheduled`); anywhere else it is stale.
+    ['done with a leftover autoResumeAt', run('done', { autoResumeAt: '2026-09-24T12:00:00.000Z' }), false],
+    ['running with a leftover autoResumeAt', run('running', { autoResumeAt: '2026-09-24T12:00:00.000Z' }), false],
+    ['cancelled with a leftover autoResumeAt', run('cancelled', { autoResumeAt: '2026-09-24T12:00:00.000Z' }), false],
+  ])('cancel auto-resume (FR-030): %s', (_name, input, expected) => {
+    expect(runActionFlags(input).cancelAutoResume).toBe(expected)
+  })
+
+  it('a scheduled task keeps its other failed-task actions', () => {
+    expect(runActionFlags(run('failed', { autoResumeAt: '2026-09-24T12:00:00.000Z' }))).toEqual(
+      flags({ continueRun: true, pin: true, archive: true, cancelAutoResume: true }),
+    )
   })
 
   it('offers no pin on an archived run: archiving retires the pin', () => {
