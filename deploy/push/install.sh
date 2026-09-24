@@ -8,6 +8,13 @@
 # pair once (never rotated — every device is bound to it), installs the unit and
 # (re)starts it. Re-running upgrades the bundle and keeps keys and subscriptions.
 #
+# PUBLIC_ORIGIN — the https:// origin the app is served from, e.g.
+# https://cezar.example.com — is required: the sidecar refuses writes from any
+# other origin and will not start without it. Pass it once
+# (PUBLIC_ORIGIN=https://<your-host> deploy/push/install.sh); it is kept in
+# STATE_DIR/env, so later runs read it from there. On a terminal the installer
+# asks for it instead.
+#
 # CEZAR_PUSH_HOME (~/cezar-push) and STATE_DIR (~/.cezar-push) move the bundle
 # and the state. The unit is rendered with whatever they resolve to, so the
 # service, the keys written here and the health probe below always agree; the
@@ -47,6 +54,36 @@ normalise_dir() {
 home_dir=$(normalise_dir CEZAR_PUSH_HOME "${CEZAR_PUSH_HOME:-$HOME/cezar-push}")
 state_dir=$(normalise_dir STATE_DIR "${STATE_DIR:-$HOME/.cezar-push}")
 unit_dir="$HOME/.config/systemd/user"
+env_file="$state_dir/env"
+
+# The last assignment of a variable in a systemd env/unit file, quotes off.
+last_value() { # last_value <sed-prefix> <file>
+  local prefix="$1" file="$2" value
+  [[ -f "$file" ]] || return 0
+  value=$(sed -n "s/^${prefix}//p" "$file" | tail -n 1)
+  value="${value%$'\r'}"
+  value="${value#[\"\']}"
+  value="${value%[\"\']}"
+  printf '%s' "$value"
+}
+
+# PUBLIC_ORIGIN: from the caller, else the env file an earlier run wrote, else
+# asked for. Checked here with the sidecar's own rule (config.ts), so a value
+# the service would refuse fails the install instead of a restart loop.
+stored_origin=$(last_value '[[:space:]]*PUBLIC_ORIGIN=' "$env_file")
+public_origin="${PUBLIC_ORIGIN:-$stored_origin}"
+if [[ -z "$public_origin" && -t 0 ]]; then
+  read -r -p "PUBLIC_ORIGIN (the https:// origin the app is served from, e.g. https://cezar.example.com): " public_origin
+fi
+[[ -n "$public_origin" ]] ||
+  die "PUBLIC_ORIGIN is not set — run: PUBLIC_ORIGIN=https://<your-host> $0"
+node -e '
+  const v = process.argv[1]
+  let u
+  try { u = new URL(v) } catch { process.exit(1) }
+  process.exit(u.protocol === "https:" && u.origin === v ? 0 : 1)
+' "$public_origin" ||
+  die "PUBLIC_ORIGIN must be a bare https:// origin (scheme, host, optional port; no trailing slash), got: $public_origin"
 
 echo "==> building the bundle"
 (cd "$repo" && npm run build -w @cezar-pwa/shared >/dev/null && npm run build -w @cezar-pwa/push-sidecar >/dev/null)
@@ -60,8 +97,17 @@ install -d -m 700 "$home_dir" "$state_dir"
 install -m 644 "$bundle" "$home_dir/cezar-push.mjs"
 echo "==> installed $home_dir/cezar-push.mjs"
 
+# Keep PUBLIC_ORIGIN in the env file, replacing an older value and leaving
+# every other line alone. The file stays 0600 (it may hold a mailto: contact).
+if [[ "$public_origin" != "$stored_origin" ]]; then
+  [[ -f "$env_file" ]] || install -m 600 /dev/null "$env_file"
+  kept=$(grep -v '^[[:space:]]*PUBLIC_ORIGIN=' "$env_file" || true)
+  { [[ -z "$kept" ]] || printf '%s\n' "$kept"; printf 'PUBLIC_ORIGIN=%s\n' "$public_origin"; } >"$env_file"
+  echo "==> PUBLIC_ORIGIN=$public_origin written to $env_file"
+fi
+
 # Prints only the PUBLIC key. Keeps an existing pair.
-STATE_DIR="$state_dir" node "$home_dir/cezar-push.mjs" init
+STATE_DIR="$state_dir" PUBLIC_ORIGIN="$public_origin" node "$home_dir/cezar-push.mjs" init
 
 # The unit in the repo spells its paths with systemd's %h, which is right for
 # the defaults and wrong for every override: rendered here, WorkingDirectory,
@@ -109,18 +155,8 @@ fi
 # then the state directory's env file, which systemd reads after it and so
 # wins. Last assignment wins there too. HOST is deliberately not read — the
 # unit pins it to loopback, because nginx is the sole way in (A5/A6).
-last_value() { # last_value <sed-prefix> <file>
-  local prefix="$1" file="$2" value
-  [[ -f "$file" ]] || return 0
-  value=$(sed -n "s/^${prefix}//p" "$file" | tail -n 1)
-  value="${value%$'\r'}"
-  value="${value#[\"\']}"
-  value="${value%[\"\']}"
-  printf '%s' "$value"
-}
-
 port=$(last_value 'Environment=PORT=' "$rendered")
-override=$(last_value '[[:space:]]*PORT=' "$state_dir/env")
+override=$(last_value '[[:space:]]*PORT=' "$env_file")
 [[ -n "$override" ]] && port="$override"
 if ! [[ "$port" =~ ^[0-9]{1,5}$ ]] || ((port < 1 || port > 65535)); then
   die "PORT is not a port: '$port' (from $state_dir/env, or the unit's own default)"

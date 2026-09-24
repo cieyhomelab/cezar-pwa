@@ -18,7 +18,7 @@ export type AppDeps = {
   pusher: Pusher
   watcher: Pick<Watcher, 'state' | 'statuses' | 'seededAt'>
   publicKey: string
-  /** `https://cezar.ciey.studio` — the only origin a write may come from (CLAUDE.md rule 1). */
+  /** `PUBLIC_ORIGIN`, e.g. `https://cezar.example.com` — the only origin a write may come from (CLAUDE.md rule 1). */
   publicOrigin: string
 }
 

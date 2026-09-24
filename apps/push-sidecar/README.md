@@ -47,8 +47,11 @@ node dist/cezar-push.mjs                   # serve + watch
 ```
 
 Environment: `HOST` (127.0.0.1), `PORT` (4330), `CEZAR_URL` (`http://127.0.0.1:4322`),
-`STATE_DIR` (`~/.cezar-push`), `VAPID_SUBJECT` (`mailto:` or `https:`, default the site URL),
-`PUBLIC_ORIGIN` (`https://cezar.ciey.studio`).
+`STATE_DIR` (`~/.cezar-push`), `VAPID_SUBJECT` (`mailto:` or `https:`, default `PUBLIC_ORIGIN`),
+and `PUBLIC_ORIGIN`, which is **required**: the bare `https://host[:port]` origin the app is served
+from, the only one a write may come from. With no default, a sidecar on the wrong host fails to start
+instead of answering 403 to every subscribe. A trailing slash or a path is refused too, since the
+check compares it with the browser's `Origin` header as an exact string.
 
 On the VPS, `deploy/push/install.sh` (as the user Cezar runs as) builds, installs the user unit
 `deploy/systemd/cezar-push.service` and starts it. Logs: `journalctl --user -u cezar-push`.

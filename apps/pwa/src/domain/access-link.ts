@@ -74,7 +74,7 @@ export function buildUnlockUrl(
   }
 
   // Only an explicit foreign host is refused. A scheme-less paste
-  // (`cezar.ciey.studio/?key=…`) resolves as a *path* on our own origin, which
+  // (`cezar.example.com/?key=…`) resolves as a *path* on our own origin, which
   // is harmless and in fact still works: the path is discarded and only the key
   // is carried over. The secret therefore never travels anywhere but here.
   if (parsed.origin !== new URL(options.origin).origin) {

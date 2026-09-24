@@ -1,6 +1,6 @@
 # CLAUDE.md — Cezar Mobile (PWA)
 
-Mobilna aplikacja PWA (iPhone priorytet, Android) do podglądu i sterowania instancją **Cezar** (`open-mercato/cezar`) działającą na `https://cezar.ciey.studio`. Aplikacja jest serwowana z tego samego originu pod `/m/`.
+Mobilna aplikacja PWA (iPhone priorytet, Android) do podglądu i sterowania instancją **Cezar** (`open-mercato/cezar`) działającą na hoście operatora (host to konfiguracja: w repo `<your-host>` / `$PUBLIC_ORIGIN`; wdrożenie referencyjne podaje `README.md`). Aplikacja jest serwowana z tego samego originu pod `/m/`.
 
 Przed pracą przeczytaj:
 - `docs/REQUIREMENTS.md` — co budujemy, priorytety (P0/P1/P2), etapy M0–M5, otwarte pytania
@@ -62,7 +62,7 @@ npm run deploy         # scripts/deploy.sh — wymaga DEPLOY_HOST w .env.local
 ```
 
 ### Dev na żywym Cezarze
-Vite proxy `/api` → `https://cezar.ciey.studio` z nagłówkiem `Cookie` z `.env.local` (`CEZAR_COOKIE=…`, plik w `.gitignore`). Proxy musi przepisywać `Origin` na `https://cezar.ciey.studio` (`changeOrigin: true` + ręczne `headers.origin`), inaczej guard same-origin odrzuci zapisy.
+Vite proxy `/api` → `CEZAR_URL` (np. `https://<your-host>`) z nagłówkiem `Cookie` z `.env.local` (`CEZAR_COOKIE=…`, plik w `.gitignore`). Proxy musi przepisywać `Origin` na `CEZAR_URL` (`changeOrigin: true` + ręczne `headers.origin`), inaczej guard same-origin odrzuci zapisy. Bez `CEZAR_URL` proxy celuje w lokalny mock `http://127.0.0.1:4321`, nigdy w produkcję.
 Bez dostępu do VPS: lokalnie `CEZ_DRY_RUN=1 npx cezar-cli` (mock agenta) i `CEZAR_URL=http://127.0.0.1:4321`.
 
 ## Konwencje kodu

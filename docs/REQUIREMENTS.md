@@ -5,7 +5,7 @@ Cel dokumentu: jedno źródło prawdy dla budowy PWA, z którego Claude Code (i 
 
 ## 1. Cel i kontekst
 
-Cezar (`open-mercato/cezar`) to orkiestrator agentów kodujących działający na VPS pod `https://cezar.ciey.studio`, za nginx z ochroną przez cookie. Jego cockpit jest responsywny, ale to pełne narzędzie desktopowe. **Cezar Mobile** to lekka, instalowalna aplikacja PWA na iPhone'a (priorytet) i Androida, której główne zadanie to: **w 3 sekundy od otwarcia wiedzieć, co robią agenci i czy coś czeka na mnie** — a gdy czeka, móc to załatwić kciukiem.
+Cezar (`open-mercato/cezar`) to orkiestrator agentów kodujących działający na VPS pod `https://<your-host>`, za nginx z ochroną przez cookie. Jego cockpit jest responsywny, ale to pełne narzędzie desktopowe. **Cezar Mobile** to lekka, instalowalna aplikacja PWA na iPhone'a (priorytet) i Androida, której główne zadanie to: **w 3 sekundy od otwarcia wiedzieć, co robią agenci i czy coś czeka na mnie** — a gdy czeka, móc to załatwić kciukiem.
 
 ### Sukces wygląda tak
 - Otwieram ikonę na ekranie głównym → widzę listę zadań z żywymi statusami, zadania wymagające uwagi na górze.
@@ -19,7 +19,7 @@ Edycja workflowów, skilli, ustawień, automatyzacji; zarządzanie projektami i 
 
 | # | Decyzja | Uzasadnienie |
 |---|---|---|
-| A1 | PWA serwowana z **tego samego originu**: `https://cezar.ciey.studio/m/` | Cezar odrzuca zapisy cross-origin (guard #426), CORS ma tylko `/health`; cookie auth działa bez zmian |
+| A1 | PWA serwowana z **tego samego originu**: `https://<your-host>/m/` | Cezar odrzuca zapisy cross-origin (guard #426), CORS ma tylko `/health`; cookie auth działa bez zmian |
 | A2 | Statyczny build (Vite) w `/var/www/cezar-mobile`, nginx `location /m/` **przed** `location /` (proxy do Cezara) | Zero zmian w samym Cezarze, niezależne wdrażanie |
 | A3 | Scope manifestu i Service Workera = `/m/` | SW nie może przechwytywać cockpitu ani `/api` |
 | A4 | Dane: bezpośrednio `/api/v1/…` Cezara (REST + SSE) | Nie ma potrzeby backendu pośredniego dla odczytu |
@@ -133,7 +133,7 @@ Motyw (system/ciemny/jasny), powiadomienia (P1), filtr projektów, „Wyloguj”
 ## 7. Konfiguracja nginx (docelowa, do zaadaptowania)
 
 ```nginx
-# w istniejącym server { } dla cezar.ciey.studio, PRZED location /
+# w istniejącym server { } dla <your-host>, PRZED location /
 location /m/push/ {
     # ta sama weryfikacja cookie co dla / (wstaw istniejący mechanizm)
     proxy_pass http://127.0.0.1:4330;

@@ -2,8 +2,9 @@
 # Builds the PWA and ships apps/pwa/dist to the VPS.
 #
 # Requires DEPLOY_HOST in .env.local (gitignored), e.g.
-#   DEPLOY_HOST=user@cezar.ciey.studio
+#   DEPLOY_HOST=user@your-host
 #   DEPLOY_PATH=/var/www/cezar-mobile     # optional, this is the default
+#   PUBLIC_URL=https://your-host/m/       # optional, only printed at the end
 #
 # The sidecar is deployed separately — it is a long-running service, not static
 # files (see deploy/systemd/cezar-push.service).
@@ -71,5 +72,9 @@ if [[ "${DEPLOY_DRY_RUN:-}" == "1" ]]; then
   exit 0
 fi
 
-echo "==> done. Shell is live at https://cezar.ciey.studio/m/"
+if [[ -n "${PUBLIC_URL:-}" ]]; then
+  echo "==> done. Shell is live at $PUBLIC_URL"
+else
+  echo "==> done. Shell is live under /m/ on $DEPLOY_HOST's vhost."
+fi
 echo "    Installed clients pick up the new build on next launch (F-PWA-5 prompt)."

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installs the /m/ snippet into an existing nginx vhost. RUN THIS ON THE VPS.
 #
-#   sudo deploy/nginx/install.sh /etc/nginx/sites-available/cezar.ciey.studio
+#   sudo deploy/nginx/install.sh /etc/nginx/sites-available/<your-vhost>
 #
 # Safe by construction: the vhost and every file this script writes are backed
 # up first, `nginx -t` gates the reload, and a config that fails the test is
@@ -28,7 +28,7 @@ ensure=0
 if [[ "${1:-}" == --ensure ]]; then ensure=1; shift; fi
 
 vhost="${1:-}"
-[[ -n "$vhost" ]] || die "usage: $0 [--ensure] <path-to-vhost>  (e.g. /etc/nginx/sites-available/cezar.ciey.studio)"
+[[ -n "$vhost" ]] || die "usage: $0 [--ensure] <path-to-vhost>  (e.g. /etc/nginx/sites-available/<your-vhost>)"
 if [[ "$ensure" == 1 && ! -e "$vhost" ]]; then
   # Mid-rewrite, or Cezar is not installed: nothing to restore yet. The timer
   # comes back.
@@ -163,5 +163,12 @@ if [[ "$ensure" == 1 ]]; then
   echo "==> include restored and nginx reloaded; previous vhost in $backup"
   exit 0
 fi
-echo "==> done. https://cezar.ciey.studio/m/ now serves the shell."
+# The vhost's own name, so the message is true on any host. Only a first
+# server_name that is a real host is used; `_` or a wildcard says nothing.
+host=$(awk '$1 == "server_name" { sub(/;$/, "", $2); print $2; exit }' "$vhost")
+if [[ "$host" =~ ^[A-Za-z0-9.-]+$ && "$host" == *.* ]]; then
+  echo "==> done. https://$host/m/ now serves the shell."
+else
+  echo "==> done. /m/ on this vhost now serves the shell."
+fi
 echo "    Rollback: cp -a $backup $vhost && nginx -t && systemctl reload nginx"
