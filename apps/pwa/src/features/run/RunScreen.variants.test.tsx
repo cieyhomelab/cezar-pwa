@@ -174,6 +174,20 @@ describe('keeping this one', () => {
     expect(variants.queryByRole('button', { name: t.keep })).toBeNull()
   })
 
+  it('offers the pick as soon as the task itself settles, not on the next group tick', async () => {
+    const { state, groupReads } = serve(runAs('running'), groupOf('running'))
+    const variants = await panel()
+    expect(await variants.findByText(t.waitToKeep)).toBeTruthy()
+    const before = groupReads()
+
+    state.run = runAs('done')
+    state.group = groupOf('done')
+    fireEvent.click(screen.getByRole('button', { name: en.run.refresh }))
+
+    expect(await variants.findByRole('button', { name: t.keep })).toBeTruthy()
+    expect(groupReads()).toBe(before + 1)
+  })
+
   it('a variant that lost the pick offers nothing', async () => {
     serve(runAs('done', { archived: true }), {
       groupId: 'g-1',

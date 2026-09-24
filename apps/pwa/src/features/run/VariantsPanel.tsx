@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router'
 import { type AttentionInput, deriveAttention } from '@cezar-pwa/shared'
-import { groupQueryOptions } from '../../api/groups.ts'
+import { groupQueryKey, groupQueryOptions } from '../../api/groups.ts'
 import { HEALTH_QUERY_KEY } from '../../api/health.ts'
 import { AuthRequiredError } from '../../api/http.ts'
 import { formatCost } from '../../domain/run-display.ts'
@@ -56,7 +56,9 @@ function VariantLine({ row, projectId }: { row: VariantRow; projectId: string })
  * confirmation. Side-by-side diff comparison is the cockpit's (N07).
  *
  * `pick` lives on the screen, so the task's other actions wait for it as it waits for them
- * (`busy`: an action or a send in flight).
+ * (`busy`: an action or a send in flight). `runState` is this task's status and archive flag as
+ * the screen knows them (kept live by its stream): when they move, the group is re-asked, so the
+ * offer follows the task at once rather than on the group's next 30 s tick.
  */
 export function VariantsPanel({
   projectId,
@@ -64,12 +66,14 @@ export function VariantsPanel({
   groupId,
   pick,
   busy,
+  runState,
 }: {
   projectId: string
   runId: string
   groupId: string
   pick: PickVariant
   busy: boolean
+  runState: string
 }) {
   const queryClient = useQueryClient()
   const t = en.run.variants
@@ -80,6 +84,13 @@ export function VariantsPanel({
   // Every other variant, archived ones included: an archived task keeps its worktree, and the
   // pick removes the worktree and branch of each loser all the same.
   const others = rows.filter((row) => !row.current).length
+
+  const seenRunState = useRef(runState)
+  useEffect(() => {
+    if (seenRunState.current === runState) return
+    seenRunState.current = runState
+    void queryClient.invalidateQueries({ queryKey: groupQueryKey(projectId, groupId) })
+  }, [runState, projectId, groupId, queryClient])
 
   const refused = group.error instanceof AuthRequiredError
   useEffect(() => {

@@ -193,6 +193,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             groupId={groupId}
             pick={pick}
             busy={delivery.pending || actions.pending !== undefined}
+            runState={`${run.data.status}:${run.data.archived === true}`}
           />
         ) : null}
 
