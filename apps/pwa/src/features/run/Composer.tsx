@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react'
 import { queuedMessagesEditable } from '../../domain/queued-messages.ts'
 import { en } from '../../i18n/en.ts'
 import { QueuedMessageList } from './QueuedMessageList.tsx'
+import type { ImageSrc } from './TranscriptView.tsx'
 import type { Delivery } from './useDeliver.ts'
 import type { QueuedMessages } from './useQueuedMessages.ts'
 
@@ -20,6 +21,7 @@ export function Composer({
   openAskId,
   queuedMessages = [],
   queue,
+  imageSrc,
 }: {
   status: string
   delivery: Delivery
@@ -27,6 +29,8 @@ export function Composer({
   queuedMessages?: readonly QueuedMessage[]
   /** Edit and remove for the stacked messages (#66), offered while the task is queued. */
   queue?: QueuedMessages
+  /** #65: where the stacked messages' attached images are read. */
+  imageSrc?: ImageSrc
 }) {
   const [draft, setDraft] = useState('')
   const resuming = delivery.mode === 'resume'
@@ -57,6 +61,7 @@ export function Composer({
         messages={queuedMessages}
         editable={queuedMessagesEditable(status)}
         {...(queue !== undefined ? { queue } : {})}
+        {...(imageSrc !== undefined ? { imageSrc } : {})}
       />
       {hint ? <p className="text-xs text-text-muted">{hint}</p> : null}
       <div className="flex items-end gap-2">
