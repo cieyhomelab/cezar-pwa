@@ -20,10 +20,15 @@ export interface MergeActions {
   pending?: 'merge' | 'refresh'
   /** The merge is behind a confirmation naming the PR (brief R03): the first tap only asks. */
   confirming: boolean
+  /**
+   * The head the confirmation was opened on. The merge names this one, never a head a later poll
+   * brought in, so a push while the operator reads the confirmation is refused, not merged unseen.
+   */
+  confirmedHead?: string
   /** The last failure in words, Cezar's or GitHub's reason verbatim (FR-032). */
   error?: string
   notice?: string
-  ask: () => void
+  ask: (headSha: string) => void
   back: () => void
   refresh: () => Promise<void>
   merge: (attempt: MergeAttempt) => Promise<void>
@@ -41,6 +46,7 @@ export function useMerge(projectId: string, runId: string, number: number): Merg
   const queryClient = useQueryClient()
   const [pending, setPending] = useState<MergeActions['pending']>()
   const [confirming, setConfirming] = useState(false)
+  const [confirmedHead, setConfirmedHead] = useState<string>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const inFlight = useRef(false)
@@ -103,11 +109,13 @@ export function useMerge(projectId: string, runId: string, number: number): Merg
   return {
     ...(pending ? { pending } : {}),
     confirming,
+    ...(confirming && confirmedHead !== undefined ? { confirmedHead } : {}),
     ...(error !== undefined ? { error } : {}),
     ...(notice !== undefined ? { notice } : {}),
-    ask: useCallback(() => {
+    ask: useCallback((headSha: string) => {
       setError(undefined)
       setNotice(undefined)
+      setConfirmedHead(headSha)
       setConfirming(true)
     }, []),
     back: useCallback(() => setConfirming(false), []),

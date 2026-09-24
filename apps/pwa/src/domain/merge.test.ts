@@ -47,6 +47,7 @@ describe('mergeHeadline', () => {
     ['a pending check', { canMerge: false, eligibility: 'pending', checks: [{ name: 'a', state: 'pending', required: null }] }, 'pending'],
     ['a pending check the server ranked after unknown rules', { canMerge: false, eligibility: 'unknown', checks: [{ name: 'a', state: 'pending', required: null }] }, 'pending'],
     ['a missing review', { canMerge: false, eligibility: 'blocked', reviewDecision: 'review-required' }, 'blocked'],
+    ['a viewer who may not merge', { canMerge: false, eligibility: 'unauthorized' }, 'blocked'],
     ['rules GitHub would not show', { canMerge: false, eligibility: 'unknown', reviewDecision: 'unknown' }, 'unknown'],
     ['an eligibility this build does not know', { canMerge: false, eligibility: 'queued' as never }, 'unknown'],
   ] as const)('%s', (_name, extra, expected) => {

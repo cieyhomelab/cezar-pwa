@@ -167,6 +167,33 @@ describe('the merge panel', () => {
     )
   })
 
+  it('a push while the confirmation is open is not merged: the dialog names the new head and refuses', async () => {
+    const moved = { ...READY, headSha: 'feedface'.repeat(5) }
+    const { merges } = serve({
+      states: [{ available: true, mergeState: READY }, { available: true, mergeState: moved }],
+      merge: () => ({ status: 200, body: { merged: true, number: 7, url: PR_URL, method: 'squash' } }),
+    })
+    const box = await panel()
+    fireEvent.click(await box.findByRole('button', { name: t.mergeButton }))
+    const dialog = within(box.getByRole('alertdialog', { name: t.confirm.title(7) }))
+    expect(dialog.getByText(t.confirm.head(READY.headSha.slice(0, 7)))).toBeInTheDocument()
+
+    // A later read (here the refresh; in life the 30 s poll) brings a head nobody has looked at.
+    fireEvent.click(box.getByRole('button', { name: t.refresh }))
+    expect(await dialog.findByText(t.confirm.moved('feedfac'))).toBeInTheDocument()
+    expect(dialog.getByText(t.confirm.head(READY.headSha.slice(0, 7)))).toBeInTheDocument()
+    const confirm = dialog.getByRole('button', { name: t.method.squash })
+    expect(confirm).toBeDisabled()
+    fireEvent.click(confirm)
+    expect(merges).toEqual([])
+
+    // Going back and asking again confirms the head now shown.
+    fireEvent.click(dialog.getByRole('button', { name: t.confirm.back }))
+    fireEvent.click(box.getByRole('button', { name: t.mergeButton }))
+    fireEvent.click(box.getByRole('button', { name: t.method.squash }))
+    await waitFor(() => expect(merges).toEqual([{ method: 'squash', expectedHeadSha: moved.headSha }]))
+  })
+
   it('available: false shows the reason plainly and offers no merge', async () => {
     serve({ states: [{ available: false, reason: 'gh: not logged in to github.com' }] })
     const box = await panel()

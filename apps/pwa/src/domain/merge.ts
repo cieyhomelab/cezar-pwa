@@ -95,7 +95,8 @@ export function mergeHeadline(state: Pick<GithubPrMergeState, 'state' | 'isDraft
   if (state.canMerge) return 'ready'
   if (state.checks.some((check) => check.state === 'failing')) return 'failing'
   if (state.eligibility === 'pending' || state.checks.some((check) => check.state === 'pending')) return 'pending'
-  if (state.eligibility === 'blocked') return 'blocked'
+  // `unauthorized`: the viewer may not merge. That is a blocker, not an unconfirmed requirement.
+  if (state.eligibility === 'blocked' || state.eligibility === 'unauthorized') return 'blocked'
   return 'unknown'
 }
 

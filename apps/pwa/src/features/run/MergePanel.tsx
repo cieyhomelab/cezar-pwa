@@ -76,6 +76,9 @@ function Confirmation({ view, merge, override }: { view: MergeView; merge: Merge
   const [chosen, setChosen] = useState<GithubMergeMethod>()
   const method = selectedMethod(view, chosen)
   const busy = merge.pending !== undefined
+  const head = merge.confirmedHead ?? view.headSha
+  // New commits arrived while the confirmation was open: they have not been seen, so no merge.
+  const moved = head !== view.headSha
   return (
     <div
       role="alertdialog"
@@ -88,7 +91,8 @@ function Confirmation({ view, merge, override }: { view: MergeView; merge: Merge
       </h4>
       <div id={`${id}-body`} className="flex flex-col gap-1 text-sm text-text-muted">
         <p className="break-words">{t.confirm.body(view.title, view.baseRef)}</p>
-        <p>{t.confirm.head(view.headSha.slice(0, 7))}</p>
+        <p>{t.confirm.head(head.slice(0, 7))}</p>
+        {moved ? <p className="text-danger">{t.confirm.moved(view.headSha.slice(0, 7))}</p> : null}
         {override ? <p className="text-danger">{t.confirm.override}</p> : null}
       </div>
       {view.methods.length > 1 ? (
@@ -117,8 +121,8 @@ function Confirmation({ view, merge, override }: { view: MergeView; merge: Merge
         <button
           type="button"
           className={PRIMARY}
-          disabled={busy || method === null}
-          onClick={() => method && void merge.merge({ method, headSha: view.headSha, override })}
+          disabled={busy || method === null || moved}
+          onClick={() => method && !moved && void merge.merge({ method, headSha: head, override })}
         >
           {merge.pending === 'merge' ? t.merging : method ? t.method[method] : t.mergeButton}
         </button>
@@ -183,7 +187,7 @@ function MergeState({ view, merge }: { view: MergeView; merge: MergeActions }) {
         <Confirmation view={view} merge={merge} override={gate.override} />
       ) : offered ? (
         <div>
-          <button type="button" className={PRIMARY} disabled={busy || !gate.allowed} onClick={merge.ask}>
+          <button type="button" className={PRIMARY} disabled={busy || !gate.allowed} onClick={() => merge.ask(view.headSha)}>
             {merge.pending === 'merge' ? t.merging : t.mergeButton}
           </button>
         </div>

@@ -467,6 +467,8 @@ export const en = {
         body: (title: string, base: string) => `“${title}” will be merged into ${base}.`,
         /** The server re-reads the PR and refuses a head that moved since this screen read it. */
         head: (sha: string) => `Only commit ${sha} is merged: if anything was pushed since, Cezar refuses.`,
+        /** A poll brought a newer head while the confirmation was open: it has not been seen. */
+        moved: (sha: string) => `New commits were pushed (now ${sha}). Go back and check them before merging.`,
         override: 'You are asking GitHub to bypass unmet requirements. It may refuse.',
         back: 'Not yet',
       },
