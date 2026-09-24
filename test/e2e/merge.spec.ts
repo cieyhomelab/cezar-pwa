@@ -98,7 +98,7 @@ test('a blocked PR shows why, and merges only after "merge without waiting" and 
   await noSidewaysScroll(page)
 
   await dialog.getByRole('button', { name: t.method.squash }).tap()
-  await expect(panel.getByText(t.headline.merged)).toBeVisible()
+  await expect(panel.getByText(t.headline.merged, { exact: true })).toBeVisible()
   await expect(panel.getByText(t.merged(7))).toBeVisible()
   await expect(panel.getByRole('button', { name: t.mergeButton })).toHaveCount(0)
   expect(merges).toEqual([
@@ -141,7 +141,7 @@ test.describe('at 390×844', () => {
       if (evidence) await panel.screenshot({ path: `${evidence}/confirm-merge-${scheme}.png` })
 
       await panel.getByRole('alertdialog').getByRole('button', { name: t.method.squash }).tap()
-      await expect(panel.getByText(t.headline.merged)).toBeVisible()
+      await expect(panel.getByText(t.headline.merged, { exact: true })).toBeVisible()
       if (evidence) await panel.screenshot({ path: `${evidence}/merged-${scheme}.png` })
     })
   }
