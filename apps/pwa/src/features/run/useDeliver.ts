@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HEALTH_QUERY_KEY } from '../../api/health.ts'
 import { ApiError, AuthRequiredError, NetworkError, TimeoutError } from '../../api/http.ts'
-import { continueRunWith, invalidateRun, sendRunMessage } from '../../api/run.ts'
+import { continueRunWith, invalidateRun, runQueryOptions, sendRunMessage } from '../../api/run.ts'
 import { type DeliveryMode, type DeliveryRun, deliveryMode, lastSessionId, resumeAfterIdleTeardown } from '../../domain/answer.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
 import { en } from '../../i18n/en.ts'
@@ -46,6 +46,13 @@ export function failureMessage(error: unknown): string {
  * live route means the record was stale (the session closed since it was fetched), so the text
  * is resumed rather than lost, when there is a session to resume.
  *
+ * The reverse is Cezar #986 (`deliver-prompt.ts`, tag `v0.11.1`): a record that says the task is
+ * finished while it is still running sends the text to `…/continue`, which answers 409. That 409
+ * means the record was stale. The record is fetched once more, bypassing the cache, and when it
+ * now says the session is live the text goes to `…/messages` instead. The refetch also corrects
+ * the cache, so the screen stops showing the task as finished. When the fresh record agrees with
+ * the route already tried, the refusal is reported as it came.
+ *
  * Nothing is retried on the operator's behalf except the idle-teardown refusal, whose meaning is
  * "try again in a moment". A timed-out write in particular is reported, not resent: it may
  * already have reached the agent.
@@ -83,7 +90,20 @@ export function useDeliver(projectId: string, runId: string, run: DeliveryRun | 
       try {
         let answer: MessageResponse | undefined
         if (route === 'resume') {
-          await resume()
+          try {
+            await resume()
+          } catch (resumeError) {
+            if (!(resumeError instanceof ApiError && resumeError.status === 409)) throw resumeError
+            let fresh: DeliveryRun
+            try {
+              fresh = await queryClient.fetchQuery({ ...runQueryOptions(projectId, runId), staleTime: 0 })
+            } catch {
+              // The refetch is the recovery, not the delivery: the reason shown stays the send's.
+              throw resumeError
+            }
+            if (deliveryMode(fresh) !== 'live') throw resumeError
+            answer = await sendRunMessage(projectId, runId, text)
+          }
         } else {
           try {
             answer = await sendRunMessage(projectId, runId, text)

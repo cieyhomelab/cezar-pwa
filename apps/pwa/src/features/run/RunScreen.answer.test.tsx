@@ -52,8 +52,9 @@ const askPage = (questions: unknown[] = [branch]) =>
 type Handler = (init: RequestInit | undefined) => Response | Promise<Response>
 
 /** Routes by path and method, and records every write's body. */
-function serve(opts: { run: ApiRun; history: () => unknown; messages?: Handler; continue?: Handler }) {
+function serve(opts: { run: ApiRun | (() => ApiRun); history: () => unknown; messages?: Handler; continue?: Handler }) {
   const writes: { path: string; body: unknown }[] = []
+  const run = () => (typeof opts.run === 'function' ? opts.run() : opts.run)
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
     const path = new URL(url, 'http://localhost').pathname
@@ -61,10 +62,10 @@ function serve(opts: { run: ApiRun; history: () => unknown; messages?: Handler; 
     if (method === 'POST') writes.push({ path, body: init?.body ? JSON.parse(String(init.body)) : undefined })
     if (path === '/api/v1/health') return jsonResponse({ version: '0.11.0', projects: [{ id: 'cezar-pwa', name: 'Cezar PWA' }] })
     if (path === '/api/v1/workspace/runs-index') return jsonResponse({ runs: [], referenceStatuses: {}, perProjectLimit: 200, truncated: [] })
-    if (path === BASE) return jsonResponse(opts.run)
+    if (path === BASE) return jsonResponse(run())
     if (path === `${BASE}/history`) return jsonResponse(opts.history())
     if (path === `${BASE}/history-context`) return jsonResponse({ contextEvents: [], asOfSeq: 0 })
-    if (path === `${BASE}/read`) return jsonResponse(opts.run)
+    if (path === `${BASE}/read`) return jsonResponse(run())
     if (path === `${BASE}/messages`) return (opts.messages ?? (() => jsonResponse({ delivered: true })))(init)
     if (path === `${BASE}/continue`) return (opts.continue ?? (() => jsonResponse({ continued: true })))(init)
     throw new Error(`unrouted fetch in test: ${method} ${path}`)
@@ -188,6 +189,38 @@ describe('answering a question (FR-022)', () => {
 
     fireEvent.click(card.getByRole('button', { name: 'dev' }))
     await waitFor(() => expect(writesTo('/continue').map((write) => write.body)).toEqual([{ text: 'Branch: dev' }]))
+    expect(writesTo('/messages')).toHaveLength(0)
+  })
+
+  it('a stale "finished" record (Cezar #986): the 409 from the resume turns into a message', async () => {
+    let status = 'done'
+    const { writesTo } = serve({
+      run: () => runAs(status),
+      history: () => askPage(),
+      continue: () => {
+        // The run was live all along; the record the screen aimed by had not caught up.
+        status = 'running'
+        return jsonResponse({ error: 'run is running' }, 409)
+      },
+    })
+    fireEvent.click(within(await askCard()).getByRole('button', { name: 'dev' }))
+
+    await waitFor(() => expect(writesTo('/messages').map((write) => write.body)).toEqual([{ text: 'Branch: dev' }]))
+    expect(writesTo('/continue')).toHaveLength(1)
+    expect(await screen.findByText(en.run.transcript.ask.sent)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('a 409 from the resume that the fresh record agrees with is reported, not rerouted', async () => {
+    const { writesTo } = serve({
+      run: runAs('done'),
+      history: () => askPage(),
+      continue: () => jsonResponse({ error: 'provider claude is not connected' }, 409),
+    })
+    const card = within(await askCard())
+    fireEvent.click(card.getByRole('button', { name: 'dev' }))
+
+    expect(await card.findByRole('alert')).toHaveTextContent('Cezar refused: provider claude is not connected')
     expect(writesTo('/messages')).toHaveLength(0)
   })
 
