@@ -71,7 +71,7 @@ Environment: `PUBLIC_ORIGIN` (required), `VAPID_SUBJECT`, `CEZAR_URL`, `STATE_DI
 The rsync target layout on the VPS, the rrsync path anchoring, the installers and the nginx snippet the gateway includes.
 
 - **Breaking:** changing the target directory layout, the rrsync-anchored paths, required secrets, or what the nginx snippet expects from the surrounding server block.
-- **Required path:** update the deploy notes in `OLD_README.md` (and the short steps in `README.md` if they change) in the same PR, keep `deploy/nginx/rehearse.sh` and `deploy/push/rehearse.sh` green, label `risk-high`, spell out any manual step on the host.
+- **Required path:** update the deploy notes in `docs/DEPLOYMENT.md` (and the install steps in `README.md` if they change) in the same PR, keep `deploy/nginx/rehearse.sh` and `deploy/push/rehearse.sh` green, label `risk-high`, spell out any manual step on the host.
 
 ## Not protected
 
