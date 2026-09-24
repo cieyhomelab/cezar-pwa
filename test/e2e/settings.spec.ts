@@ -163,3 +163,36 @@ test('when the perimeter cannot end the session, Settings says so instead of pre
   await expect(page.getByRole('button', { name: en.settings.signOut.retry })).toBeVisible()
   await expect(page).toHaveURL(/\/m\/settings$/)
 })
+
+test('the temporary icon badge check sets and clears the badge in the installed app (#68)', async ({ page }) => {
+  await serve(page)
+  await page.addInitScript(() => {
+    const calls: string[] = []
+    Object.assign(window, { badgeCalls: calls })
+    Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true })
+    Object.defineProperty(navigator, 'setAppBadge', {
+      configurable: true,
+      value: async (count: number) => void calls.push(`set ${count}`),
+    })
+    Object.defineProperty(navigator, 'clearAppBadge', {
+      configurable: true,
+      value: async () => void calls.push('clear'),
+    })
+  })
+  const t = en.settings.badge
+  const shots = process.env.E2E_SHOTS
+  const section = page.getByRole('region', { name: t.section })
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme })
+    await page.goto('settings')
+    await expect(section.getByText(t.supported)).toBeVisible()
+    await section.getByRole('button', { name: t.set }).click()
+    await expect(section.getByRole('status')).toHaveText(t.didSet)
+    await section.scrollIntoViewIfNeeded()
+    if (shots) await section.screenshot({ path: `${shots}/badge-check-${scheme}.png` })
+    await section.getByRole('button', { name: t.clear }).click()
+    await expect(section.getByRole('status')).toHaveText(t.didClear)
+    expect(await page.evaluate(() => (window as unknown as { badgeCalls: string[] }).badgeCalls)).toEqual(['set 3', 'clear'])
+  }
+})

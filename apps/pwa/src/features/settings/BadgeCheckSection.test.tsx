@@ -6,29 +6,34 @@ import { BadgeCheckSection } from './BadgeCheckSection.tsx'
 /** #68: the temporary on-device badge check. The badge itself is the device's to show. */
 
 const t = en.settings.badge
-type BadgeNav = Navigator & { standalone?: boolean; setAppBadge?: unknown; clearAppBadge?: unknown }
-const nav = window.navigator as BadgeNav
+const nav = window.navigator
+
+/** jsdom has no badge API: each test defines it, and takes it away again. */
+function define(key: 'standalone' | 'setAppBadge' | 'clearAppBadge', value: unknown) {
+  Object.defineProperty(nav, key, { configurable: true, value })
+}
+const remove = (key: string) => Reflect.deleteProperty(nav, key)
 
 let setAppBadge: ReturnType<typeof vi.fn>
 let clearAppBadge: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
-  nav.standalone = true
   setAppBadge = vi.fn(async () => {})
   clearAppBadge = vi.fn(async () => {})
-  nav.setAppBadge = setAppBadge
-  nav.clearAppBadge = clearAppBadge
+  define('standalone', true)
+  define('setAppBadge', setAppBadge)
+  define('clearAppBadge', clearAppBadge)
 })
 
 afterEach(() => {
-  delete nav.standalone
-  delete nav.setAppBadge
-  delete nav.clearAppBadge
+  remove('standalone')
+  remove('setAppBadge')
+  remove('clearAppBadge')
 })
 
 describe('BadgeCheckSection', () => {
   it('in a browser tab, only says to open the installed app', () => {
-    delete nav.standalone
+    remove('standalone')
     render(<BadgeCheckSection />)
     expect(screen.getByText(t.tabOnly)).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
@@ -55,7 +60,7 @@ describe('BadgeCheckSection', () => {
   })
 
   it('says so when the API is missing', async () => {
-    delete nav.setAppBadge
+    remove('setAppBadge')
     render(<BadgeCheckSection />)
     expect(screen.getByText(t.unsupported)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: t.set }))
