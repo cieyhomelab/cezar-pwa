@@ -7,6 +7,13 @@ export {
   type AttentionInput,
   type AttentionTone,
 } from './attention.ts'
+export type {
+  LimitsProvider,
+  LimitsResponse,
+  LimitWindow,
+  LimitWindowKind,
+  ProviderLimits,
+} from './limits.ts'
 export {
   attentionPayload,
   isEntering,

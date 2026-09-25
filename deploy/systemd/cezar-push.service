@@ -39,6 +39,15 @@ Environment=CEZAR_URL=http://127.0.0.1:4322
 # 403 every write from the real origin. The installer keeps it in the env file
 # below. VAPID_SUBJECT defaults to it; a mailto: contact can be set there too.
 Environment=STATE_DIR=%h/.cezar-push
+# Usage-limits collector (GET /m/push/limits, #92). Codex is read through
+# `codex app-server` and reports "codex not installed" when the binary is
+# missing. Claude is OFF by default: turning it on makes the sidecar read the
+# OAuth token from ~/.claude/.credentials.json and call Anthropic's
+# undocumented usage endpoint — set LIMITS_CLAUDE=1 in the env file below only
+# if you accept that. The poll interval is in seconds, at least 60.
+Environment=LIMITS_CODEX=1
+Environment=LIMITS_CLAUDE=0
+Environment=LIMITS_POLL_SECONDS=300
 EnvironmentFile=-%h/.cezar-push/env
 
 # journald only; the sidecar never logs task content (§6).

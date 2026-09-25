@@ -14,6 +14,14 @@ export type Config = {
   /** VAPID `sub`: a `mailto:` or `https:` contact the push service may use. */
   subject: string
   publicOrigin: string
+  /** The usage-limits collector (#92), `GET /m/push/limits`. */
+  limits: {
+    /** Off by default: it reads the OAuth token and calls Anthropic's undocumented usage endpoint. */
+    claude: boolean
+    /** On by default; reports `codex not installed` when the binary is missing. */
+    codex: boolean
+    intervalMs: number
+  }
 }
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -30,7 +38,29 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
     stateDir: env.STATE_DIR ?? join(homedir(), '.cezar-push'),
     subject,
     publicOrigin,
+    limits: {
+      claude: readSwitch('LIMITS_CLAUDE', env.LIMITS_CLAUDE, false),
+      codex: readSwitch('LIMITS_CODEX', env.LIMITS_CODEX, true),
+      intervalMs: readPollSeconds(env.LIMITS_POLL_SECONDS) * 1000,
+    },
   }
+}
+
+function readSwitch(name: string, value: string | undefined, fallback: boolean): boolean {
+  if (value === undefined || value === '') return fallback
+  if (/^(1|true|on|yes)$/i.test(value)) return true
+  if (/^(0|false|off|no)$/i.test(value)) return false
+  throw new Error(`${name} must be on or off (1/0, true/false), got: ${value}`)
+}
+
+/** Five minutes by default; never under one, so a typo cannot hammer the providers. */
+function readPollSeconds(value: string | undefined): number {
+  if (value === undefined || value === '') return 300
+  const seconds = Number(value)
+  if (!Number.isInteger(seconds) || seconds < 60) {
+    throw new Error(`LIMITS_POLL_SECONDS must be a whole number of seconds, at least 60, got: ${value}`)
+  }
+  return seconds
 }
 
 /**

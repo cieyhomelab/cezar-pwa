@@ -80,7 +80,7 @@ Examined directly on the VPS. Replaces guesswork; if the nginx configuration cha
 | Workflows (for the composer) | `GET /api/v1/p/:projectId/workflows` | `workflowsResponseSchema`: `workflows[]` (`name`, `description?`, `steps[]`, `source`), `issues[]` (files that could not be loaded) |
 | Project agent settings | `GET /api/v1/p/:projectId/config` | `configResponseSchema`: `defaultRunner`, `defaultModels{claude?,codex?,…}`, `modelsLocked`, … |
 | Runner models | `GET /api/v1/models?runner=claude\|codex\|opencode` | `runnerModelCatalogResponseSchema`: `models[{id,label,description}]`, `source` (`live\|cache\|unavailable`), `stale`. A **workspace** route — `GET /api/v1/p/:projectId/models` returns **404** (checked on `0.11.0`, 2026-09-24). `pi` has no catalog (400) |
-| Agent accounts | `GET /api/v1/workspace/agent-profiles` | `agentProfilesResponseSchema`: `profiles[]` (`id`, `provider`, `label`), `selections`, `defaults`; on this host (`CEZ_REMOTE`) `profiles: []` |
+| Agent accounts | `GET /api/v1/workspace/agent-profiles` | `agentProfilesResponseSchema`: `profiles[]` (`id`, `provider`, `label`), `selections`, `defaults`; on this host (`CEZ_REMOTE`) `profiles: []` — the sidecar's limits collector reads it on loopback for the accounts to poll (§ 6) |
 
 ### RunStatus
 `queued | running | waiting | review | done | failed | cancelled`
@@ -294,3 +294,29 @@ The second runner does not change the picture: `codex` has `approvalPolicy: 'nev
 **Caveat:** setting `CEZ_APPROVAL_GATE=1` **will not bring** this branch to life. The variable only switches the CLI permission mode to `acceptEdits`; Cezar still has no code that would turn a `control_request can_use_tool` into a UI event. Bringing this path to life is a change in Cezar — out of the PWA's reach (see rule 7 in `CLAUDE.md`: we file it as a proposed upstream issue).
 
 **What we do about it in code:** the branch **stays** in `packages/shared/attention.ts`. Rule 8 requires a 1:1 copy from Cezar, and the event vocabulary is append-only — the emitter may arrive in any version. Removing the branch would split us from the cockpit exactly when Cezar wires it up. We treat it as unreachable, not as nonexistent: no E2E tests, no UI for answering a permission request, with a unit test keeping parity with the original.
+
+## 6. Provider usage limits — `GET /m/push/limits` (sidecar, #92)
+
+Not a Cezar route: Cezar learns about a subscription limit only after a run hits it
+(`usage limit reached|<epoch>` → `autoResumeAt`). `cezar-push` polls each agent account every five
+minutes and serves the last pass behind the same gate as the rest of `/m/push/`
+(`LimitsResponse` in `packages/shared/src/limits.ts`; details in `apps/push-sidecar/README.md`):
+
+```json
+{ "observedAt": "…", "providers": [
+  { "provider": "claude", "account": "default", "status": "ok", "observedAt": "…",
+    "windows": [ { "kind": "five_hour", "usedPercent": 42, "resetsAt": "…" },
+                 { "kind": "weekly_model", "model": "opus", "usedPercent": 61, "resetsAt": "…" } ] },
+  { "provider": "codex", "account": "default", "status": "unavailable", "reason": "codex not installed",
+    "observedAt": "…", "windows": [] } ] }
+```
+
+| Provider | Source | Stability |
+|---|---|---|
+| Codex (ChatGPT plan) | `codex app-server` → JSON-RPC `account/rateLimits/read`: `rateLimits.primary`/`secondary` = `{ usedPercent, windowDurationMins, resetsAt }` (Unix seconds). A window is identified by `windowDurationMins` — the 5-hour row can be missing and then the weekly one is `primary` | Official app-server method. Codex is not installed on this host (`codex.available: false`), so the row reads `codex not installed` |
+| Claude Code (Pro/Max) | `GET https://api.anthropic.com/api/oauth/usage`, `Authorization: Bearer <claudeAiOauth.accessToken>`, `anthropic-beta: oauth-2025-04-20`: `five_hour`, `seven_day`, `seven_day_opus`, `seven_day_sonnet` = `{ utilization, resets_at }` or `null` | **Undocumented**; off unless `LIMITS_CLAUDE=1`. The documented sources don't work headless: the status line's `rate_limits` is interactive only, and `stream-json`'s `rate_limit_event` has no percentage (anthropics/claude-code#78476) |
+
+A window the provider does not report is absent, never 0 or 100. A failed read is `unavailable` +
+`reason`, never the previous numbers. Upstream proposal: a `limits` field on Cezar's own provider
+and account rows (`/api/v1/providers/status`, `/workspace/agent-profiles`), after which this
+collector can go.
