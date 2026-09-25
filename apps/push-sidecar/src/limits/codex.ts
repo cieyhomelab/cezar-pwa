@@ -89,7 +89,8 @@ function readCodex(command: string, account: LimitsAccount, timeoutMs: number): 
     child.on('error', (error: NodeJS.ErrnoException) =>
       finish(unavailable(error.code === 'ENOENT' ? 'codex not installed' : 'codex could not be started')),
     )
-    child.on('exit', () => finish(unavailable('codex exited before answering')))
+    // `close`, not `exit`: stdout is drained by then, so a last-moment answer is not lost.
+    child.on('close', () => finish(unavailable('codex exited before answering')))
     // An EPIPE from a child that died early is reported by `exit`, not thrown.
     child.stdin.on('error', () => {})
 
