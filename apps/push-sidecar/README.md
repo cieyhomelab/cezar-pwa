@@ -68,6 +68,20 @@ work, so the phone never triggers a read. None of the reads spends quota.
 - The log says when a row's status changes (`limits: codex/default unavailable (codex not
   installed)`), never a number or a path.
 
+## Limit notifications (#94)
+
+After each pass `src/limit-alerts.ts` applies `limitCrossings()` (`packages/shared/src/notifications.ts`):
+a window that **enters** `LIMITS_NOTIFY_PERCENT` (default 90, a whole percent 1–100) or 100% is
+pushed once — `{ kind: 'limit', provider, account, window, model?, level, usedPercent, resetsAt? }`,
+no token, path or credential — and only **while a task is queued or running** (the watcher's
+statuses). Not again for the same level until the window resets: the recorded `resetsAt` passes,
+or a reading shows it back under the threshold. `near` → `exhausted` is a second push, on the same
+push `Topic` and notification tag, so it replaces the first. With nothing queued nothing is sent
+or remembered — a window still full when work is queued later is announced then. An unavailable
+read or an absent window is not a reset. What was announced is kept in
+`STATE_DIR/limit-alerts.json` (0600), written before the push goes out, so neither a restart nor a
+failed push rings twice.
+
 ## Run
 
 ```sh

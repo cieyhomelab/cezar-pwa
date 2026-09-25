@@ -356,3 +356,30 @@ describe('one ring per transition, across a drop and a restart', () => {
     expect(notify).toHaveBeenCalledOnce()
   })
 })
+
+describe('hasActiveRuns (#94)', () => {
+  it('is false before any baseline', () => {
+    expect(new Watcher({ cezarUrl: CEZAR, notify: () => {} }).hasActiveRuns()).toBe(false)
+  })
+
+  it.each([
+    ['queued', true],
+    ['running', true],
+    ['waiting', false],
+    ['done', false],
+  ])('a run %s → %s', async (status, expected) => {
+    const { watcher } = await seeded([
+      { projectId: 'cezar-pwa', id: 'r0', status: 'done' },
+      { projectId: 'cezar-pwa', id: 'r1', status },
+    ])
+    expect(watcher.hasActiveRuns()).toBe(expected)
+  })
+
+  it('follows the stream', async () => {
+    const { watcher } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'done' }])
+    watcher.handleFrame(runFrame({ status: 'queued' }))
+    expect(watcher.hasActiveRuns()).toBe(true)
+    watcher.handleFrame(runFrame({ status: 'waiting' }))
+    expect(watcher.hasActiveRuns()).toBe(false)
+  })
+})

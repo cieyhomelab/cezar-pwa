@@ -23,6 +23,8 @@ export type CollectorOptions = {
   fetch?: typeof fetch
   log?: (message: string) => void
   now?: () => Date
+  /** Handed every finished pass's rows (#94: the limit notifications). Its failure is logged, not fatal. */
+  onPoll?: (providers: readonly ProviderLimits[]) => Promise<void> | void
 }
 
 /**
@@ -70,6 +72,11 @@ export class LimitsCollector {
     for (const row of rows) this.logChange(row)
     this.readings = rows
     this.observedAt = this.now().toISOString()
+    try {
+      await this.options.onPoll?.(rows)
+    } catch {
+      this.options.log?.('limits: the after-poll hook failed')
+    }
   }
 
   /** Runs until `stop()`: a pass, then the interval. */

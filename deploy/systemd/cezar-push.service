@@ -49,6 +49,9 @@ Environment=STATE_DIR=%h/.cezar-push
 Environment=LIMITS_CODEX=1
 Environment=LIMITS_CLAUDE=0
 Environment=LIMITS_POLL_SECONDS=300
+# #94: push once when a window reaches this percent (or runs out) while tasks
+# are queued or running. A whole percent, 1–100.
+Environment=LIMITS_NOTIFY_PERCENT=90
 EnvironmentFile=-%h/.cezar-push/env
 
 # journald only; the sidecar never logs task content (§6).

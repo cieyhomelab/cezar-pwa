@@ -709,7 +709,7 @@ export const en = {
     section: 'Notifications',
     /** FR-038, FR-043: what a notification says, and what it never carries. */
     intro:
-      'A notification arrives when a task is waiting for your answer, waiting for review, or has ended with an error. It carries the task title, the project and the reason — no code and nothing from the conversation.',
+      'A notification arrives when a task is waiting for your answer, waiting for review, or has ended with an error. It carries the task title, the project and the reason — no code and nothing from the conversation. While tasks are queued or running, one also arrives when a usage-limit window is nearly or fully used up.',
     /** FR-037: in a browser tab the permission prompt cannot work on iOS. */
     installTitle: 'First add Cezar to your home screen',
     installBody:
@@ -747,6 +747,12 @@ export const en = {
     fallbackReason: 'Needs attention',
     testTitle: 'Cezar',
     testBody: 'Notifications are working.',
+    /** #94: a usage-limit window nearing exhaustion while tasks are queued or running. */
+    limit: {
+      near: 'nearly used up',
+      exhausted: 'used up',
+      queued: 'tasks are waiting to run',
+    },
   },
   install: {
     title: 'Add Cezar to your home screen',

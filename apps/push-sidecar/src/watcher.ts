@@ -100,6 +100,18 @@ export class Watcher {
     this.state = 'stopped'
   }
 
+  /**
+   * #94: whether any task is queued or running — the only time a usage-limit window is worth a
+   * notification. `false` until the first baseline lands, so a sidecar that cannot read Cezar
+   * stays silent rather than guessing.
+   */
+  hasActiveRuns(): boolean {
+    for (const status of this.statuses.values()) {
+      if (status === 'queued' || status === 'running') return true
+    }
+    return false
+  }
+
   stop(): void {
     this.stopped = true
     this.controller?.abort()

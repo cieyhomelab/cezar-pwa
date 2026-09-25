@@ -208,6 +208,21 @@ describe('Pusher.sendTo, staying honest (S-11)', () => {
     expect(topicFor(attention('r1', 'kai-phone'))).not.toBe(topicFor(attention('r1')))
   })
 
+  it('gives a limit window its own topic, shared by near and exhausted (#94)', () => {
+    const limit = (level: 'near' | 'exhausted', model?: string): PushPayload => ({
+      kind: 'limit',
+      provider: 'claude',
+      account: 'default',
+      window: 'weekly_model',
+      ...(model ? { model } : {}),
+      level,
+    })
+    const topic = topicFor(limit('near', 'opus'))
+    expect(topic).toMatch(/^[A-Za-z0-9_-]{1,32}$/)
+    expect(topicFor(limit('exhausted', 'opus'))).toBe(topic)
+    expect(topicFor(limit('near', 'sonnet'))).not.toBe(topic)
+  })
+
   it('sends the test without a topic: it must not replace a real notification waiting to be delivered', async () => {
     await store.upsert(subscription())
     await new Pusher({ store, vapid, subject: ORIGIN, send }).sendTo(subscription(), { kind: 'test' })

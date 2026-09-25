@@ -103,3 +103,56 @@ describe('pickAppWindow', () => {
     expect(pickAppWindow([{ url: `${ORIGIN}/projects` }])).toBeUndefined()
   })
 })
+
+describe('limit notifications (#94)', () => {
+  const NOW = Date.parse('2026-09-25T12:00:00Z')
+  const limit = {
+    kind: 'limit',
+    provider: 'claude',
+    account: 'default',
+    window: 'five_hour',
+    level: 'near',
+    usedPercent: 92,
+    resetsAt: '2026-09-25T13:20:00Z',
+  }
+
+  it('reads the limit fields, dropping ones of the wrong type', () => {
+    expect(readPushPayload({ ...limit, usedPercent: '92', level: 'loud', extra: 1 })).toEqual({
+      kind: 'limit',
+      provider: 'claude',
+      account: 'default',
+      window: 'five_hour',
+      resetsAt: '2026-09-25T13:20:00Z',
+    })
+  })
+
+  it('names the window, how full, and when it resets, and opens the Limits screen', () => {
+    const { title, options } = notificationFor(readPushPayload(limit), NOW)
+    expect(title).toBe('Claude · 5-hour window')
+    expect(options.body).toBe('92% used · resets in 1h 20m · tasks are waiting to run')
+    expect(options.data.url).toBe('/m/limits')
+    expect(targetUrl(readPushPayload(limit))).toBe('/m/limits')
+  })
+
+  it('names a non-default account and says when a window is used up', () => {
+    const { title, options } = notificationFor(
+      readPushPayload({ ...limit, account: 'work', window: 'weekly_model', model: 'opus', level: 'exhausted', usedPercent: 100 }),
+      NOW,
+    )
+    expect(title).toBe('Claude · Weekly · Opus')
+    expect(options.body).toBe('Account work · used up · resets in 1h 20m · tasks are waiting to run')
+  })
+
+  it('tags per window, so exhausted replaces near and rings', () => {
+    const near = notificationFor(readPushPayload(limit), NOW).options
+    const exhausted = notificationFor(readPushPayload({ ...limit, level: 'exhausted' }), NOW).options
+    expect(exhausted.tag).toBe(near.tag)
+    expect(exhausted.renotify).toBe(true)
+    expect(notificationFor(readPushPayload({ ...limit, window: 'weekly' }), NOW).options.tag).not.toBe(near.tag)
+  })
+
+  it('shows a provider and window it has not heard of by their keys', () => {
+    const { title } = notificationFor(readPushPayload({ kind: 'limit', provider: 'gemini', window: 'daily' }), NOW)
+    expect(title).toBe('gemini · daily')
+  })
+})

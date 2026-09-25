@@ -1,4 +1,5 @@
-import type { PushPayload } from '@cezar-pwa/shared'
+import type { LimitsProvider, LimitWindowKind, PushPayload } from '@cezar-pwa/shared'
+import { resetText } from '../domain/limits.ts'
 import { runPath } from '../domain/run-header.ts'
 import { en } from '../i18n/en.ts'
 
@@ -29,6 +30,20 @@ export function readPushPayload(raw: unknown): PushPayload {
   if (typeof raw !== 'object' || raw === null) return { kind: 'attention' }
   const data = raw as Record_
   const optional = (key: keyof PushPayload) => (text(data[key]) ? { [key]: data[key] } : {})
+  if (data.kind === 'limit') {
+    const percent = data.usedPercent
+    return {
+      kind: 'limit',
+      // Open strings: a provider or window the phone has not heard of shows its raw key (rule 5).
+      ...(text(data.provider) ? { provider: data.provider as LimitsProvider } : {}),
+      ...optional('account'),
+      ...(text(data.window) ? { window: data.window as LimitWindowKind } : {}),
+      ...optional('model'),
+      ...(data.level === 'near' || data.level === 'exhausted' ? { level: data.level } : {}),
+      ...(typeof percent === 'number' && Number.isFinite(percent) ? { usedPercent: percent } : {}),
+      ...optional('resetsAt'),
+    }
+  }
   return {
     kind: data.kind === 'test' ? 'test' : 'attention',
     ...optional('projectId'),
@@ -39,8 +54,12 @@ export function readPushPayload(raw: unknown): PushPayload {
   }
 }
 
-/** FR-041: the task's transcript, or the list when the payload does not name a task. */
+/**
+ * FR-041: the task's transcript, or the list when the payload does not name a task. A limit
+ * notification (#94) opens the Limits screen.
+ */
 export function targetUrl(payload: PushPayload): string {
+  if (payload.kind === 'limit') return `${BASE}/limits`
   return payload.projectId && payload.runId ? `${BASE}${runPath(payload.projectId, payload.runId)}` : `${BASE}/`
 }
 
@@ -56,8 +75,9 @@ export type NotificationSpec = {
  * `renotify` makes that replacement ring: the sidecar only sends a new transition, and a task that
  * went from "needs you" to "failed" is news, not a silent edit of a notification already seen.
  */
-export function notificationFor(payload: PushPayload): NotificationSpec {
+export function notificationFor(payload: PushPayload, now: number = Date.now()): NotificationSpec {
   const icon = `${BASE}/icons/icon-192.png`
+  if (payload.kind === 'limit') return limitNotification(payload, icon, now)
   if (payload.kind === 'test') {
     return {
       title: en.push.testTitle,
@@ -73,6 +93,40 @@ export function notificationFor(payload: PushPayload): NotificationSpec {
     options: {
       body: project ? `${project} · ${reason}` : reason,
       tag: payload.runId ? `cezar-run-${payload.projectId ?? ''}/${payload.runId}` : 'cezar',
+      renotify: true,
+      icon,
+      data: { url: targetUrl(payload) },
+    },
+  }
+}
+
+/**
+ * #94: which account's which window, how full, and when it resets. The tag is per window, so
+ * "exhausted" replaces "near" instead of stacking, and rings: running out is news. The reset is
+ * counted from when the notification is shown, not from when the sidecar sent it.
+ */
+function limitNotification(payload: PushPayload, icon: string, now: number): NotificationSpec {
+  const t = en.push.limit
+  const provider = payload.provider ? (en.limits.provider[payload.provider] ?? payload.provider) : en.push.fallbackTitle
+  const window =
+    payload.window === 'weekly_model'
+      ? en.limits.window.weeklyModel(payload.model)
+      : payload.window === 'five_hour' || payload.window === 'weekly'
+        ? en.limits.window[payload.window]
+        : payload.window
+  const usage =
+    payload.level === 'exhausted'
+      ? t.exhausted
+      : payload.usedPercent !== undefined
+        ? en.limits.used(Math.round(payload.usedPercent))
+        : t.near
+  const account = payload.account && payload.account !== 'default' ? en.limits.account(payload.account) : undefined
+  const key = `${payload.provider ?? ''}/${payload.account ?? ''}/${payload.window ?? ''}:${payload.model ?? ''}`
+  return {
+    title: window ? `${provider} · ${window}` : provider,
+    options: {
+      body: [account, usage, resetText(payload.resetsAt, now), t.queued].filter(Boolean).join(' · '),
+      tag: `cezar-limit-${key}`,
       renotify: true,
       icon,
       data: { url: targetUrl(payload) },

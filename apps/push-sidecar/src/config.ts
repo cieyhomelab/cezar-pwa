@@ -1,5 +1,6 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { DEFAULT_LIMIT_THRESHOLD } from '@cezar-pwa/shared'
 
 /**
  * Everything the sidecar reads from its environment (`deploy/systemd/cezar-push.service`). No
@@ -23,6 +24,11 @@ export type Config = {
     /** `LIMITS_CODEX_BIN`: the Codex binary, when it is not `codex` on `PATH` or in `~/.local/bin`. */
     codexBin: string | undefined
     intervalMs: number
+    /**
+     * `LIMITS_NOTIFY_PERCENT` (#94): a window at or past this share, or exhausted, is pushed once
+     * while tasks are queued or running. 90 by default.
+     */
+    notifyPercent: number
   }
 }
 
@@ -45,6 +51,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
       codex: readSwitch('LIMITS_CODEX', env.LIMITS_CODEX, true),
       codexBin: env.LIMITS_CODEX_BIN || undefined,
       intervalMs: readPollSeconds(env.LIMITS_POLL_SECONDS) * 1000,
+      notifyPercent: readNotifyPercent(env.LIMITS_NOTIFY_PERCENT),
     },
   }
 }
@@ -64,6 +71,16 @@ function readPollSeconds(value: string | undefined): number {
     throw new Error(`LIMITS_POLL_SECONDS must be a whole number of seconds, at least 60, got: ${value}`)
   }
   return seconds
+}
+
+/** A whole percent from 1 to 100; 100 means "only when exhausted". */
+function readNotifyPercent(value: string | undefined): number {
+  if (value === undefined || value === '') return DEFAULT_LIMIT_THRESHOLD
+  const percent = Number(value)
+  if (!Number.isInteger(percent) || percent < 1 || percent > 100) {
+    throw new Error(`LIMITS_NOTIFY_PERCENT must be a whole percent from 1 to 100, got: ${value}`)
+  }
+  return percent
 }
 
 /**
