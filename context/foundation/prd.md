@@ -404,7 +404,8 @@ Added during shaping, each ruled out deliberately so it cannot creep back:
 - **No notification when a task merely finishes.** Only states that need a human produce a
   notification. Notifications that require no action teach the operator to ignore
   notifications, which destroys the one thing this product sells.
-  *Narrowed 2026-09-25 by the operator:* one non-task notification is allowed — a
+  *Narrowed 2026-09-25 (#94, #97; the operator commissioned the implementation and told the
+  run to proceed):* one non-task notification is allowed — a
   usage-limit window reaching the threshold (default 90%) or running out **while tasks are
   queued or running**, once per window until it resets, opening the Limits screen (#94). Queued
   work about to park until a reset is worth a human's glance; a task merely finishing stays out.
