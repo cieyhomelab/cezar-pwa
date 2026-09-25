@@ -132,7 +132,17 @@ setInterval(() => {}, 1000)
     await expect.poll(() => alive(pid)).toBe(false)
   })
 
+  it("finds a bare `codex` in the extra search path, where Cezar's own unit finds it", async () => {
+    await fakeCodex('answer', fixturePath('codex-both-windows.json'))
+    const reading = await codexAdapter({ searchPath: [dir] })(account)
+    expect(reading).toMatchObject({ status: 'ok' })
+  })
+
   it('says so when codex is not installed', async () => {
+    expect(await codexAdapter({ command: 'no-such-codex', searchPath: [dir] })(account)).toEqual({
+      status: 'unavailable',
+      reason: 'codex not installed',
+    })
     expect(await codexAdapter({ command: join(dir, 'no-such-codex') })(account)).toEqual({
       status: 'unavailable',
       reason: 'codex not installed',

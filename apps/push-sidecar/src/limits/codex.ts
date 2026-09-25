@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process'
+import { homedir } from 'node:os'
+import { delimiter, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import type { LimitWindow, LimitWindowKind } from '@cezar-pwa/shared'
 import { z } from 'zod'
@@ -32,16 +34,26 @@ const rateLimitsResultSchema = z.object({
   rateLimits: z.object({ primary: windowSchema, secondary: windowSchema }).nullish(),
 })
 
+/**
+ * Where agent CLIs live on the reference host. Cezar's own unit puts it on `PATH`; the sidecar's
+ * user unit gets systemd's default `PATH` without it, so a bare `codex` is looked up here too —
+ * otherwise a Codex that Cezar runs would read as not installed.
+ */
+export const EXTRA_SEARCH_PATH = [join(homedir(), '.local', 'bin')]
+
 export type CodexOptions = {
-  /** The binary; `codex` on `PATH` by default. */
+  /** The binary (`LIMITS_CODEX_BIN`); `codex` on `PATH` + `searchPath` by default. */
   command?: string
+  /** Appended to `PATH` for the lookup. */
+  searchPath?: readonly string[]
   timeoutMs?: number
 }
 
 export function codexAdapter(options: CodexOptions = {}): LimitsAdapter {
   const command = options.command ?? 'codex'
   const timeoutMs = options.timeoutMs ?? CODEX_TIMEOUT_MS
-  return (account) => readCodex(command, account, timeoutMs)
+  const path = [process.env.PATH, ...(options.searchPath ?? EXTRA_SEARCH_PATH)].filter(Boolean).join(delimiter)
+  return (account) => readCodex(command, path, account, timeoutMs)
 }
 
 /** Maps a `account/rateLimits/read` result; exported for the fixture tests. */
@@ -65,9 +77,15 @@ export function mapCodexResult(result: unknown): LimitsReading {
 
 type RpcMessage = { id?: unknown; result?: unknown; error?: { message?: unknown } }
 
-function readCodex(command: string, account: LimitsAccount, timeoutMs: number): Promise<LimitsReading> {
+function readCodex(
+  command: string,
+  path: string,
+  account: LimitsAccount,
+  timeoutMs: number,
+): Promise<LimitsReading> {
   return new Promise((resolve) => {
-    const env = { ...process.env, ...(account.configDir ? { CODEX_HOME: account.configDir } : {}) }
+    // `spawn` resolves a bare command against `env.PATH`.
+    const env = { ...process.env, PATH: path, ...(account.configDir ? { CODEX_HOME: account.configDir } : {}) }
     const child = spawn(command, ['app-server'], { env, stdio: ['pipe', 'pipe', 'ignore'] })
     const lines = createInterface({ input: child.stdout })
     let settled = false

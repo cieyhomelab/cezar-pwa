@@ -37,7 +37,12 @@ describe('readConfig', () => {
 
   describe('the limits collector', () => {
     it('reads Codex and not Claude every five minutes by default', () => {
-      expect(readConfig({ PUBLIC_ORIGIN: ORIGIN }).limits).toEqual({ claude: false, codex: true, intervalMs: 300_000 })
+      expect(readConfig({ PUBLIC_ORIGIN: ORIGIN }).limits).toEqual({
+        claude: false,
+        codex: true,
+        codexBin: undefined,
+        intervalMs: 300_000,
+      })
     })
 
     it.each([
@@ -47,6 +52,12 @@ describe('readConfig', () => {
       [{ LIMITS_CLAUDE: '', LIMITS_CODEX: '' }, { claude: false, codex: true }],
     ])('reads the switches %o', (env, expected) => {
       expect(readConfig({ PUBLIC_ORIGIN: ORIGIN, ...env }).limits).toMatchObject(expected)
+    })
+
+    it('takes a Codex binary path', () => {
+      expect(readConfig({ PUBLIC_ORIGIN: ORIGIN, LIMITS_CODEX_BIN: '/opt/codex/bin/codex' }).limits.codexBin).toBe(
+        '/opt/codex/bin/codex',
+      )
     })
 
     it('takes a poll interval in seconds', () => {

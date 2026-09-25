@@ -55,7 +55,7 @@ async function main(argv: string[]): Promise<void> {
         ? { adapter: claudeAdapter() }
         : { disabled: 'off in the sidecar config (LIMITS_CLAUDE)' },
       codex: config.limits.codex
-        ? { adapter: codexAdapter() }
+        ? { adapter: codexAdapter({ command: config.limits.codexBin }) }
         : { disabled: 'off in the sidecar config (LIMITS_CODEX)' },
     },
   })

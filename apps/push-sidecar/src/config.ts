@@ -20,6 +20,8 @@ export type Config = {
     claude: boolean
     /** On by default; reports `codex not installed` when the binary is missing. */
     codex: boolean
+    /** `LIMITS_CODEX_BIN`: the Codex binary, when it is not `codex` on `PATH` or in `~/.local/bin`. */
+    codexBin: string | undefined
     intervalMs: number
   }
 }
@@ -41,6 +43,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): Config {
     limits: {
       claude: readSwitch('LIMITS_CLAUDE', env.LIMITS_CLAUDE, false),
       codex: readSwitch('LIMITS_CODEX', env.LIMITS_CODEX, true),
+      codexBin: env.LIMITS_CODEX_BIN || undefined,
       intervalMs: readPollSeconds(env.LIMITS_POLL_SECONDS) * 1000,
     },
   }

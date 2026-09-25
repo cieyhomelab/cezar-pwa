@@ -52,7 +52,9 @@ work, so the phone never triggers a read. None of the reads spends quota.
   calls `account/rateLimits/read`, with `CODEX_HOME` set for a profile. Windows are told apart by
   `windowDurationMins` (300 → `five_hour`, 10080 → `weekly`), never by `primary`/`secondary`; a
   window Codex does not report is absent, never 0. The child is killed on every path (15 s
-  timeout). No binary → `codex not installed`.
+  timeout). The binary is `codex` on `PATH` or in `~/.local/bin` — where Cezar's own unit finds
+  its CLIs, which the sidecar's systemd `PATH` lacks — or `LIMITS_CODEX_BIN`. No binary →
+  `codex not installed`.
 - **Claude** (`LIMITS_CLAUDE`, **off** by default): reads the OAuth token from the account's
   `.credentials.json` on every request and calls Anthropic's **undocumented**
   `GET https://api.anthropic.com/api/oauth/usage` — the endpoint behind `/usage` — for the
