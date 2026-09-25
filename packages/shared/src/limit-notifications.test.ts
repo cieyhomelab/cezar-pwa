@@ -127,6 +127,26 @@ describe('limitCrossings', () => {
       memoryAfter: { [KEY]: { level: 'near', resetsAt: RESET } },
     },
     {
+      name: 'a stale reading (its reset already passed): silent and not remembered',
+      windows: [fiveHour(95, '2026-09-25T11:00:00Z')],
+      levels: [],
+      memoryAfter: {},
+    },
+    {
+      name: 'a stale reading after the recorded reset passed: silent, memory forgotten',
+      windows: [fiveHour(100, '2026-09-25T11:00:00Z')],
+      memory: { [KEY]: { level: 'exhausted', resetsAt: '2026-09-25T11:00:00Z' } },
+      levels: [],
+      memoryAfter: {},
+    },
+    {
+      name: 'a stale reading does not drop a newer memory',
+      windows: [fiveHour(3, '2026-09-25T11:00:00Z')],
+      memory: { [KEY]: { level: 'near', resetsAt: RESET } },
+      levels: [],
+      memoryAfter: { [KEY]: { level: 'near', resetsAt: RESET } },
+    },
+    {
       name: 'no reset time given: remembered until it drops back under',
       windows: [fiveHour(91, null)],
       levels: ['near'],
@@ -157,6 +177,23 @@ describe('limitCrossings', () => {
       'codex/work/weekly',
     ])
     expect(result.notify).toHaveLength(3)
+  })
+
+  it('a stale full reading does not ring on every poll', () => {
+    let memory: Record<string, LimitMemory> = {}
+    const rings: number[] = []
+    for (let poll = 0; poll < 3; poll++) {
+      const result = limitCrossings({
+        providers: [row([fiveHour(100, '2026-09-25T11:00:00Z')])],
+        memory,
+        threshold: 90,
+        busy: true,
+        now: NOW,
+      })
+      rings.push(result.notify.length)
+      memory = result.memory
+    }
+    expect(rings).toEqual([0, 0, 0])
   })
 
   it('does not mutate the memory it was given', () => {

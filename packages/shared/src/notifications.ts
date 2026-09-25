@@ -147,6 +147,8 @@ export type LimitCrossingInput = {
  *   that is still full when work is queued later is announced then.
  * - An unavailable row or an absent window changes nothing: a failed read is not a reset, and
  *   must not lead to a second ring once the read works again.
+ * - A reading whose `resetsAt` has already passed is stale and changes nothing either: it would
+ *   otherwise ring on every poll until a fresh reading arrives.
  */
 export function limitCrossings(input: LimitCrossingInput): {
   notify: PushPayload[]
@@ -162,6 +164,9 @@ export function limitCrossings(input: LimitCrossingInput): {
   for (const row of input.providers) {
     if (row.status !== 'ok') continue
     for (const window of row.windows) {
+      // A reading whose own reset has already passed is stale (an old provider snapshot): it says
+      // nothing about the window now, and remembering it would be pruned next poll and re-ring.
+      if (window.resetsAt !== undefined && Date.parse(window.resetsAt) <= now) continue
       const key = limitWindowKey(row.provider, row.account, window)
       const level = limitLevel(window.usedPercent, input.threshold)
       if (level === undefined) {

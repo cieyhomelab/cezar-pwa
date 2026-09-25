@@ -78,7 +78,8 @@ statuses). Not again for the same level until the window resets: the recorded `r
 or a reading shows it back under the threshold. `near` → `exhausted` is a second push, on the same
 push `Topic` and notification tag, so it replaces the first. With nothing queued nothing is sent
 or remembered — a window still full when work is queued later is announced then. An unavailable
-read or an absent window is not a reset. What was announced is kept in
+read or an absent window is not a reset, and a reading whose own `resetsAt` has already passed is
+stale and ignored (it would otherwise ring on every poll). What was announced is kept in
 `STATE_DIR/limit-alerts.json` (0600), written before the push goes out, so neither a restart nor a
 failed push rings twice.
 
