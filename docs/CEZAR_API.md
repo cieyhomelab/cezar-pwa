@@ -320,3 +320,22 @@ A window the provider does not report is absent, never 0 or 100. A failed read i
 `reason`, never the previous numbers. Upstream proposal: a `limits` field on Cezar's own provider
 and account rows (`/api/v1/providers/status`, `/workspace/agent-profiles`), after which this
 collector can go.
+
+### The Limits screen in the PWA (#93) — how we read `/m/push/limits`
+
+`/m/limits`, linked from the list header, from Settings and from a task waiting for a limit reset
+(`failed` + `autoResumeAt`, beside *Cancel auto-resume*). `apps/pwa/src/api/limits.ts` reads through
+`pushFetch`, so a lost session, the SPA fallback answering for a missing sidecar (`not-routed`) and
+timeouts are judged in `http.ts`; a body without `providers[]` is `unexpected-shape`, a window with
+an unknown `kind` is dropped. Query key `['limits']`: read on open and on return to the foreground
+(`refetchOnWindowFocus: 'always'`), **no `refetchInterval`** — the sidecar polls, the phone doesn't.
+
+`apps/pwa/src/domain/limits.ts` turns the answer into cards: Claude, then Codex, `default` account
+first. Each `ok` card shows 5-hour and weekly — **always**, *Not reported* when the provider left
+one out, never 0 % or 100 % — then any `weekly_model` rows the provider did report. Every bar is a
+`role="meter"` with the percentage also in text, "resets in 2h 14m", and the row's age; a row whose
+`observedAt` is older than **10 min** has its numbers dimmed and says *Stale*. An `unavailable`
+row shows the sidecar's `reason` verbatim, badged *Off* when it begins `off …` (switched off in the
+sidecar config) and *Unavailable* otherwise. A failed refresh keeps the last reading on screen
+under a banner. The service worker's navigation fallback denies `/m/push/**` and it registers no
+runtime cache (`apps/pwa/src/pwa/sw-routes.ts`, pinned by `apps/pwa/test/sw-routes.test.ts`).

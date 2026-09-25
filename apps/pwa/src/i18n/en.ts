@@ -410,6 +410,8 @@ export const en = {
       archiving: 'Saving…',
       cancelAutoResume: 'Cancel auto-resume',
       cancellingAutoResume: 'Cancelling…',
+      /** #93: a task waiting for a limit reset links to the Limits screen. */
+      seeLimits: 'See usage limits',
       confirmCancel: {
         title: 'Cancel this task?',
         body: 'The agent will be stopped and the task will end as cancelled. The worktree stays.',
@@ -609,6 +611,43 @@ export const en = {
       skipped: 'Skipped',
       failed: 'Launch failed',
     },
+  },
+  /** #93: each agent account's 5-hour and weekly windows, as the push sidecar last read them. */
+  limits: {
+    title: 'Usage limits',
+    /** The list header's link to this screen. Short: it sits beside "New task". */
+    open: 'Limits',
+    back: 'Tasks',
+    loading: 'Reading the limits…',
+    loadFailed: 'Could not read the limits.',
+    /** A refresh failed while an earlier reading is on screen. */
+    refreshFailed: 'Could not refresh — showing the last reading.',
+    retry: 'Try again',
+    /** The sidecar has not finished its first poll, or knows of no account. */
+    empty: 'The notification server has not read any limits yet. Try again in a few minutes.',
+    provider: { claude: 'Claude', codex: 'Codex' } as Record<string, string>,
+    account: (id: string) => (id === 'default' ? 'Default account' : `Account ${id}`),
+    window: {
+      five_hour: '5-hour window',
+      weekly: 'Weekly',
+      weeklyModel: (model: string | undefined) =>
+        model ? `Weekly · ${model.charAt(0).toUpperCase()}${model.slice(1)}` : 'Weekly · one model',
+    },
+    used: (percent: number) => `${percent}% used`,
+    /** A window the provider left out: never shown as 0% or 100%. */
+    notReported: 'Not reported',
+    resetsIn: (duration: string) => `resets in ${duration}`,
+    resetDue: 'reset due now',
+    noReset: 'no reset time given',
+    read: (age: string) => `read ${age} ago`,
+    readUnknown: 'read at an unknown time',
+    stale: 'Stale',
+    staleHint: 'Older than 10 minutes — it may no longer be accurate.',
+    off: 'Off',
+    unavailable: 'Unavailable',
+    /** The Settings entry. */
+    section: 'Usage limits',
+    intro: 'How much of each agent account’s 5-hour and weekly window is used, and when it resets.',
   },
   settings: {
     title: 'Settings',

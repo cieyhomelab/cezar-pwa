@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import App from './App.tsx'
 import { AutomationsScreen } from './features/automations/AutomationsScreen.tsx'
 import { DiffScreen } from './features/diff/DiffScreen.tsx'
+import { LimitsScreen } from './features/limits/LimitsScreen.tsx'
 import { NewTaskScreen } from './features/new-task/NewTaskScreen.tsx'
 import { RunScreen } from './features/run/RunScreen.tsx'
 import { RunsListScreen } from './features/runs-list/RunsListScreen.tsx'
@@ -23,6 +24,7 @@ export function AppRoutes() {
         <Route path="p/:projectId/runs/:runId" element={<RunScreen />} />
         <Route path="p/:projectId/runs/:runId/diff" element={<DiffScreen />} />
         <Route path="automations" element={<AutomationsScreen />} />
+        <Route path="limits" element={<LimitsScreen />} />
         <Route path="settings" element={<SettingsScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

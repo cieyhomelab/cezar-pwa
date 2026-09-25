@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { en } from '../../i18n/en.ts'
 import { BadgeCheckSection } from './BadgeCheckSection.tsx'
+import { LimitsSection } from './LimitsSection.tsx'
 import { NotificationsSection } from './NotificationsSection.tsx'
 import { SignOutSection } from './SignOutSection.tsx'
 import { ThemeSection } from './ThemeSection.tsx'
@@ -9,8 +10,8 @@ import { VersionsSection } from './VersionsSection.tsx'
 
 /**
  * Settings. S-10 brought notifications (FR-036); S-12 adds the theme (FR-046), both versions
- * (FR-047) and sign-out (FR-006). Sign-out goes last: it is the one that cannot be taken back
- * from here.
+ * (FR-047) and sign-out (FR-006); #93 the way to the usage limits. Sign-out goes last: it is the
+ * one that cannot be taken back from here.
  */
 export function SettingsScreen() {
   const signOut = useSignOut()
@@ -27,6 +28,7 @@ export function SettingsScreen() {
       {/* Keyed on the sign-out attempt: after one that stayed here, both read the cleared state. */}
       <ThemeSection key={`theme-${signOut.attempt}`} />
       <NotificationsSection key={`push-${signOut.attempt}`} />
+      <LimitsSection />
       <VersionsSection />
       <BadgeCheckSection />
       <SignOutSection signOut={signOut} />

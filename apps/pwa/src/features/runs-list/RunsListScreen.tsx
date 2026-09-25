@@ -158,6 +158,10 @@ export function RunsListScreen() {
                 {en.automations.open}
               </Link>
             ) : null}
+            {/* #93: the push sidecar's reading of each account's usage windows. */}
+            <Link to="/limits" className="touch-target inline-flex items-center rounded border border-border px-3 text-sm">
+              {en.limits.open}
+            </Link>
             {/* S-13 (FR-033): a filtered list starts the task in the project it shows. */}
             <Link
               to={projectId === null ? '/new' : `/new?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
