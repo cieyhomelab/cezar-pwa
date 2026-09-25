@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { PushPayload } from '@cezar-pwa/shared'
+import type { LimitsResponse, PushPayload } from '@cezar-pwa/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.ts'
 import { Pusher, PUSH_TIMEOUT_MS, PUSH_TTL_SECONDS, topicFor, type SendNotification } from './push.ts'
@@ -16,13 +16,28 @@ let store: SubscriptionStore
 let send: ReturnType<typeof vi.fn<SendNotification>>
 let app: ReturnType<typeof createApp>
 
+const LIMITS: LimitsResponse = {
+  observedAt: '2026-09-25T10:00:00.000Z',
+  providers: [
+    {
+      provider: 'codex',
+      account: 'default',
+      status: 'unavailable',
+      reason: 'codex not installed',
+      observedAt: '2026-09-25T10:00:00.000Z',
+      windows: [],
+    },
+  ],
+}
+const limits = { snapshot: vi.fn(() => LIMITS) }
+
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'cezar-push-'))
   store = new SubscriptionStore(join(dir, 'subscriptions.json'))
   send = vi.fn<SendNotification>(async () => ({}))
   const pusher = new Pusher({ store, vapid, subject: ORIGIN, send })
   const watcher = { state: 'live' as const, statuses: new Map([['cezar-pwa/r1', 'waiting' as const]]), seededAt: 'now' }
-  app = createApp({ store, pusher, watcher, publicKey: vapid.publicKey, publicOrigin: ORIGIN })
+  app = createApp({ store, pusher, watcher, limits, publicKey: vapid.publicKey, publicOrigin: ORIGIN })
 })
 afterEach(() => rm(dir, { recursive: true, force: true }))
 
@@ -99,6 +114,13 @@ describe('the /m/push/ surface', () => {
     await store.upsert(subscription())
     const body = await (await call('GET', '/health')).json()
     expect(body).toEqual({ ok: true, stream: 'live', seededAt: 'now', runs: 1, subscriptions: 1 })
+  })
+
+  it("serves the collector's last pass on /limits, never cached", async () => {
+    const response = await call('GET', '/limits', undefined, { origin: 'https://evil.example' })
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await response.json()).toEqual(LIMITS)
   })
 
   it('answers an unknown path with a JSON 404', async () => {

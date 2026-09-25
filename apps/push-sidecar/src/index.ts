@@ -2,6 +2,9 @@ import { join } from 'node:path'
 import { serve } from '@hono/node-server'
 import { createApp } from './app.ts'
 import { readConfig } from './config.ts'
+import { claudeAdapter } from './limits/claude.ts'
+import { codexAdapter } from './limits/codex.ts'
+import { LimitsCollector } from './limits/collector.ts'
 import { Pusher } from './push.ts'
 import { rejectedFileOf, SubscriptionStore } from './store.ts'
 import { initVapid, loadVapid } from './vapid.ts'
@@ -43,19 +46,42 @@ async function main(argv: string[]): Promise<void> {
     },
   })
 
-  const app = createApp({ store, pusher, watcher, publicKey: vapid.publicKey, publicOrigin: config.publicOrigin })
+  const limits = new LimitsCollector({
+    cezarUrl: config.cezarUrl,
+    intervalMs: config.limits.intervalMs,
+    log,
+    providers: {
+      claude: config.limits.claude
+        ? { adapter: claudeAdapter() }
+        : { disabled: 'off in the sidecar config (LIMITS_CLAUDE)' },
+      codex: config.limits.codex
+        ? { adapter: codexAdapter({ command: config.limits.codexBin }) }
+        : { disabled: 'off in the sidecar config (LIMITS_CODEX)' },
+    },
+  })
+
+  const app = createApp({
+    store,
+    pusher,
+    watcher,
+    limits,
+    publicKey: vapid.publicKey,
+    publicOrigin: config.publicOrigin,
+  })
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
     log(`listening on ${info.address}:${info.port}, ${store.list().length} subscriptions`)
   })
   const watching = watcher.run()
+  const collecting = limits.run()
 
   const shutdown = () => {
     watcher.stop()
+    limits.stop()
     server.close()
   }
   process.once('SIGTERM', shutdown)
   process.once('SIGINT', shutdown)
-  await watching
+  await Promise.all([watching, collecting])
 }
 
 main(process.argv.slice(2)).catch((error: unknown) => {

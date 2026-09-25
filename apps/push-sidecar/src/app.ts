@@ -2,6 +2,7 @@ import type { PushPayload } from '@cezar-pwa/shared'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
+import type { LimitsCollector } from './limits/collector.ts'
 import type { Pusher } from './push.ts'
 import { subscriptionSchema, type SubscriptionStore } from './store.ts'
 import type { Watcher } from './watcher.ts'
@@ -20,6 +21,7 @@ export type AppDeps = {
   publicKey: string
   /** `PUBLIC_ORIGIN`, e.g. `https://cezar.example.com` — the only origin a write may come from (CLAUDE.md rule 1). */
   publicOrigin: string
+  limits: Pick<LimitsCollector, 'snapshot'>
 }
 
 const endpointBody = z.object({ endpoint: z.string().min(1).max(2048) })
@@ -82,6 +84,12 @@ export function createApp(deps: AppDeps): Hono {
       subscriptions: deps.store.list().length,
     }),
   )
+
+  // The collector's last pass (#92). Reading it starts no work: the sidecar polls on its own clock.
+  app.get('/limits', (c) => {
+    c.header('cache-control', 'no-store')
+    return c.json(deps.limits.snapshot())
+  })
 
   app.notFound((c) => c.json({ error: 'not found' }, 404))
   app.onError((_error, c) => c.json({ error: 'internal error' }, 500))

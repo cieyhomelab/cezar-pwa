@@ -20,6 +20,7 @@ Served on `127.0.0.1:4330` under `/m/push/`; nginx forwards them only past the c
 | `DELETE` | `/m/push/subscription` | `{ endpoint }` → `{ removed }` |
 | `POST` | `/m/push/test` | `{ endpoint }` → a test push to that device only; 404 unknown, 410 gone, 502 refused, 504 the push service never answered |
 | `GET` | `/m/push/health` | stream state, baseline time, counts — never a task |
+| `GET` | `/m/push/limits` | each agent account's 5-hour / weekly windows from the last poll (`LimitsResponse`, `packages/shared/src/limits.ts`); `Cache-Control: no-store` |
 
 ## State
 
@@ -37,6 +38,35 @@ that was already waiting never rings again. A transition that happens while the 
 not announced afterwards. Each push about a task carries a `Topic` (a hash of `project/run`), so
 the push service keeps only the newest undelivered one. The phone's per-task `tag` does the same
 for notifications already shown.
+
+## Limits (#92)
+
+`src/limits/` polls every provider × account every five minutes (`LIMITS_POLL_SECONDS`, at least
+60) and keeps only the last pass in memory. `GET /m/push/limits` serves that pass and starts no
+work, so the phone never triggers a read. None of the reads spends quota.
+
+- **Accounts** come from Cezar's `GET /api/v1/workspace/agent-profiles` on loopback, each read
+  from its own config dir. A provider with no profile (on this host `profiles: []`), or a Cezar
+  that cannot be read, gets one `default` account: the CLI's own login.
+- **Codex** (`LIMITS_CODEX`, on by default): spawns `codex app-server` as the service user and
+  calls `account/rateLimits/read`, with `CODEX_HOME` set for a profile. Windows are told apart by
+  `windowDurationMins` (300 → `five_hour`, 10080 → `weekly`), never by `primary`/`secondary`; a
+  window Codex does not report is absent, never 0. The child is killed on every path (15 s
+  timeout). The binary is `codex` on `PATH` or in `~/.local/bin` — where Cezar's own unit finds
+  its CLIs, which the sidecar's systemd `PATH` lacks — or `LIMITS_CODEX_BIN`. No binary →
+  `codex not installed`.
+- **Claude** (`LIMITS_CLAUDE`, **off** by default): reads the OAuth token from the account's
+  `.credentials.json` on every request and calls Anthropic's **undocumented**
+  `GET https://api.anthropic.com/api/oauth/usage` — the endpoint behind `/usage` — for the
+  5-hour, weekly and per-model (Opus, Sonnet) weekly windows. The token lives only in that
+  request's header: never logged, cached, written or quoted in a reason. An expired token is
+  reported, not refreshed (the next `claude` run renews it). Turning it on is the operator's call:
+  it is the sidecar's only call to a third party besides the push services.
+- **No stale numbers.** Every pass replaces every row; an adapter that fails gives
+  `status: "unavailable"` + `reason` and no windows. A row the loop has not refreshed for three
+  intervals is served as `unavailable` too. Each row carries its own `observedAt`.
+- The log says when a row's status changes (`limits: codex/default unavailable (codex not
+  installed)`), never a number or a path.
 
 ## Run
 
