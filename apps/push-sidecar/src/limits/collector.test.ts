@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { claudeAdapter, CLAUDE_USAGE_URL } from './claude.ts'
 import { codexAdapter } from './codex.ts'
-import { AGENT_PROFILES_PATH, LimitsCollector, type ProviderSetting } from './collector.ts'
+import { AGENT_PROFILES_PATH, LimitsCollector, type CollectorOptions, type ProviderSetting } from './collector.ts'
 import { fixture, fixturePath, FIXTURE_REFRESH, FIXTURE_TOKEN } from './testing.ts'
 import type { LimitsAdapter, LimitsReading } from './types.ts'
 
@@ -40,6 +40,7 @@ function setup(options: {
   claude?: ProviderSetting
   codex?: ProviderSetting
   fetch?: typeof fetch
+  onPoll?: CollectorOptions['onPoll']
 }) {
   let now = T0
   const log = vi.fn<(message: string) => void>()
@@ -56,6 +57,7 @@ function setup(options: {
     fetch: options.fetch ?? cezarFetch,
     log,
     now: () => now,
+    ...(options.onPoll ? { onPoll: options.onPoll } : {}),
     providers: {
       claude: options.claude ?? { disabled: 'off in the sidecar config (LIMITS_CLAUDE)' },
       codex: options.codex ?? off,
@@ -65,6 +67,23 @@ function setup(options: {
 }
 
 describe('LimitsCollector', () => {
+  it('hands each finished pass to the after-poll hook (#94)', async () => {
+    const onPoll = vi.fn()
+    const { collector } = setup({ profiles: profilesResponse([]), codex: { adapter: async () => ok }, onPoll })
+    await collector.pollOnce()
+    expect(onPoll).toHaveBeenCalledWith(collector.snapshot().providers)
+  })
+
+  it('survives an after-poll hook that fails', async () => {
+    const { collector, log } = setup({
+      profiles: profilesResponse([]),
+      onPoll: () => Promise.reject(new Error('boom')),
+    })
+    await collector.pollOnce()
+    expect(collector.snapshot().observedAt).toBe(T0.toISOString())
+    expect(log).toHaveBeenCalledWith('limits: the after-poll hook failed')
+  })
+
   it('serves nothing until the first pass has run', () => {
     expect(setup({}).collector.snapshot()).toEqual({ observedAt: null, providers: [] })
   })

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { runKey, type PushPayload } from '@cezar-pwa/shared'
+import { limitWindowKey, runKey, type PushPayload } from '@cezar-pwa/shared'
 import webpush from 'web-push'
 import type { Subscription, SubscriptionStore } from './store.ts'
 import type { VapidKeys } from './vapid.ts'
@@ -70,11 +70,20 @@ const isGone = (error: unknown) => {
  * The tag does the same on the phone for what was already shown.
  *
  * A topic is at most 32 URL-safe base64 characters, and it travels in the clear to the push
- * service, so it is a hash of the task's key rather than the key itself.
+ * service, so it is a hash of the task's key rather than the key itself. A limit notification
+ * (#94) is keyed by its window the same way: an undelivered "near" is replaced by "exhausted".
  */
 export function topicFor(payload: PushPayload): string | undefined {
-  if (payload.kind !== 'attention' || !payload.projectId || !payload.runId) return undefined
-  return createHash('sha256').update(runKey(payload.projectId, payload.runId)).digest('base64url').slice(0, 32)
+  const key = topicKey(payload)
+  return key === undefined ? undefined : createHash('sha256').update(key).digest('base64url').slice(0, 32)
+}
+
+function topicKey(payload: PushPayload): string | undefined {
+  if (payload.kind === 'attention' && payload.projectId && payload.runId) return runKey(payload.projectId, payload.runId)
+  if (payload.kind === 'limit' && payload.provider && payload.account && payload.window) {
+    return `limit:${limitWindowKey(payload.provider, payload.account, { kind: payload.window, model: payload.model })}`
+  }
+  return undefined
 }
 
 /** A subscription past the `expirationTime` its push service gave it is as gone as a 410. */

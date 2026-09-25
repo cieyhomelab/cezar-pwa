@@ -4,6 +4,7 @@ import { createApp } from './app.ts'
 import { readConfig } from './config.ts'
 import { claudeAdapter } from './limits/claude.ts'
 import { codexAdapter } from './limits/codex.ts'
+import { LimitAlerts } from './limit-alerts.ts'
 import { LimitsCollector } from './limits/collector.ts'
 import { Pusher } from './push.ts'
 import { rejectedFileOf, SubscriptionStore } from './store.ts'
@@ -46,10 +47,23 @@ async function main(argv: string[]): Promise<void> {
     },
   })
 
+  const alerts = new LimitAlerts({
+    file: join(config.stateDir, 'limit-alerts.json'),
+    threshold: config.limits.notifyPercent,
+    busy: () => watcher.hasActiveRuns(),
+    log,
+    notify: async (payload) => {
+      const deliveries = await pusher.sendToAll(payload)
+      log(`limit alert pushed to ${deliveries.filter((d) => d === 'sent').length}/${deliveries.length} devices`)
+    },
+  })
+  await alerts.load()
+
   const limits = new LimitsCollector({
     cezarUrl: config.cezarUrl,
     intervalMs: config.limits.intervalMs,
     log,
+    onPoll: (providers) => alerts.check(providers),
     providers: {
       claude: config.limits.claude
         ? { adapter: claudeAdapter() }

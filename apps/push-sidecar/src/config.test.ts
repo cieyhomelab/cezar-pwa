@@ -42,7 +42,22 @@ describe('readConfig', () => {
         codex: true,
         codexBin: undefined,
         intervalMs: 300_000,
+        notifyPercent: 90,
       })
+    })
+
+    it.each([
+      ['75', 75],
+      ['100', 100],
+      ['', 90],
+    ])('reads LIMITS_NOTIFY_PERCENT %s', (value, expected) => {
+      expect(readConfig({ PUBLIC_ORIGIN: ORIGIN, LIMITS_NOTIFY_PERCENT: value }).limits.notifyPercent).toBe(expected)
+    })
+
+    it.each(['0', '101', '90.5', 'ninety'])('refuses LIMITS_NOTIFY_PERCENT %s', (value) => {
+      expect(() => readConfig({ PUBLIC_ORIGIN: ORIGIN, LIMITS_NOTIFY_PERCENT: value })).toThrow(
+        'LIMITS_NOTIFY_PERCENT must be a whole percent',
+      )
     })
 
     it.each([
