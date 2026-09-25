@@ -623,6 +623,10 @@ export const en = {
     /** A refresh failed while an earlier reading is on screen. */
     refreshFailed: 'Could not refresh — showing the last reading.',
     retry: 'Try again',
+    retrying: 'Trying…',
+    /** The sidecar answered 404: its bundle predates the limits endpoint (#92). */
+    sidecarOutdated:
+      'The notification server (cezar-push) is older than this app and has no limits yet. Redeploy it on the host: deploy/push/install.sh.',
     /** The sidecar has not finished its first poll, or knows of no account. */
     empty: 'The notification server has not read any limits yet. Try again in a few minutes.',
     provider: { claude: 'Claude', codex: 'Codex' } as Record<string, string>,

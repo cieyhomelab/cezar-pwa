@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router'
 import { HEALTH_QUERY_KEY } from '../../api/health.ts'
-import { AuthRequiredError } from '../../api/http.ts'
+import { ApiError, AuthRequiredError } from '../../api/http.ts'
 import { limitsQueryOptions } from '../../api/limits.ts'
 import { limitCards } from '../../domain/limits.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
@@ -28,15 +28,18 @@ export function LimitsScreen() {
     if (refused) void queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY })
   }, [refused, queryClient])
 
-  const detail = apiErrorDetail(limits.error)
+  // A 404 from the sidecar is not a transient failure: its bundle predates `GET /m/push/limits`
+  // (#92), and no amount of retrying fixes that — say what does.
+  const outdated = limits.error instanceof ApiError && limits.error.status === 404
+  const detail = outdated ? t.sidecarOutdated : apiErrorDetail(limits.error)
   const retry = (
     <button
       type="button"
-      className="touch-target rounded border border-border px-4 text-sm"
+      className="touch-target rounded border border-border px-4 text-sm disabled:opacity-60"
       onClick={() => void limits.refetch()}
       disabled={limits.isFetching}
     >
-      {t.retry}
+      {limits.isFetching ? t.retrying : t.retry}
     </button>
   )
 

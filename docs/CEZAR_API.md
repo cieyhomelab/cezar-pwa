@@ -337,5 +337,6 @@ one out, never 0 % or 100 % — then any `weekly_model` rows the provider did re
 `observedAt` is older than **10 min** has its numbers dimmed and says *Stale*. An `unavailable`
 row shows the sidecar's `reason` verbatim, badged *Off* when it begins `off …` (switched off in the
 sidecar config) and *Unavailable* otherwise. A failed refresh keeps the last reading on screen
-under a banner. The service worker's navigation fallback denies `/m/push/**` and it registers no
-runtime cache (`apps/pwa/src/pwa/sw-routes.ts`, pinned by `apps/pwa/test/sw-routes.test.ts`).
+under a banner. A 404 means the deployed `cezar-push` predates this endpoint: the screen says to
+redeploy it (`deploy/push/install.sh`), since retrying alone cannot help. The service worker's
+navigation fallback denies `/m/push/**` and it registers no runtime cache (`apps/pwa/src/pwa/sw-routes.ts`, pinned by `apps/pwa/test/sw-routes.test.ts`).

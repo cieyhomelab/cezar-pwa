@@ -153,6 +153,40 @@ describe('LimitsScreen', () => {
     expect(await card('Claude', 'default')).toBeTruthy()
   })
 
+  it('names an outdated sidecar on a 404 — retrying cannot fix that', async () => {
+    let answer = () => jsonResponse({ error: 'not found' }, 404)
+    serveLimits(() => answer())
+    renderWithQuery(<LimitsScreen />, undefined, '/limits')
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText(t.sidecarOutdated)).toBeTruthy()
+    expect(within(alert).queryByText('not found')).toBeNull()
+
+    // Once the sidecar is redeployed, the same button brings the reading in.
+    answer = () => jsonResponse(reading)
+    fireEvent.click(within(alert).getByRole('button', { name: t.retry }))
+    expect(await card('Claude', 'default')).toBeTruthy()
+  })
+
+  it('shows a refresh under way on the banner button', async () => {
+    let release: (response: Response) => void = () => undefined
+    let answer: () => Response | Promise<Response> = () => jsonResponse(reading)
+    serveLimits(() => answer())
+    const { client } = renderWithQuery(<LimitsScreen />, undefined, '/limits')
+    await card('Claude', 'default')
+
+    answer = () => jsonResponse({ error: 'not found' }, 404)
+    await client.refetchQueries({ queryKey: ['limits'] }).catch(() => undefined)
+    const banner = await screen.findByRole('alert')
+
+    answer = () => new Promise<Response>((resolve) => (release = resolve))
+    fireEvent.click(within(banner).getByRole('button', { name: t.retry }))
+    const pending = await within(banner).findByRole('button', { name: t.retrying })
+    expect((pending as HTMLButtonElement).disabled).toBe(true)
+    release(jsonResponse(reading))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+  })
+
   it('refuses an answer that is not the limits shape', async () => {
     serveLimits(() => jsonResponse({ nope: true }))
     renderWithQuery(<LimitsScreen />, undefined, '/limits')
