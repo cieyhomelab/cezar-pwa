@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { type ActionRun, type ConfirmedActionId, type RunActionId, runActionFlags } from '../../domain/run-actions.ts'
 import { en } from '../../i18n/en.ts'
 import type { RunActions } from './useRunActions.ts'
@@ -82,6 +83,12 @@ export function RunActionBar({ run, actions, busy }: { run: ActionRun; actions: 
         {flags.cancelAutoResume
           ? button('cancelAutoResume', STYLE.danger, t.cancelAutoResume, t.cancellingAutoResume)
           : null}
+        {/* #93: waiting for a limit reset — how far off it is lives on the Limits screen. */}
+        {flags.cancelAutoResume ? (
+          <Link to="/limits" className={STYLE.outline}>
+            {t.seeLimits}
+          </Link>
+        ) : null}
         {flags.cancel ? button('cancel', STYLE.danger, t.cancel, t.cancelling) : null}
       </div>
       {actions.error ? (

@@ -3,6 +3,7 @@ import { createHandlerBoundToURL, precacheAndRoute, cleanupOutdatedCaches } from
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { applyBadge } from './pwa/app-badge.ts'
 import { NAVIGATE_MESSAGE, notificationFor, pickAppWindow, readPushPayload, TEST_TAG } from './pwa/push-message.ts'
+import { NAVIGATION_DENYLIST } from './pwa/sw-routes.ts'
 import { replaceSubscription } from './pwa/subscription-sync.ts'
 
 declare const self: ServiceWorkerGlobalScope
@@ -24,13 +25,8 @@ cleanupOutdatedCaches()
 // notification tap on a cold app yields a white screen.
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('/m/index.html'), {
-    // `?key=` is the unlock navigation (S-02). It MUST reach the network: the
-    // gateway can only issue the session cookie for a request it actually
-    // sees, and answering this one from the precache would make unlocking
-    // silently impossible — the app would come back with the key unconsumed
-    // every time, no matter how the gateway is configured. Denylist patterns
-    // are tested against pathname + search, so this matches.
-    denylist: [/^\/api\//, /^\/m\/push\//, /[?&]key=/],
+    // `/api/`, `/m/push/` and the `?key=` unlock navigation — why each, in `sw-routes.ts`.
+    denylist: [...NAVIGATION_DENYLIST],
   }),
 )
 
