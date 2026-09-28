@@ -1,5 +1,5 @@
 import { isUnread } from '@cezar-pwa/shared'
-import type { ListSection } from './task-list.ts'
+import { flattenRows, type ListSection } from './task-list.ts'
 
 /**
  * "Mark all read" over the list on screen (#67). Pure, so which projects get a call is a table.
@@ -27,7 +27,8 @@ export function readAllPlan(sections: readonly ListSection[]): ReadAllPlan {
   const projects: string[] = []
   let unread = 0
   for (const section of sections) {
-    for (const { run } of section.rows) {
+    // #101: a subtask folded under its parent is still on the list, so the sweep reaches it.
+    for (const { run } of flattenRows(section.rows)) {
       if (!isUnread(run)) continue
       unread++
       if (!projects.includes(run.projectId)) projects.push(run.projectId)
