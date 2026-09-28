@@ -137,6 +137,49 @@ describe('RunsListScreen', () => {
     expect(within(section('Finished')).getAllByRole('listitem')).toHaveLength(FINISHED_VISIBLE + 5)
   })
 
+  describe('dispatched subtasks (#101)', () => {
+    const base = index.runs.find((run) => run.id === 'run-running') as RunIndexEntry
+    const run = (id: string, over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({ ...base, id, title: id, ...over })
+    const tree = [
+      run('root', { createdAt: '2026-09-21T10:00:00.000Z' }),
+      run('child-a', { createdAt: '2026-09-21T10:01:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root', kind: 'review' } }),
+      run('child-b', { createdAt: '2026-09-21T10:02:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root' } }),
+      run('grandchild', { createdAt: '2026-09-21T10:03:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'child-a' } }),
+      run('asks', { status: 'waiting', createdAt: '2026-09-21T10:04:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root' } }),
+    ]
+    const label = en.runs.subtasks.count(2)
+
+    it('folds subtasks under the parent, collapsed, and never hides one that needs attention', async () => {
+      renderList(() => jsonResponse({ ...index, runs: tree }))
+      await screen.findByRole('heading', { name: /needs attention/ })
+
+      expect(rowTexts('Needs attention')).toEqual(['asks'])
+      expect(rowTexts('In progress')).toEqual(['root'])
+      // The header still counts every run the section holds.
+      expect(within(section('In progress')).getByRole('heading').textContent).toBe('In progress (4)')
+      const toggle = within(section('In progress')).getByRole('button', { name: en.runs.subtasks.expand(label) })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      expect(toggle).toHaveClass('touch-target')
+    })
+
+    it('expands and collapses a tree, one level at a time, in the section order', async () => {
+      renderList(() => jsonResponse({ ...index, runs: tree }))
+      await screen.findByRole('heading', { name: /needs attention/ })
+
+      fireEvent.click(screen.getByRole('button', { name: en.runs.subtasks.expand(label) }))
+      expect(rowTexts('In progress')).toEqual(['root', 'child-b', 'child-a'])
+      const collapse = screen.getByRole('button', { name: en.runs.subtasks.collapse(label) })
+      expect(collapse).toHaveAttribute('aria-expanded', 'true')
+
+      // The grandchild folds into its direct parent, behind that parent's own toggle.
+      fireEvent.click(screen.getByRole('button', { name: en.runs.subtasks.expand(en.runs.subtasks.count(1)) }))
+      expect(rowTexts('In progress')).toEqual(['root', 'child-b', 'child-a', 'grandchild'])
+
+      fireEvent.click(collapse)
+      expect(rowTexts('In progress')).toEqual(['root'])
+    })
+  })
+
   it('names the projects whose history was cut off', async () => {
     renderList(() => jsonResponse({ ...index, truncated: ['kai-phone'] }))
     expect(await screen.findByText(en.runs.truncated(200, 'Kai Phone'))).toBeInTheDocument()

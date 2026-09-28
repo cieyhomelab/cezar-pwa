@@ -5,6 +5,10 @@ import {
   attentionCount,
   buildTaskList,
   compareRuns,
+  flattenRows,
+  foldSubtasks,
+  type ListRow,
+  type ListSection,
   queuePositions,
   sectionOf,
   type SectionKey,
@@ -127,5 +131,113 @@ describe('queuePositions', () => {
       entry({ projectId: 'a', id: 'gone', status: 'queued', archived: true, createdAt: '2026-09-21T09:00:00.000Z' }),
     ])
     expect(Object.fromEntries(positions)).toEqual({ 'a/same': 1, 'b/same': 2 })
+  })
+})
+
+describe('foldSubtasks (#101)', () => {
+  const child = (id: string, parentRunId: string, over: Partial<RunIndexEntry> = {}) =>
+    entry({ id, dispatch: { rootRunId: 'root', parentRunId, kind: 'review' }, ...over })
+  const row = (run: RunIndexEntry): ListRow => ({ run, queuePosition: null })
+
+  /** The fold as a nested id tree: `['a', ['b', 'c']]` is `a` with children `b` and `c`. */
+  type Tree = (string | Tree)[]
+  const shape = (rows: readonly ListRow[]): Tree =>
+    rows.flatMap((r) => (r.children ? [r.run.id, shape(r.children)] : [r.run.id]))
+
+  const cases: [string, RunIndexEntry[], Tree][] = [
+    ['a flat list stays flat', [entry({ id: 'a' }), entry({ id: 'b' })], ['a', 'b']],
+    [
+      'children fold under their parent, in the order they came in',
+      [entry({ id: 'root' }), entry({ id: 'x' }), child('c2', 'root'), child('c1', 'root')],
+      ['root', ['c2', 'c1'], 'x'],
+    ],
+    [
+      'a child sorted above its parent still folds under it, where the parent stands',
+      [child('c', 'root'), entry({ id: 'x' }), entry({ id: 'root' })],
+      ['x', 'root', ['c']],
+    ],
+    [
+      'a grandchild folds into its direct parent, not the root',
+      [entry({ id: 'root' }), child('c', 'root'), child('g', 'c')],
+      ['root', ['c', ['g']]],
+    ],
+    [
+      'an orphan whose parent is not in the section stays top-level',
+      [entry({ id: 'x' }), child('c', 'elsewhere')],
+      ['x', 'c'],
+    ],
+    [
+      'a grandchild whose parent is missing stays top-level even with the root present',
+      [entry({ id: 'root' }), child('g', 'missing')],
+      ['root', 'g'],
+    ],
+    [
+      'a parent in another project is not this child\'s parent',
+      [entry({ id: 'root', projectId: 'other' }), child('c', 'root')],
+      ['root', 'c'],
+    ],
+    [
+      'a cycle roots every member instead of hanging',
+      [child('a', 'b'), child('b', 'a')],
+      ['a', 'b'],
+    ],
+    ['a run that names itself as parent is a root', [child('a', 'a')], ['a']],
+    [
+      'a duplicate key is painted once',
+      [entry({ id: 'root' }), entry({ id: 'root' })],
+      ['root'],
+    ],
+  ]
+
+  it.each(cases)('%s', (_name, input, expected) => {
+    expect(shape(foldSubtasks(input.map(row)))).toEqual(expected)
+  })
+
+  it('carries each row as it was, queue position included', () => {
+    const [parent] = foldSubtasks([
+      { run: entry({ id: 'root', status: 'queued' }), queuePosition: 1 },
+      { run: child('c', 'root', { status: 'queued' }), queuePosition: 2 },
+    ])
+    expect(parent?.queuePosition).toBe(1)
+    expect(parent?.children?.[0]?.queuePosition).toBe(2)
+  })
+
+  it('flattenRows lists every folded run, parent first', () => {
+    const rows = foldSubtasks([entry({ id: 'root' }), child('c', 'root'), child('g', 'c'), entry({ id: 'x' })].map(row))
+    expect(flattenRows(rows).map((r) => r.run.id)).toEqual(['root', 'c', 'g', 'x'])
+  })
+})
+
+describe('buildTaskList folding (#101)', () => {
+  const tree = [
+    entry({ id: 'root', status: 'running', createdAt: '2026-09-21T10:00:00.000Z' }),
+    entry({ id: 'busy', status: 'running', createdAt: '2026-09-21T10:01:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root' } }),
+    entry({ id: 'asks', status: 'waiting', createdAt: '2026-09-21T10:02:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root' } }),
+    entry({ id: 'deep', status: 'running', createdAt: '2026-09-21T10:03:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'busy' } }),
+    entry({ id: 'fin', status: 'done', createdAt: '2026-09-21T10:04:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root' } }),
+    entry({ id: 'w-root', status: 'waiting', createdAt: '2026-09-21T09:00:00.000Z' }),
+    entry({ id: 'w-child', status: 'review', createdAt: '2026-09-21T09:01:00.000Z', dispatch: { rootRunId: 'w-root', parentRunId: 'w-root' } }),
+  ]
+  const sections = buildTaskList(tree, null)
+  const section = (key: SectionKey) => sections.find((s) => s.key === key) as ListSection
+
+  it('folds a running child and grandchild under the running parent', () => {
+    const [root] = section('running').rows
+    expect(section('running').rows.map((r) => r.run.id)).toEqual(['root'])
+    expect(root?.children?.map((r) => r.run.id)).toEqual(['busy'])
+    expect(root?.children?.[0]?.children?.map((r) => r.run.id)).toEqual(['deep'])
+  })
+
+  it('never hides a child that needs attention, and never folds the attention section', () => {
+    expect(section('attention').rows.map((r) => [r.run.id, r.children])).toEqual([
+      ['asks', undefined],
+      ['w-root', undefined],
+      ['w-child', undefined],
+    ])
+    expect(attentionCount(sections)).toBe(3)
+  })
+
+  it('leaves a child whose parent is in another section flat', () => {
+    expect(section('finished').rows.map((r) => [r.run.id, r.children])).toEqual([['fin', undefined]])
   })
 })

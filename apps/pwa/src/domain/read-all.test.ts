@@ -55,4 +55,15 @@ describe('readAllPlan', () => {
     const list = [entry({ seenAt: '2026-09-21T10:00:00.000Z', finishedAt: '2026-09-21T11:00:00.000Z' })]
     expect(plan(list, null)).toEqual({ projects: ['p'], unread: 1 })
   })
+
+  it('reaches unread subtasks folded under their parent (#101)', () => {
+    const list = [
+      entry({ projectId: 'p', id: 'root', seenAt: '2026-09-21T10:31:00.000Z' }),
+      entry({ projectId: 'p', id: 'child', dispatch: { rootRunId: 'root', parentRunId: 'root' } }),
+      entry({ projectId: 'p', id: 'grandchild', dispatch: { rootRunId: 'root', parentRunId: 'child' } }),
+    ]
+    const sections = buildTaskList(list, null)
+    expect(sections[0]?.rows.map((row) => row.run.id)).toEqual(['root'])
+    expect(readAllPlan(sections)).toEqual({ projects: ['p'], unread: 2 })
+  })
 })

@@ -131,6 +131,12 @@ export const en = {
       Issue: (n: number) => `#${n}`,
     },
     showOlder: (count: number) => `Show older (${count})`,
+    /** #101: the handle that folds dispatched subtasks under their parent row. */
+    subtasks: {
+      count: (count: number) => `${count} ${plural(count, 'subtask', 'subtasks')}`,
+      expand: (label: string) => `Expand ${label}`,
+      collapse: (label: string) => `Collapse ${label}`,
+    },
     /** FR-012: the live connection's state, always in words. */
     live: {
       live: 'Live',

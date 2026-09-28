@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { HEALTH_QUERY_KEY, healthQueryOptions } from '../../api/health.ts'
 import { AuthRequiredError } from '../../api/http.ts'
 import { runsIndexQueryOptions } from '../../api/runs-index.ts'
 import { clockTime } from '../../domain/run-display.ts'
 import { readAllPlan } from '../../domain/read-all.ts'
-import { attentionCount, buildTaskList } from '../../domain/task-list.ts'
+import { attentionCount, buildTaskList, flattenRows } from '../../domain/task-list.ts'
 import { apiErrorDetail } from '../../i18n/errors.ts'
 import { en } from '../../i18n/en.ts'
 import { PROJECT_PARAM } from '../new-task/NewTaskScreen.tsx'
@@ -62,6 +62,7 @@ export function RunsListScreen() {
     () => new Map(projects.map((project) => [project.id, project.name])),
     [projects],
   )
+  const projectName = useCallback((id: string) => projectNames.get(id) ?? id, [projectNames])
   const { projectId, setProject } = useProjectFilter(
     health.data ? projects.map((project) => project.id) : undefined,
   )
@@ -193,7 +194,7 @@ export function RunsListScreen() {
         <MarkAllReadControl
           plan={readAllTargets}
           readAll={readAll}
-          projectName={(id) => projectNames.get(id) ?? id}
+          projectName={projectName}
         />
 
         <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
@@ -222,6 +223,7 @@ export function RunsListScreen() {
           </p>
         ) : (
           sections.map((section) => {
+            // #101: the cap counts top-level rows — a tree is shown or hidden whole.
             const rows =
               section.key === 'finished' && !showOlder
                 ? section.rows.slice(0, FINISHED_VISIBLE)
@@ -233,15 +235,16 @@ export function RunsListScreen() {
                   id={`section-${section.key}`}
                   className="px-4 pt-4 pb-1 text-xs font-semibold tracking-wide text-text-muted uppercase"
                 >
-                  {en.runs.sections[section.key]} ({section.rows.length})
+                  {en.runs.sections[section.key]} ({flattenRows(section.rows).length})
                 </h3>
                 <ul>
-                  {rows.map(({ run, queuePosition }) => (
+                  {rows.map(({ run, queuePosition, children }) => (
                     <RunRow
                       key={`${run.projectId}/${run.id}`}
                       run={run}
                       queuePosition={queuePosition}
-                      projectName={projectNames.get(run.projectId) ?? run.projectId}
+                      subtasks={children}
+                      projectName={projectName}
                       now={now}
                     />
                   ))}
