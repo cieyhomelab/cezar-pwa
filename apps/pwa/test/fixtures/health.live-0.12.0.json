@@ -1,8 +1,8 @@
 {
-    "version": "0.11.0",
+    "version": "0.12.0",
     "repoRoot": "kai-phone",
     "repo": {
-        "root": "/home/ubuntu/cezar/projects/kai-phone",
+        "root": "/home/<redacted>/cezar/projects/kai-phone",
         "branch": "main",
         "remote": "https://github.com/cieyhomelab/kai-phone.git"
     },
@@ -10,13 +10,14 @@
         {
             "name": "claude",
             "available": true,
-            "version": "2.1.278 (Claude Code)",
+            "version": "2.1.283 (Claude Code)",
             "hint": "if not authenticated, run `claude` once and log in"
         },
         {
             "name": "codex",
-            "available": false,
-            "hint": "optional: install the Codex CLI (npm i -g @openai/codex) and log in to use the Codex runner"
+            "available": true,
+            "version": "codex-cli 0.157.0",
+            "hint": "if not authenticated, run `codex` once and log in"
         },
         {
             "name": "opencode",

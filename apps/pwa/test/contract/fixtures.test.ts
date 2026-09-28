@@ -17,10 +17,10 @@ import automations from '../fixtures/automations.json'
 import liveChangesRepointed from '../fixtures/changes-repointed.live-0.11.0.json'
 import liveChanges from '../fixtures/changes.live-0.11.0.json'
 import group from '../fixtures/group.json'
-import liveHealth from '../fixtures/health.live-0.11.0.json'
+import liveHealth from '../fixtures/health.live-0.12.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
-import liveMergeState from '../fixtures/merge-state.live-0.11.1.json'
+import liveMergeState from '../fixtures/merge-state.live-0.12.0.json'
 import mergeState from '../fixtures/merge-state.json'
 import liveRun from '../fixtures/run.live-0.11.0.json'
 import recording from '../fixtures/transcript.ndjson?raw'
@@ -60,7 +60,7 @@ describe('contract fixtures', () => {
     // S-20. Hand-written: no project on the host has an automation (both lists empty on 2026-09-24).
     ['hand-written automations list', automationsResponseSchema, automations],
     ['hand-written automation log', automationLogResponseSchema, automationLog],
-    // S-19. The live one is this repo's merged PR #78 (0.11.1); the hand-written one is open, with a
+    // S-19. The live one is this repo's merged PR #97 (0.12.0); the hand-written one is open, with a
     // failing and a pending check, as the host rarely holds one when a fixture is captured.
     ['live merge state, merged', githubPrMergeStateResponseSchema, liveMergeState],
     ['hand-written merge state, blocked', githubPrMergeStateResponseSchema, mergeState],

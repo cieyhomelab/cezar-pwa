@@ -1,6 +1,6 @@
 import type { GithubPrMergeState } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
-import liveMerged from '../../test/fixtures/merge-state.live-0.11.1.json'
+import liveMerged from '../../test/fixtures/merge-state.live-0.12.0.json'
 import blockedFixture from '../../test/fixtures/merge-state.json'
 import { mergeGate, mergeHeadline, mergePanelState, mergeView, samePullRequest, selectedMethod } from './merge.ts'
 
@@ -20,6 +20,7 @@ function state(extra: Partial<GithubPrMergeState> = {}): GithubPrMergeState {
     mergeable: 'mergeable',
     reviewDecision: 'approved',
     checks: [{ name: 'test', state: 'passing', required: true }],
+    checksTier: 'detailed',
     methods: ['squash', 'merge'],
     defaultMethod: 'squash',
     eligibility: 'ready',
@@ -107,7 +108,7 @@ describe('mergeView', () => {
   })
 
   it('reads the live capture of a merged PR as terminal', () => {
-    const panel = mergePanelState(liveMerged, 'https://github.com/cieyhomelab/cezar-pwa/pull/78')
+    const panel = mergePanelState(liveMerged, 'https://github.com/cieyhomelab/cezar-pwa/pull/97')
     expect(panel.kind).toBe('state')
     if (panel.kind !== 'state') return
     expect(panel.view).toMatchObject({ headline: 'merged', terminal: true, canMerge: false, canOverride: false })
