@@ -17,7 +17,7 @@
     "methods": ["squash", "merge", "rebase"],
     "defaultMethod": "squash",
     "eligibility": "unknown",
-    "blockers": [{ "code": "checks-unknown", "message": "The checks on this pull request could not be read." }],
+    "blockers": [{ "code": "checks-unknown", "message": "This token cannot read the checks on this pull request." }],
     "canMerge": false,
     "canOverride": true
   }

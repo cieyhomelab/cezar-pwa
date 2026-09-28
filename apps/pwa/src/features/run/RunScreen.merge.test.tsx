@@ -202,6 +202,8 @@ describe('the merge panel', () => {
     const line = box.getByText(t.checksUnread, { exact: false })
     expect(line).toHaveTextContent(t.checksTierReason(checksNoneFixture.mergeState.checksReason))
     expect(box.queryByText(t.noChecks)).toBeNull()
+    // The server's own `checks-unknown` blocker says the same thing; it is not shown twice.
+    expect(box.queryByText(checksNoneFixture.mergeState.blockers[0]!.message)).toBeNull()
     // canOverride: the bypass stays the server's to grant, exactly as with readable checks.
     expect(box.getByRole('button', { name: t.mergeButton })).toBeDisabled()
     expect(box.getByRole('checkbox', { name: new RegExp(t.override) })).toBeInTheDocument()

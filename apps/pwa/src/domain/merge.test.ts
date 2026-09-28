@@ -160,6 +160,17 @@ describe('checks tier (#99)', () => {
     expect(view({ checks: [], checksTier: 'none' })).toMatchObject({ headline: 'unknown', canMerge: true, canOverride: false })
     expect(view({ checks: [], checksTier: 'none', canMerge: false, canOverride: true })).toMatchObject({ canMerge: false, canOverride: true })
   })
+
+  it.each([
+    ['none: checks-unknown is not repeated under the checks line', 'none', ['A required review is missing.']],
+    ['detailed: every blocker, verbatim', 'detailed', ['This token cannot read the checks on this pull request.', 'A required review is missing.']],
+  ] as const)('%s', (_name, tier, expected) => {
+    const blockers = [
+      { code: 'checks-unknown', message: 'This token cannot read the checks on this pull request.' },
+      { code: 'reviews', message: 'A required review is missing.' },
+    ]
+    expect(view({ checks: [], checksTier: tier, canMerge: false, blockers })?.blockers).toEqual(expected)
+  })
 })
 
 describe('mergeGate — can merge, and the reason it cannot', () => {

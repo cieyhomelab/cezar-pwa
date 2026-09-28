@@ -49,7 +49,10 @@ export interface MergeView {
   checksTier: ChecksTier
   /** Why the tier degraded, verbatim; only kept when it did. */
   checksReason?: string
-  /** The server's reasons, in its order, verbatim (FR-032). */
+  /**
+   * The server's reasons, in its order, verbatim (FR-032). With `checksTier: 'none'` its
+   * `checks-unknown` is dropped: the checks line already says so, with the reason (as upstream).
+   */
   blockers: string[]
   methods: GithubMergeMethod[]
   defaultMethod: GithubMergeMethod | null
@@ -141,7 +144,9 @@ export function mergeView(raw: unknown): MergeView | null {
   const methods = Array.isArray(raw.methods) ? raw.methods.filter(isMethod) : []
   const defaultMethod = isMethod(raw.defaultMethod) && methods.includes(raw.defaultMethod) ? raw.defaultMethod : null
   const blockers = Array.isArray(raw.blockers)
-    ? raw.blockers.flatMap((blocker) => (isRecord(blocker) && typeof blocker.message === 'string' ? [blocker.message] : []))
+    ? raw.blockers.flatMap((blocker) =>
+        isRecord(blocker) && typeof blocker.message === 'string' && !(tier === 'none' && blocker.code === 'checks-unknown') ? [blocker.message] : [],
+      )
     : []
   const open = state === 'open'
   return {
