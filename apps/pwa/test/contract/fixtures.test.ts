@@ -21,6 +21,7 @@ import liveHealth from '../fixtures/health.live-0.12.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
 import liveMergeState from '../fixtures/merge-state.live-0.12.0.json'
+import mergeStateChecksNone from '../fixtures/merge-state.checks-none.json'
 import mergeState from '../fixtures/merge-state.json'
 import liveRun from '../fixtures/run.live-0.11.0.json'
 import recording from '../fixtures/transcript.ndjson?raw'
@@ -64,6 +65,8 @@ describe('contract fixtures', () => {
     // failing and a pending check, as the host rarely holds one when a fixture is captured.
     ['live merge state, merged', githubPrMergeStateResponseSchema, liveMergeState],
     ['hand-written merge state, blocked', githubPrMergeStateResponseSchema, mergeState],
+    // #99. A fine-grained PAT whose aggregate read failed too: `checksTier: none`, nothing read.
+    ['hand-written merge state, checks unread', githubPrMergeStateResponseSchema, mergeStateChecksNone],
   ] as const)('%s matches the vendored schema', (_name, schema, fixture) => {
     const result = schema.safeParse(fixture)
     expect(result.error?.issues ?? []).toEqual([])
