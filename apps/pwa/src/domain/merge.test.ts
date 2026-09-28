@@ -20,6 +20,7 @@ function state(extra: Partial<GithubPrMergeState> = {}): GithubPrMergeState {
     mergeable: 'mergeable',
     reviewDecision: 'approved',
     checks: [{ name: 'test', state: 'passing', required: true }],
+    checksTier: 'detailed',
     methods: ['squash', 'merge'],
     defaultMethod: 'squash',
     eligibility: 'ready',
