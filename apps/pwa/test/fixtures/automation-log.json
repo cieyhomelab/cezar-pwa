@@ -1,6 +1,19 @@
 {
   "records": [
     {
+      "seq": 8,
+      "ts": "2026-09-27T11:00:00.000Z",
+      "automationId": "jira-triage",
+      "revision": 1,
+      "event": "issue.status_changed",
+      "result": "launched",
+      "receiptId": "rcpt-8",
+      "runId": "run-jira-1",
+      "trackerKey": "PWA-12",
+      "trackerTitle": "Crash on the Limits screen",
+      "trackerUrl": "https://example.atlassian.net/browse/PWA-12"
+    },
+    {
       "seq": 7,
       "ts": "2026-09-24T09:00:00.000Z",
       "automationId": "triage-issues",
@@ -29,6 +42,7 @@
     }
   ],
   "runs": {
+    "run-jira-1": { "title": "Triage PWA-12", "status": "running", "children": [] },
     "run-nightly-1": { "title": "Nightly dependency check", "status": "done", "costUsd": 0.31, "children": [] }
   }
 }

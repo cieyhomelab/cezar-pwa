@@ -99,7 +99,13 @@ test.describe('at 390×844', () => {
       await page.setViewportSize({ width: 390, height: 844 })
       await page.goto(`automations?project=${PROJECT}`)
       await expect(page.getByRole('heading', { name: 'Nightly dependency check' })).toBeVisible()
-      await expect(page.getByRole('region', { name: t.log.title }).getByRole('listitem')).toHaveCount(3)
+      await expect(page.getByRole('region', { name: t.log.title }).getByRole('listitem')).toHaveCount(4)
+      // A Jira poll (Cezar 0.12.0, #100): its trigger in words, no Run now, the issue linked out.
+      const jira = row(page, 'Triage Jira issues')
+      await expect(jira).toContainText('Jira: new issue, issue status changed')
+      await expect(jira.getByRole('button', { name: t.runNow })).toHaveCount(0)
+      const issue = page.getByRole('link', { name: 'PWA-12 Crash on the Limits screen' })
+      expect((await issue.boundingBox())?.height).toBeGreaterThanOrEqual(44)
       await noSidewaysScroll(page)
       const evidence = process.env.E2E_EVIDENCE_DIR
       if (evidence) await page.screenshot({ path: `${evidence}/automations-${scheme}.png`, fullPage: true })

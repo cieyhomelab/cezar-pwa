@@ -36,6 +36,29 @@
       "updatedAt": "2026-09-24T09:00:00.000Z",
       "counts": { "matches": 4, "launched": 1, "duplicates": 2, "errors": 1 },
       "runs7d": 1
+    },
+    {
+      "id": "jira-triage",
+      "revision": 1,
+      "name": "Triage Jira issues",
+      "enabled": true,
+      "kind": "tracker",
+      "intervalSeconds": 300,
+      "trackerTrigger": {
+        "events": ["issue.opened", "issue.status_changed"],
+        "targetStatusIds": ["10001"],
+        "association": {
+          "kind": "jira",
+          "source": { "id": "cloud-1", "webUrl": "https://example.atlassian.net" },
+          "externalId": "10000",
+          "externalName": "PWA"
+        }
+      },
+      "task": { "prompt": "Triage the issue", "workflow": "quick-task" },
+      "createdAt": "2026-09-27T10:00:00.000Z",
+      "updatedAt": "2026-09-27T10:00:00.000Z",
+      "counts": { "matches": 1, "launched": 1, "duplicates": 0, "errors": 0 },
+      "runs7d": 1
     }
   ]
 }

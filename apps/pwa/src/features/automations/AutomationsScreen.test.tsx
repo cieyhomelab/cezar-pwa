@@ -193,14 +193,21 @@ describe('AutomationsScreen', () => {
 
     const log = within(await screen.findByRole('region', { name: t.log.title }))
     const rows = await log.findAllByRole('listitem')
-    expect(rows).toHaveLength(3)
-    expect(rows[0]?.textContent).toContain('Triage new issues')
-    expect(rows[0]?.textContent).toContain('#41 Login loops on Safari')
-    expect(rows[0]?.textContent).toContain('gh: HTTP 502')
-    expect(within(rows[1] as HTMLElement).getByRole('link', { name: 'Nightly dependency check' }).getAttribute('href')).toBe(
+    expect(rows).toHaveLength(4)
+    // A Jira launch: the issue links out, the task links in.
+    const jira = within(rows[0] as HTMLElement)
+    expect(rows[0]?.textContent).toContain('Triage Jira issues')
+    const issue = jira.getByRole('link', { name: 'PWA-12 Crash on the Limits screen' })
+    expect(issue.getAttribute('href')).toBe('https://example.atlassian.net/browse/PWA-12')
+    expect(issue.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(jira.getByRole('link', { name: 'Triage PWA-12' }).getAttribute('href')).toBe('/p/cezar-pwa/runs/run-jira-1')
+    expect(rows[1]?.textContent).toContain('Triage new issues')
+    expect(rows[1]?.textContent).toContain('#41 Login loops on Safari')
+    expect(rows[1]?.textContent).toContain('gh: HTTP 502')
+    expect(within(rows[2] as HTMLElement).getByRole('link', { name: 'Nightly dependency check' }).getAttribute('href')).toBe(
       '/p/cezar-pwa/runs/run-nightly-1',
     )
-    expect(rows[2]?.textContent).toContain('deleted-one')
+    expect(rows[3]?.textContent).toContain('deleted-one')
   })
 
   it('says the project has none', async () => {
