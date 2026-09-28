@@ -504,6 +504,12 @@ export const en = {
       required: 'required',
       checksSummary: (passing: number, total: number) => `${passing} of ${total} ${plural(total, 'check', 'checks')} passing`,
       noChecks: 'No checks reported.',
+      /** `checksTier: 'aggregate'` — the token could read only GitHub's rolled-up state (#99). */
+      checksAggregate: (state: string) => `Only the combined state of the checks could be read, not each check: ${state}.`,
+      /** `checksTier: 'none'` — nothing was readable, so an empty list is not "no CI" (#99). */
+      checksUnread: 'Cezar could not read this pull request’s checks, so they may not have passed. Check them on GitHub.',
+      /** The server's `checksReason`, verbatim. */
+      checksTierReason: (reason: string) => `(${reason})`,
       details: 'details',
       method: {
         squash: 'Squash and merge',

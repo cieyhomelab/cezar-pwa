@@ -2,7 +2,7 @@ import type { GithubPrMergeState } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
 import liveMerged from '../../test/fixtures/merge-state.live-0.12.0.json'
 import blockedFixture from '../../test/fixtures/merge-state.json'
-import { mergeGate, mergeHeadline, mergePanelState, mergeView, samePullRequest, selectedMethod } from './merge.ts'
+import { checksSummary, mergeGate, mergeHeadline, mergePanelState, mergeView, samePullRequest, selectedMethod } from './merge.ts'
 
 const PR_URL = 'https://github.com/o/r/pull/7'
 
@@ -51,6 +51,14 @@ describe('mergeHeadline', () => {
     ['a viewer who may not merge', { canMerge: false, eligibility: 'unauthorized' }, 'blocked'],
     ['rules GitHub would not show', { canMerge: false, eligibility: 'unknown', reviewDecision: 'unknown' }, 'unknown'],
     ['an eligibility this build does not know', { canMerge: false, eligibility: 'queued' as never }, 'unknown'],
+    // #99: checks nobody could read are never vouched for, even when the server would merge.
+    ['unread checks the server would merge anyway', { checks: [], checksTier: 'none' }, 'unknown'],
+    ['unread checks, nothing else known', { checks: [], checksTier: 'none', canMerge: false, eligibility: 'unknown' }, 'unknown'],
+    ['unread checks while the server waits', { checks: [], checksTier: 'none', canMerge: false, eligibility: 'pending' }, 'pending'],
+    ['unread checks and a missing review', { checks: [], checksTier: 'none', canMerge: false, eligibility: 'blocked' }, 'blocked'],
+    ['a merged PR whose checks were unread', { checks: [], checksTier: 'none', state: 'merged', canMerge: false }, 'merged'],
+    ['a passing rolled-up state the server would merge', { checks: [{ name: 'All checks', state: 'passing', required: null }], checksTier: 'aggregate' }, 'ready'],
+    ['a failing rolled-up state', { checks: [{ name: 'All checks', state: 'failing', required: null }], checksTier: 'aggregate', canMerge: false, eligibility: 'blocked' }, 'failing'],
   ] as const)('%s', (_name, extra, expected) => {
     expect(mergeHeadline(state(extra as Partial<GithubPrMergeState>))).toBe(expected)
   })
@@ -113,6 +121,44 @@ describe('mergeView', () => {
     if (panel.kind !== 'state') return
     expect(panel.view).toMatchObject({ headline: 'merged', terminal: true, canMerge: false, canOverride: false })
     expect(panel.view.counts.passing).toBe(3)
+  })
+})
+
+describe('checks tier (#99)', () => {
+  const ROLLUP = [{ name: 'All checks', state: 'failing', required: null }] as const
+  const REASON = 'gh: Resource not accessible by personal access token'
+
+  it.each([
+    ['absent: a pre-0.12 answer reads as detailed', { checksTier: undefined }, 'detailed', undefined],
+    ['a tier this build does not know reads as detailed', { checksTier: 'partial' }, 'detailed', undefined],
+    ['detailed keeps no reason even if one is sent', { checksTier: 'detailed', checksReason: REASON }, 'detailed', undefined],
+    ['aggregate, with its reason', { checksTier: 'aggregate', checksReason: REASON, checks: ROLLUP }, 'aggregate', REASON],
+    ['none, with its reason', { checksTier: 'none', checksReason: REASON, checks: [] }, 'none', REASON],
+    ['none, a blank reason is no reason', { checksTier: 'none', checksReason: '  ', checks: [] }, 'none', undefined],
+    ['none, a reason that is not a string', { checksTier: 'none', checksReason: 42, checks: [] }, 'none', undefined],
+  ])('%s', (_name, extra, tier, reason) => {
+    const result = mergeView({ ...state(), ...extra })
+    expect(result?.checksTier).toBe(tier)
+    expect(result?.checksReason).toBe(reason)
+  })
+
+  it.each([
+    ['detailed with checks: counted', {}, { kind: 'detailed', passing: 1, total: 1 }],
+    ['detailed and empty: no CI', { checks: [] }, { kind: 'none' }],
+    ['absent tier and empty: no CI, as before 0.12', { checks: [], checksTier: undefined }, { kind: 'none' }],
+    ['aggregate: the rolled-up state, never "1 of 1"', { checks: ROLLUP, checksTier: 'aggregate', checksReason: REASON }, { kind: 'aggregate', state: 'failing', reason: REASON }],
+    ['aggregate and empty: the rollup said the head has no CI', { checks: [], checksTier: 'aggregate' }, { kind: 'none' }],
+    ['none: unread, not "no CI"', { checks: [], checksTier: 'none', checksReason: REASON }, { kind: 'unread', reason: REASON }],
+    ['none without a reason', { checks: [], checksTier: 'none' }, { kind: 'unread', reason: null }],
+  ] as const)('%s', (_name, extra, expected) => {
+    const result = mergeView({ ...state(), ...extra })
+    if (result === null) throw new Error('unreadable')
+    expect(checksSummary(result)).toEqual(expected)
+  })
+
+  it('does not narrow or widen the server\'s merge flags on unread checks', () => {
+    expect(view({ checks: [], checksTier: 'none' })).toMatchObject({ headline: 'unknown', canMerge: true, canOverride: false })
+    expect(view({ checks: [], checksTier: 'none', canMerge: false, canOverride: true })).toMatchObject({ canMerge: false, canOverride: true })
   })
 })
 

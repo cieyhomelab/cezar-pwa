@@ -1,0 +1,24 @@
+{
+  "available": true,
+  "mergeState": {
+    "number": 7,
+    "title": "feat(pwa): merge a PR from the phone",
+    "url": "https://github.com/o/r/pull/7",
+    "state": "open",
+    "isDraft": false,
+    "headRef": "cez/d04cd435",
+    "baseRef": "main",
+    "headSha": "0123456789abcdef0123456789abcdef01234567",
+    "mergeable": "mergeable",
+    "reviewDecision": "unknown",
+    "checks": [],
+    "checksTier": "none",
+    "checksReason": "gh: Resource not accessible by personal access token",
+    "methods": ["squash", "merge", "rebase"],
+    "defaultMethod": "squash",
+    "eligibility": "unknown",
+    "blockers": [{ "code": "checks-unknown", "message": "The checks on this pull request could not be read." }],
+    "canMerge": false,
+    "canOverride": true
+  }
+}

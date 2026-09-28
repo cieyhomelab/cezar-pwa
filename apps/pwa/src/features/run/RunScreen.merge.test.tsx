@@ -1,6 +1,7 @@
 import type { ApiRun, GithubPrMergeState } from '@cezar-pwa/cezar-contract/contract'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import checksNoneFixture from '../../../test/fixtures/merge-state.checks-none.json'
 import blockedFixture from '../../../test/fixtures/merge-state.json'
 import liveRun from '../../../test/fixtures/run.live-0.11.0.json'
 import { jsonResponse, renderWithQuery } from '../../../test/query.tsx'
@@ -192,6 +193,33 @@ describe('the merge panel', () => {
     fireEvent.click(box.getByRole('button', { name: t.mergeButton }))
     fireEvent.click(box.getByRole('button', { name: t.method.squash }))
     await waitFor(() => expect(merges).toEqual([{ method: 'squash', expectedHeadSha: moved.headSha }]))
+  })
+
+  it('unread checks (checksTier: none) say so with the reason, never "no checks", and the server still decides the merge (#99)', async () => {
+    serve({ states: [checksNoneFixture] })
+    const box = await panel()
+    expect(await box.findByText(t.headline.unknown)).toBeInTheDocument()
+    const line = box.getByText(t.checksUnread, { exact: false })
+    expect(line).toHaveTextContent(t.checksTierReason(checksNoneFixture.mergeState.checksReason))
+    expect(box.queryByText(t.noChecks)).toBeNull()
+    // canOverride: the bypass stays the server's to grant, exactly as with readable checks.
+    expect(box.getByRole('button', { name: t.mergeButton })).toBeDisabled()
+    expect(box.getByRole('checkbox', { name: new RegExp(t.override) })).toBeInTheDocument()
+  })
+
+  it('a rolled-up check state (checksTier: aggregate) is not counted as one check (#99)', async () => {
+    serve({
+      states: [
+        {
+          available: true,
+          mergeState: { ...READY, checksTier: 'aggregate', checks: [{ name: 'All checks', state: 'passing', required: null }] },
+        },
+      ],
+    })
+    const box = await panel()
+    expect(await box.findByText(t.checksAggregate(t.checkState.passing))).toBeInTheDocument()
+    expect(box.queryByText(t.checksSummary(1, 1))).toBeNull()
+    expect(box.getByText(t.headline.ready)).toBeInTheDocument()
   })
 
   it('available: false shows the reason plainly and offers no merge', async () => {

@@ -9,6 +9,7 @@ import {
   type MergeCheck,
   type MergeHeadline,
   type MergeView,
+  checksSummary,
   mergeGate,
   mergePanelState,
   selectedMethod,
@@ -68,6 +69,36 @@ function CheckLine({ check }: { check: MergeCheck }) {
       ) : null}
     </li>
   )
+}
+
+/** The server's reason a check tier degraded, verbatim, after the line that says it did. */
+function TierReason({ reason }: { reason: string | null }) {
+  return reason ? <span className="text-text-muted"> {en.run.merge.checksTierReason(reason)}</span> : null
+}
+
+function ChecksLine({ view }: { view: MergeView }) {
+  const t = en.run.merge
+  const summary = checksSummary(view)
+  switch (summary.kind) {
+    case 'unread':
+      return (
+        <p className="text-sm break-words">
+          {t.checksUnread}
+          <TierReason reason={summary.reason} />
+        </p>
+      )
+    case 'aggregate':
+      return (
+        <p className="text-sm break-words text-text-muted">
+          {t.checksAggregate(t.checkState[summary.state])}
+          <TierReason reason={summary.reason} />
+        </p>
+      )
+    case 'detailed':
+      return <p className="text-sm text-text-muted">{t.checksSummary(summary.passing, summary.total)}</p>
+    default:
+      return <p className="text-sm text-text-muted">{t.noChecks}</p>
+  }
 }
 
 function Confirmation({ view, merge, override }: { view: MergeView; merge: MergeActions; override: boolean }) {
@@ -136,7 +167,6 @@ function MergeState({ view, merge }: { view: MergeView; merge: MergeActions }) {
   const [override, setOverride] = useState(false)
   const gate = mergeGate(view, override)
   const busy = merge.pending !== undefined
-  const total = view.checks.length
   const offered = !view.terminal && (view.canMerge || view.canOverride)
 
   return (
@@ -144,18 +174,14 @@ function MergeState({ view, merge }: { view: MergeView; merge: MergeActions }) {
       <p className={`font-semibold ${HEADLINE_TONE[view.headline]}`}>{t.headline[view.headline]}</p>
       <p className="text-sm break-words text-text-muted">{view.title}</p>
 
-      {total === 0 ? (
-        <p className="text-sm text-text-muted">{t.noChecks}</p>
-      ) : (
-        <>
-          <p className="text-sm text-text-muted">{t.checksSummary(view.counts.passing, total)}</p>
-          <ul className="flex flex-col">
-            {view.checks.map((check, index) => (
-              <CheckLine key={`${check.name}\0${index}`} check={check} />
-            ))}
-          </ul>
-        </>
-      )}
+      <ChecksLine view={view} />
+      {view.checks.length > 0 ? (
+        <ul className="flex flex-col">
+          {view.checks.map((check, index) => (
+            <CheckLine key={`${check.name}\0${index}`} check={check} />
+          ))}
+        </ul>
+      ) : null}
 
       {!view.terminal && view.headline !== 'ready' && view.blockers.length > 0 ? (
         <ul className="flex list-disc flex-col pl-5 text-sm text-text-muted">

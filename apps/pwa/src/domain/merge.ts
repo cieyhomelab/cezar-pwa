@@ -21,6 +21,13 @@ export type MergeHeadline = 'merged' | 'closed' | 'draft' | 'conflicts' | 'ready
 
 export type CheckState = GithubPrCheck['state']
 
+/**
+ * How much of the checks the forge token could read (Cezar 0.12.0, #969). `aggregate`: only the
+ * rolled-up state, collapsed into one row (a fine-grained PAT cannot get the `checks` scope).
+ * `none`: nothing, so an empty list means "never found out", not "no CI".
+ */
+export type ChecksTier = GithubPrMergeState['checksTier']
+
 export interface MergeCheck {
   name: string
   state: CheckState
@@ -38,6 +45,10 @@ export interface MergeView {
   /** Failing first, then pending, unknown, passing — what needs a look comes first. */
   checks: MergeCheck[]
   counts: Record<CheckState, number>
+  /** `detailed` when absent or unknown, so a pre-0.12 answer reads as it always did. */
+  checksTier: ChecksTier
+  /** Why the tier degraded, verbatim; only kept when it did. */
+  checksReason?: string
   /** The server's reasons, in its order, verbatim (FR-032). */
   blockers: string[]
   methods: GithubMergeMethod[]
@@ -50,11 +61,16 @@ export interface MergeView {
 
 const CHECK_STATES: readonly CheckState[] = ['failing', 'pending', 'unknown', 'passing']
 const METHODS: readonly GithubMergeMethod[] = ['squash', 'merge', 'rebase']
+const CHECKS_TIERS: readonly ChecksTier[] = ['detailed', 'aggregate', 'none']
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 
 function checkState(value: unknown): CheckState {
   return CHECK_STATES.includes(value as CheckState) ? (value as CheckState) : 'unknown'
+}
+
+function checksTier(value: unknown): ChecksTier {
+  return CHECKS_TIERS.includes(value as ChecksTier) ? (value as ChecksTier) : 'detailed'
 }
 
 function isMethod(value: unknown): value is GithubMergeMethod {
@@ -86,13 +102,21 @@ function readChecks(value: unknown): MergeCheck[] {
 /**
  * The one line the panel leads with. Terminal and structural states win over checks, as the
  * server orders its blockers: a draft with a failing check is a draft first.
+ *
+ * Checks nobody could read (`checksTier: 'none'`) are never called ready: the server may still
+ * allow the merge, and the button follows it, but the headline does not vouch for checks unseen.
  */
-export function mergeHeadline(state: Pick<GithubPrMergeState, 'state' | 'isDraft' | 'mergeable' | 'eligibility' | 'canMerge'> & { checks: { state: string }[] }): MergeHeadline {
+export function mergeHeadline(
+  state: Pick<GithubPrMergeState, 'state' | 'isDraft' | 'mergeable' | 'eligibility' | 'canMerge'> & {
+    checks: { state: string }[]
+    checksTier?: ChecksTier
+  },
+): MergeHeadline {
   if (state.state === 'merged') return 'merged'
   if (state.state === 'closed') return 'closed'
   if (state.isDraft) return 'draft'
   if (state.mergeable === 'conflicting') return 'conflicts'
-  if (state.canMerge) return 'ready'
+  if (state.canMerge && state.checksTier !== 'none') return 'ready'
   if (state.checks.some((check) => check.state === 'failing')) return 'failing'
   if (state.eligibility === 'pending' || state.checks.some((check) => check.state === 'pending')) return 'pending'
   // `unauthorized`: the viewer may not merge. That is a blocker, not an unconfirmed requirement.
@@ -109,6 +133,8 @@ export function mergeView(raw: unknown): MergeView | null {
   const { number, title, url, headSha } = raw
   if (typeof number !== 'number' || typeof title !== 'string' || typeof headSha !== 'string') return null
   const checks = readChecks(raw.checks)
+  const tier = checksTier(raw.checksTier)
+  const reason = tier !== 'detailed' && typeof raw.checksReason === 'string' && raw.checksReason.trim() !== '' ? raw.checksReason : undefined
   const counts: Record<CheckState, number> = { failing: 0, pending: 0, unknown: 0, passing: 0 }
   for (const check of checks) counts[check.state] += 1
   const state = raw.state === 'merged' || raw.state === 'closed' ? raw.state : 'open'
@@ -131,9 +157,12 @@ export function mergeView(raw: unknown): MergeView | null {
       eligibility: typeof raw.eligibility === 'string' ? (raw.eligibility as GithubPrMergeState['eligibility']) : 'unknown',
       canMerge: raw.canMerge === true,
       checks,
+      checksTier: tier,
     }),
     checks,
     counts,
+    checksTier: tier,
+    ...(reason !== undefined ? { checksReason: reason } : {}),
     blockers,
     methods,
     defaultMethod,
@@ -142,6 +171,29 @@ export function mergeView(raw: unknown): MergeView | null {
     canOverride: open && raw.canMerge !== true && raw.canOverride === true && methods.length > 0,
     terminal: !open,
   }
+}
+
+export type ChecksSummary =
+  | { kind: 'detailed'; passing: number; total: number }
+  | { kind: 'aggregate'; state: CheckState; reason: string | null }
+  | { kind: 'unread'; reason: string | null }
+  | { kind: 'none' }
+
+/**
+ * The line above the check list. `none` means the checks were never seen, so its empty list is not
+ * "no CI". An `aggregate` row is GitHub's rolled-up state (upstream names it "All checks"), not one
+ * check, so it is never counted as "1 of 1". An `aggregate` read with no row is the rollup
+ * answering "this head has no CI" (Cezar's `fetchMergeChecks`), which is "no checks" like a
+ * `detailed` one.
+ */
+export function checksSummary(view: Pick<MergeView, 'checks' | 'counts' | 'checksTier' | 'checksReason'>): ChecksSummary {
+  const reason = view.checksReason ?? null
+  if (view.checksTier === 'none') return { kind: 'unread', reason }
+  // Sorted worst first: with one row that is the rollup, with more the worst of them.
+  const worst = view.checks[0]
+  if (worst === undefined) return { kind: 'none' }
+  if (view.checksTier === 'aggregate') return { kind: 'aggregate', state: worst.state, reason }
+  return { kind: 'detailed', passing: view.counts.passing, total: view.checks.length }
 }
 
 export type MergePanelState =
