@@ -69,7 +69,29 @@ describe('automationRows', () => {
         canRunNow: false,
         trigger: 'GitHub: new issue, issue labelled',
       },
+      {
+        id: 'jira-triage',
+        name: 'Triage Jira issues',
+        enabled: true,
+        // Run now is schedule-only on the server.
+        canRunNow: false,
+        trigger: 'Jira: new issue, issue status changed',
+      },
     ])
+  })
+
+  const association = { kind: 'linear', source: { id: 's', webUrl: 'https://linear.app/acme' }, externalId: 't', externalName: 'Team' }
+  it.each([
+    ['a Linear poll', { trackerTrigger: { events: ['issue.opened'], association } }, 'Linear: new issue'],
+    ['a tracker poll with no events', { trackerTrigger: { events: [], association } }, 'Linear activity'],
+    ['a provider added upstream', { trackerTrigger: { events: ['issue.labeled'], association: { ...association, kind: 'github-projects' } } }, 'Tracker: issue labelled'],
+    ['a tracker event added upstream', { trackerTrigger: { events: ['issue.closed'], association } }, 'Linear: issue.closed'],
+    ['no trackerTrigger at all', {}, 'Tracker activity'],
+    ['a malformed trackerTrigger', { trackerTrigger: 'jira' }, 'Tracker activity'],
+    ['a prototype key as provider', { trackerTrigger: { events: ['constructor'], association: { ...association, kind: 'constructor' } } }, 'Tracker: constructor'],
+  ])('tracker: %s', (_name, extra, expected) => {
+    const [row] = automationRows(withEntries({ id: 't-1', name: 'T', enabled: true, kind: 'tracker', ...extra }))
+    expect(row).toMatchObject({ trigger: expected, canRunNow: false })
   })
 
   it.each([
@@ -99,14 +121,22 @@ describe('logRows', () => {
   ])
 
   it('reads the fixture, newest first as served', () => {
-    expect(logRows(log, names)).toEqual([
+    expect(logRows(log, new Map([...names, ['jira-triage', 'Triage Jira issues']]))).toEqual([
+      {
+        key: 'seq-8',
+        at: '2026-09-27T11:00:00.000Z',
+        automationName: 'Triage Jira issues',
+        result: 'launched',
+        subject: { text: 'PWA-12 Crash on the Limits screen', url: 'https://example.atlassian.net/browse/PWA-12' },
+        run: { id: 'run-jira-1', title: 'Triage PWA-12', status: 'running' },
+      },
       {
         key: 'seq-7',
         at: '2026-09-24T09:00:00.000Z',
         automationName: 'Triage new issues',
         result: 'error',
         reason: 'gh: HTTP 502',
-        github: '#41 Login loops on Safari',
+        subject: { text: '#41 Login loops on Safari' },
       },
       {
         key: 'seq-6',
@@ -118,6 +148,24 @@ describe('logRows', () => {
       // A deleted automation's rows stay in the log under its id.
       { key: 'seq-5', at: '2026-09-23T08:00:00.000Z', automationName: 'deleted-one', result: 'no-match' },
     ])
+  })
+
+  const record = (extra: object) =>
+    logRows({ records: [{ seq: 1, ts: 'x', automationId: 'a', revision: 1, result: 'launched', ...extra }], runs: {} } as unknown as AutomationLogResponse, names)[0]
+  it.each([
+    ['a tracker key alone', { trackerKey: 'ENG-3' }, { text: 'ENG-3' }],
+    ['a tracker title alone', { trackerTitle: 'Fix it' }, { text: 'Fix it' }],
+    ['a Linear issue with its link', { trackerKey: 'ENG-3', trackerTitle: 'Fix it', trackerUrl: 'https://linear.app/acme/issue/ENG-3' }, { text: 'ENG-3 Fix it', url: 'https://linear.app/acme/issue/ENG-3' }],
+    ['a non-http tracker link stays text', { trackerKey: 'ENG-3', trackerUrl: 'javascript:alert(1)' }, { text: 'ENG-3' }],
+    ['a GitHub number alone', { githubNumber: 5 }, { text: '#5' }],
+    ['a GitHub record with its link', { githubNumber: 5, githubTitle: 'Bug', githubUrl: 'https://github.com/o/r/issues/5' }, { text: '#5 Bug', url: 'https://github.com/o/r/issues/5' }],
+    ['GitHub wins over tracker fields', { githubNumber: 5, trackerKey: 'ENG-3', trackerUrl: 'https://linear.app/x' }, { text: '#5' }],
+  ])('subject: %s', (_name, extra, expected) => {
+    expect(record(extra)?.subject).toEqual(expected)
+  })
+
+  it('a record that matched nothing has no subject', () => {
+    expect(record({})).not.toHaveProperty('subject')
   })
 
   it('keeps a run the join did not find, by id', () => {
@@ -133,6 +181,15 @@ describe('words', () => {
     ['something-new', 'something-new'],
   ])('result %s → %s', (result, expected) => {
     expect(resultText(result)).toBe(expected)
+  })
+
+  it.each([
+    ['issue.opened', 'new issue'],
+    ['issue.status_changed', 'issue status changed'],
+    ['issue.labeled', 'issue labelled'],
+    ['issue.unlabeled', 'issue unlabelled'],
+  ])('tracker event %s → %s', (event, expected) => {
+    expect(eventText(event)).toBe(expected)
   })
 
   it('an event added upstream reads as its raw word', () => {

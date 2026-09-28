@@ -585,6 +585,11 @@ export const en = {
       days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
       github: (events: string) => `GitHub: ${events}`,
       githubNoEvents: 'GitHub activity',
+      /** A Jira/Linear poll, named after `trackerTrigger.association.kind`. */
+      tracker: (provider: string, events: string) => `${provider}: ${events}`,
+      trackerNoEvents: (provider: string) => `${provider} activity`,
+      providers: { jira: 'Jira', linear: 'Linear' },
+      unknownProvider: 'Tracker',
       unknown: 'Unknown trigger',
     },
     events: {
@@ -592,6 +597,8 @@ export const en = {
       'issue.opened': 'new issue',
       'issue.labeled': 'issue labelled',
       'issue.unlabeled': 'issue unlabelled',
+      /** Jira only (Cezar 0.12.0); the other `issue.*` words are shared with GitHub. */
+      'issue.status_changed': 'issue status changed',
       'pull_request.reviewed': 'review submitted',
       'pull_request.review_requested': 'review requested',
       'pull_request.rereview_requested': 'review re-requested',

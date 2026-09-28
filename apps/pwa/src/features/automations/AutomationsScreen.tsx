@@ -160,8 +160,19 @@ function LogLine({ row, projectId, now }: { row: LogRow; projectId: string; now:
       </div>
       <p className={isFailureResult(row.result) ? 'text-danger' : 'text-text-muted'}>
         {resultText(row.result)}
-        {row.github ? ` · ${row.github}` : ''}
+        {row.subject && !row.subject.url ? ` · ${row.subject.text}` : ''}
       </p>
+      {row.subject?.url ? (
+        // Its own line, so the link keeps a full touch target.
+        <a
+          href={row.subject.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="touch-target inline-flex items-center break-words text-accent"
+        >
+          {row.subject.text}
+        </a>
+      ) : null}
       {row.reason ? <p className="break-words text-text-muted">{row.reason}</p> : null}
       {row.run ? (
         <Link to={runPath(projectId, row.run.id)} className="touch-target inline-flex items-center text-accent">
