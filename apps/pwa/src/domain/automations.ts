@@ -37,6 +37,9 @@ export interface LogRow {
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value !== '' ? value : undefined)
 const pad = (n: number) => String(n).padStart(2, '0')
 const httpUrl = (value: unknown) => (typeof value === 'string' && /^https?:\/\//i.test(value) ? value : undefined)
+/** A server word looked up in a copy table: own keys only, so `constructor` stays a raw word. */
+const word = (table: object, key: string): string | undefined =>
+  Object.hasOwn(table, key) ? (table as Record<string, string>)[key] : undefined
 const int = (value: unknown, fallback: number) => (typeof value === 'number' && Number.isInteger(value) ? value : fallback)
 
 /** The schedule shapes, with the contract's defaults (`normalizeSchedule`: 04:00, Monday, 6 h). */
@@ -60,7 +63,7 @@ export function scheduleText(schedule: unknown): string {
 }
 
 export function eventText(event: string): string {
-  return (en.automations.events as Record<string, string>)[event] ?? event
+  return word(en.automations.events, event) ?? event
 }
 
 /**
@@ -83,8 +86,8 @@ export function zoneSuffix(zone: unknown, localZone?: string, now: Date = new Da
 const eventList = (value: unknown): string[] => (Array.isArray(value) ? value.filter((e): e is string => typeof e === 'string') : [])
 
 function providerText(kind: unknown): string {
-  const providers = en.automations.trigger.providers as Record<string, string>
-  return (typeof kind === 'string' ? providers[kind] : undefined) ?? en.automations.trigger.unknownProvider
+  const t = en.automations.trigger
+  return (typeof kind === 'string' ? word(t.providers, kind) : undefined) ?? t.unknownProvider
 }
 
 function triggerText(entry: Record<string, unknown>, suffix: string): string {
@@ -190,7 +193,7 @@ export function logRows(response: AutomationLogResponse, names: ReadonlyMap<stri
 }
 
 export function resultText(result: string): string {
-  return (en.automations.results as Record<string, string>)[result] ?? result
+  return word(en.automations.results, result) ?? result
 }
 
 /** Results worth the danger colour: something went wrong, not "nothing matched". */

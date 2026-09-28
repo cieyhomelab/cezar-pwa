@@ -88,6 +88,7 @@ describe('automationRows', () => {
     ['a tracker event added upstream', { trackerTrigger: { events: ['issue.closed'], association } }, 'Linear: issue.closed'],
     ['no trackerTrigger at all', {}, 'Tracker activity'],
     ['a malformed trackerTrigger', { trackerTrigger: 'jira' }, 'Tracker activity'],
+    ['a prototype key as provider', { trackerTrigger: { events: ['constructor'], association: { ...association, kind: 'constructor' } } }, 'Tracker: constructor'],
   ])('tracker: %s', (_name, extra, expected) => {
     const [row] = automationRows(withEntries({ id: 't-1', name: 'T', enabled: true, kind: 'tracker', ...extra }))
     expect(row).toMatchObject({ trigger: expected, canRunNow: false })
