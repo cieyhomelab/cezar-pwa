@@ -16,6 +16,7 @@
       { "name": "e2e (webkit-iphone)", "state": "failing", "required": null, "url": "https://github.com/o/r/actions/runs/1/job/2" },
       { "name": "shellcheck · nginx rehearsal", "state": "pending", "required": null }
     ],
+    "checksTier": "detailed",
     "methods": ["squash", "merge", "rebase"],
     "defaultMethod": "squash",
     "eligibility": "blocked",
