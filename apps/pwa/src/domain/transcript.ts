@@ -72,7 +72,7 @@ export interface TranscriptAsk {
 export interface TranscriptProviderAuth {
   kind: 'provider-auth-required'
   id: string
-  provider: 'claude' | 'codex' | 'opencode' | 'pi'
+  provider: 'claude' | 'codex' | 'opencode' | 'cursor' | 'pi'
 }
 
 export type TranscriptEntry =
@@ -203,7 +203,7 @@ function stamp(value: unknown): string | undefined {
 }
 
 function providerId(value: unknown): TranscriptProviderAuth['provider'] | undefined {
-  return value === 'claude' || value === 'codex' || value === 'opencode' || value === 'pi'
+  return value === 'claude' || value === 'codex' || value === 'opencode' || value === 'cursor' || value === 'pi'
     ? value
     : undefined
 }

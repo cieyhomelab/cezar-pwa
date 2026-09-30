@@ -1,5 +1,5 @@
 {
-    "version": "0.12.0",
+    "version": "0.13.0",
     "repoRoot": "kai-phone",
     "repo": {
         "root": "/home/<redacted>/cezar/projects/kai-phone",
@@ -10,7 +10,7 @@
         {
             "name": "claude",
             "available": true,
-            "version": "2.1.283 (Claude Code)",
+            "version": "2.1.284 (Claude Code)",
             "hint": "if not authenticated, run `claude` once and log in"
         },
         {
@@ -23,6 +23,11 @@
             "name": "opencode",
             "available": false,
             "hint": "optional: install OpenCode (https://opencode.ai) and configure a provider to use the OpenCode runner"
+        },
+        {
+            "name": "cursor",
+            "available": false,
+            "hint": "optional: install the Cursor CLI (curl https://cursor.com/install -fsS | bash) and run `agent login`"
         },
         {
             "name": "pi",

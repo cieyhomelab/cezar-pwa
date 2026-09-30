@@ -16,7 +16,7 @@ const check = (name: BackendCheck['name'], available: boolean): BackendCheck => 
 describe('installedRunners', () => {
   it.each([
     ['only claude on this host', [check('claude', true), check('codex', false), check('gh', true), check('git', true)], ['claude']],
-    ['in the contract order', [check('pi', true), check('codex', true), check('claude', true)], ['claude', 'codex', 'pi']],
+    ['in the contract order', [check('pi', true), check('cursor', true), check('codex', true), check('claude', true)], ['claude', 'codex', 'cursor', 'pi']],
     ['gh and git are not runners', [check('gh', true), check('git', true)], []],
     ['no checks at all', undefined, []],
   ] as const)('%s', (_, checks, expected) => {
@@ -61,6 +61,7 @@ describe('discoversModels', () => {
     ['claude', true],
     ['codex', true],
     ['opencode', true],
+    ['cursor', true],
     ['pi', false],
   ] as const)('%s → %s', (runner, expected) => {
     expect(discoversModels(runner)).toBe(expected)

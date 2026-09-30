@@ -195,6 +195,16 @@ describe('reduceTranscript — robustness', () => {
     expect(finish(draft)).toEqual(reduceTranscript(events))
   })
 
+  it.each([
+    ['claude', [{ kind: 'provider-auth-required', id: 'v1:1', provider: 'claude' }]],
+    // Cezar 0.13.0 (#807) made Cursor a first-class runner.
+    ['cursor', [{ kind: 'provider-auth-required', id: 'v1:1', provider: 'cursor' }]],
+    ['an unknown provider', []],
+  ])('shows a lapsed %s login, and drops a provider it does not know', (provider, expected) => {
+    const transcript = reduceTranscript([ev(1, 'provider-auth-required', { provider, authFailureId: 'f1' })])
+    expect(entries(transcript)).toEqual(expected)
+  })
+
   it('recovers the plan from a pre-v2 TodoWrite call', () => {
     const transcript = reduceTranscript([
       ev(1, 'tool-call', {
