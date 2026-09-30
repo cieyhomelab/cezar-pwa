@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { en } from './i18n/en.ts'
 import { AppRoutes } from './routes.tsx'
@@ -39,6 +39,14 @@ describe('App shell', () => {
       'href',
       '/',
     )
+  })
+
+  it('puts Settings in the app bar beside the brand, not at the bottom (#109)', () => {
+    renderApp()
+    const bar = screen.getByRole('banner')
+    expect(within(bar).getByRole('heading', { name: en.app.name })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: en.settings.open })).toHaveAttribute('href', '/settings')
+    expect(within(screen.getByRole('contentinfo')).queryByRole('link', { name: en.settings.open })).toBeNull()
   })
 
   it('shows no update prompt while no new worker is waiting', () => {

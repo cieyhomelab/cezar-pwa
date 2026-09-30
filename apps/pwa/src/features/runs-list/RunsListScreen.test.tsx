@@ -61,6 +61,20 @@ describe('RunsListScreen', () => {
     expect(rowTexts('Needs attention')).toEqual(['run-waiting', 'run-review', 'run-failed'])
   })
 
+  it('groups the screen actions in one row under the summary, New task first (#109)', async () => {
+    renderList()
+    const summary = await screen.findByRole('heading', { name: /need attention/ })
+    const toolbar = screen.getByRole('navigation', { name: en.runs.toolbar })
+
+    expect(within(toolbar).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      `+${en.runs.newTask}`,
+      en.limits.open,
+    ])
+    // The summary no longer shares its row with the buttons, so it is not squeezed beside them.
+    expect(summary.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(toolbar.contains(summary)).toBe(false)
+  })
+
   it('hides archived tasks', async () => {
     renderList()
     await screen.findByRole('heading', { name: /need attention/ })

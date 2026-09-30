@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router'
+import { NavLink, Outlet } from 'react-router'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { AuthGate } from './features/auth/AuthGate.tsx'
 import { en } from './i18n/en.ts'
@@ -39,11 +39,17 @@ export default function App() {
 
   return (
     <div className="flex min-h-full flex-col bg-surface text-text">
-      {/* Not sticky: on a phone the brand is not worth a permanent strip, and the task screen
-          pins its own bar (back link and plan) to the top. */}
-      <header className="border-b border-border px-4 py-3">
+      {/* #109: one compact row — the brand, and Settings where a thumb looks for it rather than
+          below every task. Not sticky: the task screen pins its own bar (back link and plan). */}
+      <header className="flex items-center justify-between gap-3 border-b border-border py-1 pr-2 pl-4">
         <h1 className="text-lg font-semibold">{en.app.name}</h1>
-        <p className="text-sm text-text-muted">{en.app.tagline}</p>
+        <NavLink
+          to="/settings"
+          className="touch-target inline-flex items-center gap-1 rounded px-2 text-sm text-accent aria-[current=page]:text-text-muted"
+        >
+          <span aria-hidden="true">⚙</span>
+          {en.settings.open}
+        </NavLink>
       </header>
 
       <OfflineBanner online={online} />
@@ -63,16 +69,12 @@ export default function App() {
         </AuthGate>
       </main>
 
-      <footer className="flex flex-wrap items-center justify-between gap-x-4 border-t border-border px-4 py-3">
+      <footer className="border-t border-border px-4 py-3">
         {/* Same-origin link to the full cockpit — the PWA is deliberately a
             subset of it (REQUIREMENTS §1). */}
         <a className="touch-target inline-flex items-center text-sm text-accent" href="/">
           {en.shell.openCockpit}
         </a>
-        {/* S-10: notifications are turned on in Settings (FR-036). */}
-        <Link className="touch-target inline-flex items-center text-sm text-accent" to="/settings">
-          {en.settings.open}
-        </Link>
       </footer>
     </div>
   )
