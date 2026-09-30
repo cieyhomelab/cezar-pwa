@@ -137,41 +137,46 @@ export function RunsListScreen() {
         </div>
       ) : null}
 
+      {/* #109: the summary gets the full width, the screen's actions one row under it (New task
+          first), and the list's freshness sits on one line with its Refresh. */}
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className={`text-lg font-semibold ${totalAttention > 0 ? 'text-pending' : ''}`}>
-              {totalAttention > 0 ? en.runs.summary.some(totalAttention) : en.runs.summary.none}
-            </h2>
-            {totalAttention > shownAttention ? (
-              <p className="text-sm text-text-muted">
-                {en.runs.summary.elsewhere(totalAttention - shownAttention)}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 flex-wrap justify-end gap-2">
-            {/* S-20 (#70): only where the family answers — with the capability off it is a 409. */}
-            {health.data?.capabilities?.automations === true ? (
-              <Link
-                to={projectId === null ? '/automations' : `/automations?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
-                className="touch-target inline-flex items-center rounded border border-border px-3 text-sm"
-              >
-                {en.automations.open}
-              </Link>
-            ) : null}
-            {/* #93: the push sidecar's reading of each account's usage windows. */}
-            <Link to="/limits" className="touch-target inline-flex items-center rounded border border-border px-3 text-sm">
-              {en.limits.open}
-            </Link>
-            {/* S-13 (FR-033): a filtered list starts the task in the project it shows. */}
-            <Link
-              to={projectId === null ? '/new' : `/new?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
-              className="touch-target inline-flex items-center rounded bg-accent px-3 text-sm font-semibold text-white"
-            >
-              {en.runs.newTask}
-            </Link>
-          </div>
+        <div>
+          <h2 className={`text-lg font-semibold ${totalAttention > 0 ? 'text-pending' : ''}`}>
+            {totalAttention > 0 ? en.runs.summary.some(totalAttention) : en.runs.summary.none}
+          </h2>
+          {totalAttention > shownAttention ? (
+            <p className="text-sm text-text-muted">
+              {en.runs.summary.elsewhere(totalAttention - shownAttention)}
+            </p>
+          ) : null}
         </div>
+
+        <nav aria-label={en.runs.toolbar} className="flex flex-wrap gap-2">
+          {/* S-13 (FR-033): a filtered list starts the task in the project it shows. */}
+          <Link
+            to={projectId === null ? '/new' : `/new?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
+            className="touch-target inline-flex flex-1 items-center justify-center gap-1 rounded bg-accent px-3 text-sm font-semibold text-white"
+          >
+            <span aria-hidden="true">+</span>
+            {en.runs.newTask}
+          </Link>
+          {/* S-20 (#70): only where the family answers — with the capability off it is a 409. */}
+          {health.data?.capabilities?.automations === true ? (
+            <Link
+              to={projectId === null ? '/automations' : `/automations?${PROJECT_PARAM}=${encodeURIComponent(projectId)}`}
+              className="touch-target inline-flex items-center justify-center rounded border border-border px-3 text-sm"
+            >
+              {en.automations.open}
+            </Link>
+          ) : null}
+          {/* #93: the push sidecar's reading of each account's usage windows. */}
+          <Link
+            to="/limits"
+            className="touch-target inline-flex items-center justify-center rounded border border-border px-3 text-sm"
+          >
+            {en.limits.open}
+          </Link>
+        </nav>
 
         {projects.length > 1 ? (
           <label className="flex items-center gap-2 text-sm">
@@ -191,23 +196,23 @@ export function RunsListScreen() {
           </label>
         ) : null}
 
-        <MarkAllReadControl
-          plan={readAllTargets}
-          readAll={readAll}
-          projectName={projectName}
-        />
-
         <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
           <ConnectionStatus state={live.state} detail={detail} />
           <button
             type="button"
-            className="touch-target rounded border border-border px-3 text-text"
+            className="touch-target shrink-0 rounded border border-border px-3 text-text"
             onClick={refresh}
             disabled={runs.isFetching}
           >
             {en.runs.refresh}
           </button>
         </div>
+
+        <MarkAllReadControl
+          plan={readAllTargets}
+          readAll={readAll}
+          projectName={projectName}
+        />
       </div>
 
       {runs.isError && !(runs.error instanceof AuthRequiredError) ? (

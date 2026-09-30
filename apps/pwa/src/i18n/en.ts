@@ -17,7 +17,6 @@ function plural(count: number, one: string, other: string): string {
 export const en = {
   app: {
     name: 'Cezar',
-    tagline: 'Agent overview',
   },
   /**
    * What this app judged about an answer, keyed by `ApiError.code` (`api/http.ts`). Never the
@@ -158,6 +157,8 @@ export const en = {
     truncated: (limit: number, projects: string) =>
       `Showing only the ${limit} newest tasks from: ${projects}. Older ones are in the full cockpit.`,
     newTask: 'New task',
+    /** #109: the accessible name of the row holding New task, Automations and Limits. */
+    toolbar: 'Task actions',
     /** #67: clear the unread markers of the tasks on screen, one call per project in view. */
     readAll: {
       action: (count: number) => `Mark all read (${count})`,
@@ -232,8 +233,7 @@ export const en = {
       tokensDirectional: (input: string, output: string) => `in ${input} · out ${output}`,
       branch: 'Branch',
       pr: (number: string | null) => (number ? `PR #${number}` : 'Pull request'),
-      /** S-09: the row that opens the diff. */
-      changes: 'Changes',
+      /** S-09: the button that opens the diff, before the record carries a `diffStat`. */
       showChanges: 'Show changes',
     },
     /** S-09: the task's diff, file by file, read-only (FR-031). */
@@ -670,7 +670,7 @@ export const en = {
   },
   settings: {
     title: 'Settings',
-    /** The footer link that opens the screen. */
+    /** The app bar's link that opens the screen (#109). */
     open: 'Settings',
     back: 'Task list',
     /** S-12, FR-046. */

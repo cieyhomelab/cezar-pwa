@@ -79,6 +79,17 @@ describe('RunScreen — the header (FR-014)', () => {
     expect(pr).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
+  it('puts the changes and the PR side by side as actions, not as detail rows (#109)', async () => {
+    renderRun()
+    const title = await screen.findByRole('heading', { name: 'opening pull request', level: 2 })
+    const header = title.closest('section')!
+    const changes = within(header).getByRole('link', { name: en.run.header.showChanges })
+    const pr = within(header).getByRole('link', { name: 'PR #9' })
+
+    expect(changes.parentElement).toBe(pr.parentElement)
+    expect(header.querySelector('dl')!.contains(changes)).toBe(false)
+  })
+
   it('jumps to the same task in the full cockpit (FR-048)', async () => {
     renderRun()
     const link = await screen.findByRole('link', { name: en.shell.openTaskInCockpitLabel })
