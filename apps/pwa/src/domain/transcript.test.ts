@@ -199,6 +199,9 @@ describe('reduceTranscript — robustness', () => {
     ['claude', [{ kind: 'provider-auth-required', id: 'v1:1', provider: 'claude' }]],
     // Cezar 0.13.0 (#807) made Cursor a first-class runner.
     ['cursor', [{ kind: 'provider-auth-required', id: 'v1:1', provider: 'cursor' }]],
+    // Cezar 0.14.0 (#1111, #1113): Junie and Copilot CLI.
+    ['junie', [{ kind: 'provider-auth-required', id: 'v1:1', provider: 'junie' }]],
+    ['copilot', [{ kind: 'provider-auth-required', id: 'v1:1', provider: 'copilot' }]],
     ['an unknown provider', []],
   ])('shows a lapsed %s login, and drops a provider it does not know', (provider, expected) => {
     const transcript = reduceTranscript([ev(1, 'provider-auth-required', { provider, authFailureId: 'f1' })])

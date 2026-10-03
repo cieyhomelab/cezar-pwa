@@ -57,7 +57,8 @@ export type PushPayload = {
   projectName?: string
   runId?: string
   title?: string
-  /** `deriveAttention().label`: `needs you`, `needs review`, `failed`, `needs permission`. */
+  /** `deriveAttention().label`: `needs you`, `budget reached`, `needs review`, `failed`,
+   *  `needs permission`. An open string: a label this build has never seen gets the fallback body. */
   reason?: string
   /** `limit` only (#94): which window of which account, how full, and when it resets. */
   provider?: LimitsProvider

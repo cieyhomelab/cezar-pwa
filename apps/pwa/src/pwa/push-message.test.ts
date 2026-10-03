@@ -31,6 +31,8 @@ describe('notificationFor', () => {
   })
 
   it.each([
+    // Cezar 0.14.0 (#1150): a dispatched task parked on its spend ceiling.
+    ['budget reached', 'Stopped at its budget'],
     ['needs review', 'Waiting for review'],
     ['failed', 'Ended with an error'],
     ['needs permission', 'Asking for permission'],

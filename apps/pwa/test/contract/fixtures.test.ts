@@ -17,6 +17,7 @@ import automations from '../fixtures/automations.json'
 import liveChangesRepointed from '../fixtures/changes-repointed.live-0.11.0.json'
 import liveChanges from '../fixtures/changes.live-0.11.0.json'
 import group from '../fixtures/group.json'
+import dryRunHealth from '../fixtures/health.dry-run-0.14.0.json'
 import liveHealth from '../fixtures/health.live-0.13.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
@@ -48,6 +49,9 @@ import runsIndex from '../fixtures/runs-index.json'
 describe('contract fixtures', () => {
   it.each([
     ['live health', healthResponseSchema, liveHealth],
+    // #111. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.14.0`: the dry run reports every runner as
+    // installed, so the `junie` and `copilot` rows the 0.13.0 schema rejects are both here.
+    ['dry-run health, 0.14.0', healthResponseSchema, dryRunHealth],
     ['live runs-index', runsIndexResponseSchema, liveRunsIndex],
     ['hand-written runs-index', runsIndexResponseSchema, runsIndex],
     ['live run', apiRunSchema, liveRun],

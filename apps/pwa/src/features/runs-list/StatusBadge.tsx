@@ -14,6 +14,7 @@ const TONE_CLASS: Record<AttentionTone, string> = {
 const GLYPH: Record<string, string> = {
   'needs permission': '!',
   'needs you': '?',
+  'budget reached': '$',
   'needs review': '◆',
   failed: '✕',
   scheduled: '◷',

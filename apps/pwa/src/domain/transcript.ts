@@ -5,6 +5,7 @@ import type {
   StopReason,
   ToolKind,
   UiAskQuestion,
+  UiBackend,
   UiItem,
   UiToolItem,
 } from '@cezar-pwa/cezar-contract/protocol'
@@ -72,7 +73,7 @@ export interface TranscriptAsk {
 export interface TranscriptProviderAuth {
   kind: 'provider-auth-required'
   id: string
-  provider: 'claude' | 'codex' | 'opencode' | 'cursor' | 'pi'
+  provider: UiBackend
 }
 
 export type TranscriptEntry =
@@ -202,10 +203,14 @@ function stamp(value: unknown): string | undefined {
   return Number.isFinite(new Date(value).getTime()) ? value : undefined
 }
 
+/** `UiBackend`, listed: the `satisfies` stops this compiling when the contract's union grows. */
+const PROVIDERS = ['claude', 'codex', 'opencode', 'cursor', 'pi', 'junie', 'copilot'] as const satisfies readonly UiBackend[]
+type _AllBackendsListed = UiBackend extends (typeof PROVIDERS)[number] ? true : never
+const _allBackendsListed: _AllBackendsListed = true
+void _allBackendsListed
+
 function providerId(value: unknown): TranscriptProviderAuth['provider'] | undefined {
-  return value === 'claude' || value === 'codex' || value === 'opencode' || value === 'cursor' || value === 'pi'
-    ? value
-    : undefined
+  return (PROVIDERS as readonly unknown[]).includes(value) ? (value as UiBackend) : undefined
 }
 
 const isAskQuestion = (value: unknown): value is UiAskQuestion =>

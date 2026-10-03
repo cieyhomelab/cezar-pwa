@@ -113,6 +113,20 @@ describe('RunScreen — the header (FR-014)', () => {
     })
     expect(await screen.findByText('Step 2/3 · Review')).toBeInTheDocument()
   })
+
+  it('says a dispatched task stopped at its budget, not that it waits for an answer (Cezar 0.14.0)', async () => {
+    renderRun({
+      run: () =>
+        jsonResponse({
+          ...RUN,
+          status: 'waiting',
+          costUsd: 20.83,
+          dispatch: { rootRunId: 'root', parentRunId: 'root', budgetUsd: 10, overBudget: true },
+        }),
+    })
+    expect(await screen.findByText(en.runs.status['budget reached']!)).toBeInTheDocument()
+    expect(screen.queryByText(en.runs.status['needs you']!)).not.toBeInTheDocument()
+  })
 })
 
 describe('RunScreen — the transcript (FR-015, FR-017)', () => {
