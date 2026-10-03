@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ATTENTION_RANK,
+  budgetStop,
   deriveAttention,
   wantsAttention,
   type Attention,
@@ -9,7 +10,7 @@ import {
 import type { RunStatus } from './types.ts'
 
 /**
- * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`). The expected
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`). The expected
  * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
  * copy, not the table.
  */
@@ -44,6 +45,29 @@ describe('deriveAttention', () => {
 
   it('answers for every status the API can send', () => {
     expect(cases.map(([status]) => status).sort()).toEqual([...ALL_STATUSES].sort())
+  })
+
+  it('explains a waiting dispatch run stopped by its spend ceiling', () => {
+    const stopped = run({ status: 'waiting', costUsd: 20.83, dispatch: { budgetUsd: 10, overBudget: true } })
+    expect(deriveAttention(stopped).label).toBe('budget reached')
+    expect(budgetStop(stopped)).toEqual({ spent: 20.83, ceiling: 10 })
+    expect(wantsAttention(stopped)).toBe(true)
+  })
+
+  it.each([
+    ['a budget not reached yet', run({ status: 'waiting', costUsd: 2, dispatch: { budgetUsd: 10 } })],
+    ['the brake without a ceiling', run({ status: 'waiting', dispatch: { overBudget: true } })],
+    ['a plain task', run({ status: 'waiting' })],
+  ])('keeps "needs you" for %s', (_, waiting) => {
+    expect(deriveAttention(waiting).label).toBe('needs you')
+    expect(budgetStop(waiting)).toBeUndefined()
+  })
+
+  it('reports a budget stop only while the run waits, and counts a missing cost as zero', () => {
+    const dispatch = { budgetUsd: 10, overBudget: true }
+    expect(budgetStop(run({ status: 'running', dispatch }))).toBeUndefined()
+    expect(deriveAttention(run({ status: 'failed', dispatch })).label).toBe('failed')
+    expect(budgetStop(run({ status: 'waiting', dispatch }))).toEqual({ spent: 0, ceiling: 10 })
   })
 
   it('pulses exactly the transitioning states', () => {

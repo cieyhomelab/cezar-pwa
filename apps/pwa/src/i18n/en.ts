@@ -109,6 +109,7 @@ export const en = {
     status: {
       'needs permission': 'asking for permission',
       'needs you': 'waiting for you',
+      'budget reached': 'budget reached',
       'needs review': 'to review',
       failed: 'failed',
       scheduled: 'scheduled',
@@ -758,6 +759,7 @@ export const en = {
     /** The notification body says why, keyed by the attention label (`deriveAttention().label`). */
     reason: {
       'needs you': 'Waiting for your answer',
+      'budget reached': 'Stopped at its budget',
       'needs review': 'Waiting for review',
       failed: 'Ended with an error',
       'needs permission': 'Asking for permission',

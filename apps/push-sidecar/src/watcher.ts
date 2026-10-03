@@ -44,12 +44,22 @@ function parseJson(data: string): unknown {
   }
 }
 
+/** The two `dispatch` keys the attention rule reads (Cezar 0.14.0), when they are well-typed. */
+function readDispatch(value: unknown): NotifiableRun['dispatch'] | undefined {
+  if (!isObject(value)) return undefined
+  return {
+    ...(typeof value.budgetUsd === 'number' ? { budgetUsd: value.budgetUsd } : {}),
+    ...(typeof value.overBudget === 'boolean' ? { overBudget: value.overBudget } : {}),
+  }
+}
+
 /** A `run` frame's record, read defensively: the stream's vocabulary only grows (rule 5). */
 function readRun(data: unknown): NotifiableRun | undefined {
   if (!isObject(data)) return undefined
   const { project, id, status, title } = data
   if (typeof project !== 'string' || typeof id !== 'string') return undefined
   if (typeof status !== 'string' || typeof title !== 'string') return undefined
+  const dispatch = readDispatch(data.dispatch)
   return {
     projectId: project,
     id,
@@ -58,6 +68,9 @@ function readRun(data: unknown): NotifiableRun | undefined {
     ...(typeof data.titleSummary === 'string' ? { titleSummary: data.titleSummary } : {}),
     ...(typeof data.activity === 'string' ? { activity: data.activity } : {}),
     ...(typeof data.autoResumeAt === 'string' ? { autoResumeAt: data.autoResumeAt } : {}),
+    // The frame is the full record, so a budget stop is told apart from a question here.
+    ...(dispatch ? { dispatch } : {}),
+    ...(typeof data.costUsd === 'number' ? { costUsd: data.costUsd } : {}),
   }
 }
 

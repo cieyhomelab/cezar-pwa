@@ -1,11 +1,13 @@
 export {
   ATTENTION_RANK,
+  budgetStop,
   deriveAttention,
   wantsAttention,
   type Attention,
   type AttentionBucket,
   type AttentionInput,
   type AttentionTone,
+  type BudgetStop,
 } from './attention.ts'
 export type {
   LimitsProvider,

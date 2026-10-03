@@ -1,0 +1,76 @@
+{
+  "version": "0.14.0",
+  "repoRoot": "repo",
+  "repo": {
+    "root": "/tmp/cez014/repo",
+    "branch": "master"
+  },
+  "checks": [
+    {
+      "name": "claude",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "codex",
+      "available": true,
+      "version": "codex-cli 0.157.0",
+      "hint": "if not authenticated, run `codex` once and log in"
+    },
+    {
+      "name": "opencode",
+      "available": true,
+      "version": "1.18.34",
+      "hint": "if no provider is configured, run `opencode` once to set one up"
+    },
+    {
+      "name": "cursor",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "pi",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "junie",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "copilot",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "gh",
+      "available": false,
+      "hint": "install the GitHub CLI and run `gh auth login` (only needed for PR creation)"
+    },
+    {
+      "name": "git",
+      "available": true,
+      "version": "git version 2.53.0"
+    }
+  ],
+  "defaultRunner": "claude",
+  "forge": null,
+  "capabilities": {
+    "localHandoff": false,
+    "followups": false,
+    "singleProject": false,
+    "automations": true,
+    "dispatch": true,
+    "tokenMetrics": true,
+    "tokenUsageMetrics": true,
+    "costMetrics": true
+  },
+  "projects": [
+    {
+      "id": "repo",
+      "name": "repo"
+    }
+  ],
+  "bootProject": "repo"
+}
