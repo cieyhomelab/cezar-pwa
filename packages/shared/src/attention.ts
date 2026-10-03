@@ -70,9 +70,10 @@ function isUnseen(_run: AttentionInput): boolean {
  * depend on the contract, with `dispatch` narrowed to what the rule reads.
  * A `RunIndexEntry` or a `RunRecord` satisfies it, extra fields ignored (CLAUDE.md rule 5).
  *
- * The index entry's `dispatch` carries only `rootRunId`, `parentRunId` and `kind`, so a list
- * row never says `budget reached` — upstream's sidebar has the same blind spot. The full
- * record (the task screen) does.
+ * The index entry's `dispatch` carries only `rootRunId`, `parentRunId` and `kind`, so anything
+ * fed by the runs index (the PWA's list row, like the cockpit's global Tasks page) never says
+ * `budget reached`. The full record does: the task screen, and the push sidecar, which reads
+ * the workspace stream's `run` frames.
  */
 export type AttentionInput = {
   status: RunStatus

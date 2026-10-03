@@ -1,8 +1,8 @@
 /**
  * The Cezar version this client was built and tested against.
  *
- * Source: the latest release on 2026-10-03, which the host is upgraded to
- * (#111), and the contract vendored for it (`packages/cezar-contract/UPSTREAM`
+ * Source: the latest release on 2026-10-03 (the host's upgrade to it is
+ * tracked in #111), and the contract vendored for it (`packages/cezar-contract/UPSTREAM`
  * = tag `v0.14.0` of `open-mercato/cezar`, `1b13522`). Confirm against the
  * live instance with `GET /api/v1/health` → `version`. Bump this together with
  * `npm run sync:contract <sha>` whenever the VPS moves (CLAUDE.md → "When

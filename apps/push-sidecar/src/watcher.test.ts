@@ -52,6 +52,24 @@ describe('Watcher.handleFrame', () => {
     })
   })
 
+  it('says a dispatched task stopped at its budget, not that it has a question (Cezar 0.14.0)', async () => {
+    const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'running' }])
+    watcher.handleFrame(
+      runFrame({ status: 'waiting', costUsd: 20.83, dispatch: { rootRunId: 'root', budgetUsd: 10, overBudget: true } }),
+    )
+    expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['budget reached'])
+  })
+
+  it.each([
+    ['a budget not reached', { rootRunId: 'root', budgetUsd: 10 }],
+    ['budget keys of the wrong type', { budgetUsd: '10', overBudget: 'yes' }],
+    ['a dispatch that is not an object', 'x'],
+  ])('keeps "needs you" for %s', async (_, dispatch) => {
+    const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'running' }])
+    watcher.handleFrame(runFrame({ status: 'waiting', dispatch }))
+    expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['needs you'])
+  })
+
   it('does not re-announce what the baseline already had (a reconnect is not news)', async () => {
     const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'waiting' }])
     watcher.handleFrame(runFrame({ status: 'waiting' }))
