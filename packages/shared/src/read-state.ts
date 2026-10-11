@@ -7,7 +7,8 @@ import type { RunStatus } from './types.ts'
  *
  * Copied rather than re-derived for the same reason as `attention.ts`: a row the cockpit calls
  * read and the phone calls unread is a disagreement the operator can see. Only the parts the
- * PWA reads are carried; when re-syncing, diff against upstream.
+ * PWA reads are carried; when re-syncing, diff against upstream. `v0.15.0` (Cezar #1290) took a
+ * run awaiting an answer out of the done items.
  */
 
 /** The terminal statuses a *done item* can be. */
@@ -22,11 +23,21 @@ export type ReadStateInput = {
   seenAt?: string
   archived: boolean
   autoResumeAt?: string
+  awaitingAnswerSince?: string
 }
 
 /** A usage-limit failure with a resume booked — not a done item at all. */
 function isScheduledResume(run: ReadStateInput): boolean {
   return run.status === 'failed' && run.autoResumeAt !== undefined
+}
+
+/**
+ * A run whose session closed on an unanswered `CEZ:ASK`. Like a scheduled resume it is `failed`
+ * on the record without being a done item: the question is its signal, never an unread outcome,
+ * never a dimmed read row.
+ */
+function isAwaitingAnswer(run: ReadStateInput): boolean {
+  return run.status === 'failed' && run.awaitingAnswerSince !== undefined
 }
 
 export function isDoneItem(status: RunStatus): boolean {
@@ -36,7 +47,7 @@ export function isDoneItem(status: RunStatus): boolean {
 /** Whether a run could wear the unread marker at all — the receipt-independent half. */
 export function canBeUnread(run: ReadStateInput): boolean {
   if (run.archived) return false
-  if (isScheduledResume(run)) return false
+  if (isScheduledResume(run) || isAwaitingAnswer(run)) return false
   if (!UNREAD_ELIGIBLE.includes(run.status)) return false
   return run.finishedAt !== undefined
 }
@@ -55,6 +66,6 @@ export function isUnread(run: ReadStateInput): boolean {
 
 /** A finished row that is not unread — what the cockpit dims so unread rows stand out. */
 export function isReadDoneItem(run: ReadStateInput): boolean {
-  if (isScheduledResume(run)) return false
+  if (isScheduledResume(run) || isAwaitingAnswer(run)) return false
   return isDoneItem(run.status) && !isUnread(run)
 }

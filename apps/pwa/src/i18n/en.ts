@@ -346,6 +346,7 @@ export const en = {
         waiting: 'The agent is waiting for your answer.',
         failed: 'The session ended with an error.',
         failedWith: (error: string) => `The session ended with an error — ${error}`,
+        awaitingAnswer: 'Session closed — waiting for your answer, which reopens it.',
         review: 'Session closed — waiting for your review.',
         closed: 'Session closed.',
       },

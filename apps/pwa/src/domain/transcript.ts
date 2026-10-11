@@ -137,15 +137,19 @@ export function planProgress(entries: readonly PlanEntry[]): { done: number; tot
 export type TranscriptFooter =
   | { state: 'waiting' }
   | { state: 'failed'; error?: string }
+  | { state: 'awaiting-answer' }
   | { state: 'review' }
   | { state: 'closed' }
   | null
 
-export function transcriptFooter(status: string, error?: string): TranscriptFooter {
+export function transcriptFooter(status: string, error?: string, awaitingAnswer = false): TranscriptFooter {
   switch (status) {
     case 'waiting':
       return { state: 'waiting' }
     case 'failed':
+      // The session closed on an unanswered question: the header says "needs you", so the strip
+      // must not announce a failure. The answer is the way forward, not a retry.
+      if (awaitingAnswer) return { state: 'awaiting-answer' }
       return error ? { state: 'failed', error } : { state: 'failed' }
     case 'review':
       return { state: 'review' }

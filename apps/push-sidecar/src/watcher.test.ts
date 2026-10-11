@@ -60,6 +60,18 @@ describe('Watcher.handleFrame', () => {
     expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['budget reached'])
   })
 
+  it('says a session closed on an unanswered question still needs you, not that it failed (Cezar 0.15.0)', async () => {
+    const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'waiting' }])
+    watcher.handleFrame(runFrame({ status: 'failed', awaitingAnswerSince: '2026-10-05T10:00:00.000Z' }))
+    expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['needs you'])
+  })
+
+  it('reports a plain failure when the awaiting-answer stamp is not a string', async () => {
+    const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'running' }])
+    watcher.handleFrame(runFrame({ status: 'failed', awaitingAnswerSince: true }))
+    expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['failed'])
+  })
+
   it.each([
     ['a budget not reached', { rootRunId: 'root', budgetUsd: 10 }],
     ['budget keys of the wrong type', { budgetUsd: '10', overBudget: 'yes' }],

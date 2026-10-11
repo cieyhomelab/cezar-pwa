@@ -85,3 +85,18 @@ describe('isReadDoneItem', () => {
     )
   })
 })
+
+describe('a run awaiting an answer (Cezar 0.15.0)', () => {
+  const awaiting = {
+    status: 'failed' as const,
+    finishedAt: '2026-10-05T10:00:00.000Z',
+    awaitingAnswerSince: '2026-10-05T10:00:00.000Z',
+    archived: false,
+  }
+
+  it('is neither unread nor a read done item — the question is its signal', () => {
+    expect(canBeUnread(awaiting)).toBe(false)
+    expect(isUnread(awaiting)).toBe(false)
+    expect(isReadDoneItem({ ...awaiting, seenAt: '2026-10-05T11:00:00.000Z' })).toBe(false)
+  })
+})

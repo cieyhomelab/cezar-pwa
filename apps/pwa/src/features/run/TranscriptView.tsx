@@ -92,9 +92,11 @@ function Footer({ footer }: { footer: TranscriptFooter }) {
         ? footer.error
           ? en.run.transcript.footer.failedWith(footer.error)
           : en.run.transcript.footer.failed
-        : footer.state === 'review'
-          ? en.run.transcript.footer.review
-          : en.run.transcript.footer.closed
+        : footer.state === 'awaiting-answer'
+          ? en.run.transcript.footer.awaitingAnswer
+          : footer.state === 'review'
+            ? en.run.transcript.footer.review
+            : en.run.transcript.footer.closed
   const tone =
     footer.state === 'failed' ? 'text-danger' : footer.state === 'waiting' ? 'text-pending' : 'text-text-muted'
   return <p className={`border-t border-border pt-3 text-sm break-words ${tone}`}>{text}</p>

@@ -1,5 +1,5 @@
 import type { RunIndexEntry } from '@cezar-pwa/cezar-contract/contract'
-import { wantsAttention } from '@cezar-pwa/shared'
+import { isAwaitingAnswer, wantsAttention } from '@cezar-pwa/shared'
 
 /**
  * How the task list is filtered, bucketed and ordered (FR-007, FR-008). Pure, so the part
@@ -62,8 +62,13 @@ const STATUS_ORDER: Partial<Record<string, number>> = {
 }
 const SCHEDULED_WEIGHT = 3
 
+/** A run awaiting an answer sorts with the waiting ones, as in the cockpit (`v0.15.0`). */
 const statusWeight = (run: RunIndexEntry): number =>
-  isScheduled(run) ? SCHEDULED_WEIGHT : (STATUS_ORDER[run.status] ?? 9)
+  isScheduled(run)
+    ? SCHEDULED_WEIGHT
+    : isAwaitingAnswer(run)
+      ? (STATUS_ORDER.waiting ?? 0)
+      : (STATUS_ORDER[run.status] ?? 9)
 
 /**
  * The cockpit's `sortRuns` without pins (the index row carries no `pinned`): status weight,
