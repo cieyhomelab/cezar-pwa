@@ -274,6 +274,11 @@ describe('transcriptFooter', () => {
   ] as const)('%s → %j', (status, error, expected) => {
     expect(transcriptFooter(status, error)).toEqual(expected)
   })
+
+  it('a failed run awaiting an answer says so instead of announcing a failure (Cezar 0.15.0)', () => {
+    expect(transcriptFooter('failed', 'idle timeout', true)).toEqual({ state: 'awaiting-answer' })
+    expect(transcriptFooter('done', undefined, true)).toEqual({ state: 'closed' })
+  })
 })
 
 describe('plan helpers', () => {

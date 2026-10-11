@@ -68,6 +68,8 @@ function readRun(data: unknown): NotifiableRun | undefined {
     ...(typeof data.titleSummary === 'string' ? { titleSummary: data.titleSummary } : {}),
     ...(typeof data.activity === 'string' ? { activity: data.activity } : {}),
     ...(typeof data.autoResumeAt === 'string' ? { autoResumeAt: data.autoResumeAt } : {}),
+    // Cezar 0.15.0: a session closed on an unanswered question still needs you, it did not fail.
+    ...(typeof data.awaitingAnswerSince === 'string' ? { awaitingAnswerSince: data.awaitingAnswerSince } : {}),
     // The frame is the full record, so a budget stop is told apart from a question here.
     ...(dispatch ? { dispatch } : {}),
     ...(typeof data.costUsd === 'number' ? { costUsd: data.costUsd } : {}),

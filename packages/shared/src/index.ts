@@ -2,6 +2,8 @@ export {
   ATTENTION_RANK,
   budgetStop,
   deriveAttention,
+  isAwaitingAnswer,
+  isNeedsYouStatus,
   wantsAttention,
   type Attention,
   type AttentionBucket,

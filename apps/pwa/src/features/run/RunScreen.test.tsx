@@ -127,6 +127,16 @@ describe('RunScreen — the header (FR-014)', () => {
     expect(await screen.findByText(en.runs.status['budget reached']!)).toBeInTheDocument()
     expect(screen.queryByText(en.runs.status['needs you']!)).not.toBeInTheDocument()
   })
+
+  it('says a session closed on an unanswered question needs you, not that it failed (Cezar 0.15.0)', async () => {
+    renderRun({
+      run: () =>
+        jsonResponse({ ...RUN, status: 'failed', error: 'idle timeout', awaitingAnswerSince: '2026-10-05T10:00:00.000Z' }),
+    })
+    expect(await screen.findByText(en.runs.status['needs you']!)).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.footer.awaitingAnswer)).toBeInTheDocument()
+    expect(screen.queryByText(en.run.transcript.footer.failedWith('idle timeout'))).not.toBeInTheDocument()
+  })
 })
 
 describe('RunScreen — the transcript (FR-015, FR-017)', () => {

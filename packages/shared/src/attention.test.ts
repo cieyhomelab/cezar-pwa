@@ -3,6 +3,8 @@ import {
   ATTENTION_RANK,
   budgetStop,
   deriveAttention,
+  isAwaitingAnswer,
+  isNeedsYouStatus,
   wantsAttention,
   type Attention,
   type AttentionInput,
@@ -10,7 +12,7 @@ import {
 import type { RunStatus } from './types.ts'
 
 /**
- * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`). The expected
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`). The expected
  * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
  * copy, not the table.
  */
@@ -123,6 +125,42 @@ describe('a run waiting out a usage limit', () => {
     expect(
       deriveAttention(run({ status: 'running', autoResumeAt: '2026-08-03T19:33:53.000Z' })).label,
     ).toBe('running')
+  })
+})
+
+describe('a run whose session closed on an unanswered question', () => {
+  const awaiting = run({ status: 'failed', awaitingAnswerSince: '2026-10-05T10:00:00.000Z' })
+
+  it('still needs you — the question was never answered', () => {
+    // `failed` on the record because the idle close ended the process, but the operator still
+    // owns the next move; neither "done" nor a red failure is true.
+    expect(deriveAttention(awaiting)).toEqual({
+      bucket: 'waiting',
+      tone: 'pending',
+      pulse: true,
+      label: 'needs you',
+    })
+    expect(wantsAttention(awaiting)).toBe(true)
+    expect(isAwaitingAnswer(awaiting)).toBe(true)
+  })
+
+  it('only applies to a FAILED run — any other status reads as itself', () => {
+    expect(deriveAttention(run({ status: 'done', awaitingAnswerSince: '2026-10-05T10:00:00.000Z' })).label).toBe(
+      'done',
+    )
+    expect(deriveAttention(run({ status: 'failed' })).label).toBe('failed')
+  })
+
+  it('a booked resume still wins: the run is scheduled, not waiting', () => {
+    expect(
+      deriveAttention(run({ status: 'failed', autoResumeAt: '2026-10-05T11:00:00.000Z', awaitingAnswerSince: '2026-10-05T10:00:00.000Z' }))
+        .label,
+    ).toBe('scheduled')
+  })
+
+  it('isNeedsYouStatus keeps waiting, review and awaiting-answer runs', () => {
+    expect(ALL_STATUSES.filter((status) => isNeedsYouStatus(run({ status })))).toEqual(['waiting', 'review'])
+    expect(isNeedsYouStatus(awaiting)).toBe(true)
   })
 })
 

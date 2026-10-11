@@ -2,8 +2,9 @@ import type { RunActivity, RunStatus } from './types.ts'
 
 /**
  * Copy of Cezar's `packages/web/src/lib/attention.ts` (CLAUDE.md rule 8), at the commit in
- * `packages/cezar-contract/UPSTREAM` (tag `v0.14.0`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
- * `v0.14.0` added `budgetStop` and the `budget reached` label (Cezar #1150, synced in #111).
+ * `packages/cezar-contract/UPSTREAM` (tag `v0.15.0`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
+ * `v0.14.0` added `budgetStop` and the `budget reached` label (Cezar #1150, synced in #111);
+ * `v0.15.0` added the awaiting-answer rung, `isAwaitingAnswer` and `isNeedsYouStatus` (Cezar #1290, synced in #113).
  *
  * The PRD's worst failure is a phone that disagrees with the cockpit about what needs a human,
  * so this is a transcription, not a re-derivation: same ladder, same buckets, same tones, same
@@ -66,7 +67,7 @@ function isUnseen(_run: AttentionInput): boolean {
 
 /**
  * What attention derivation reads. Upstream is `Pick<RunRecord, 'status' | 'activity' |
- * 'autoResumeAt' | 'dispatch' | 'costUsd'>`; spelled out here because this package does not
+ * 'autoResumeAt' | 'awaitingAnswerSince' | 'dispatch' | 'costUsd'>`; spelled out here because this package does not
  * depend on the contract, with `dispatch` narrowed to what the rule reads.
  * A `RunIndexEntry` or a `RunRecord` satisfies it, extra fields ignored (CLAUDE.md rule 5).
  *
@@ -79,6 +80,7 @@ export type AttentionInput = {
   status: RunStatus
   activity?: RunActivity
   autoResumeAt?: string
+  awaitingAnswerSince?: string
   /** `rootRunId` is not read: it is the key every `dispatch` carries, so the index entry's
    *  narrower object (no budget keys at all) still type-checks against this one. */
   dispatch?: { rootRunId?: string; budgetUsd?: number; overBudget?: boolean }
@@ -102,11 +104,26 @@ export function budgetStop(run: Pick<AttentionInput, 'status' | 'dispatch' | 'co
 }
 
 /**
+ * A `failed` run whose session closed on an unanswered `CEZ:ASK`: no process is left, but the
+ * question is still the operator's. Every surface that asks "does this need you?" reads it the
+ * same way.
+ */
+export function isAwaitingAnswer(run: Pick<AttentionInput, 'status' | 'awaitingAnswerSince'>): boolean {
+  return run.status === 'failed' && run.awaitingAnswerSince !== undefined
+}
+
+/** The runs a "needs you" list keeps: waiting, in review, or awaiting an answer. */
+export function isNeedsYouStatus(run: Pick<AttentionInput, 'status' | 'awaitingAnswerSince'>): boolean {
+  return run.status === 'waiting' || run.status === 'review' || isAwaitingAnswer(run)
+}
+
+/**
  * Run → attention. The chain below IS the priority order — first match wins.
  *
- * Two rungs are the counter-intuitive ones the PRD calls out (Business Logic): a `failed` run
- * with a booked auto-resume is `scheduled`, not an error, and must come before the `failed`
- * rung; a `running` run that is only `monitoring` its own background work asks nothing.
+ * Three rungs are the counter-intuitive ones: a `failed` run with a booked auto-resume is
+ * `scheduled`, not an error, and a `failed` run still awaiting an answer is `needs you` — both
+ * must come before the `failed` rung; a `running` run that is only `monitoring` its own
+ * background work asks nothing.
  */
 export function deriveAttention(run: AttentionInput): Attention {
   if (hasPendingPermission(run)) {
@@ -114,6 +131,11 @@ export function deriveAttention(run: AttentionInput): Attention {
   }
   if (run.status === 'failed' && run.autoResumeAt) {
     return { bucket: 'none', tone: 'pending', pulse: false, label: 'scheduled' }
+  }
+  // The inactivity timer, a crash or a restart closed the session on an unanswered question: the
+  // record says `failed` because the process is gone, but the answer reopens it.
+  if (isAwaitingAnswer(run)) {
+    return { bucket: 'waiting', tone: 'pending', pulse: true, label: 'needs you' }
   }
   if (run.status === 'failed') {
     return { bucket: 'error', tone: 'danger', pulse: false, label: 'failed' }

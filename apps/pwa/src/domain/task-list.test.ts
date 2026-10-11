@@ -102,6 +102,17 @@ describe('buildTaskList on the fixture', () => {
   })
 })
 
+describe('a run awaiting an answer (Cezar 0.15.0)', () => {
+  const awaiting = entry({ id: 'a', status: 'failed', awaitingAnswerSince: '2026-10-05T10:00:00.000Z' })
+
+  it('sits under Needs attention and sorts with the waiting runs, ahead of a plain failure', () => {
+    expect(sectionOf(awaiting)).toBe('attention')
+    const failed = entry({ id: 'f', status: 'failed', createdAt: '2026-10-06T10:00:00.000Z' })
+    const review = entry({ id: 'v', status: 'review' })
+    expect([failed, review, awaiting].sort(compareRuns).map((run) => run.id)).toEqual(['a', 'v', 'f'])
+  })
+})
+
 describe('compareRuns', () => {
   it('orders scheduled resumes by their appointment, soonest first', () => {
     const later = entry({ id: 'later', status: 'failed', autoResumeAt: '2026-09-21T11:40:00.000Z', createdAt: '2026-09-21T01:00:00.000Z' })
