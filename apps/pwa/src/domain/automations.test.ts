@@ -192,8 +192,16 @@ describe('words', () => {
     expect(eventText(event)).toBe(expected)
   })
 
+  // Cezar 0.15.1 (#115).
+  it.each([
+    ['pull_request.merged', 'pull request merged'],
+    ['pull_request.closed', 'pull request closed unmerged'],
+  ])('GitHub event %s → %s', (event, expected) => {
+    expect(eventText(event)).toBe(expected)
+  })
+
   it('an event added upstream reads as its raw word', () => {
-    expect(eventText('pull_request.merged')).toBe('pull_request.merged')
+    expect(eventText('pull_request.reopened')).toBe('pull_request.reopened')
   })
 
   it.each([

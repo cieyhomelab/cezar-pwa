@@ -7,7 +7,7 @@ Vendored copy of Cezar's request/response schemas and agent event dictionary:
 | `src/contract/**` | `packages/contract/src/**` |
 | `src/protocol/ui-events.ts` | `packages/api-client/src/protocol/ui-events.ts` |
 
-Pinned to tag `v0.11.0` (the version the instance reports) — the sha is in
+Pinned to the release tag the instance reports — the sha is in
 `UPSTREAM`. To move it:
 
 ```bash
@@ -37,6 +37,10 @@ responses with them would turn a new upstream status into a failed screen.
 ## Rules
 
 - **Never edit these files by hand** (CLAUDE.md rule 3). Re-run the sync instead.
+- The one exception is `patches/*.patch`, which the sync applies after copying:
+  upstream compiles without `noUnusedParameters`, ours does not. Keep each patch
+  to the line that trips our compiler; a patch that stops applying fails the
+  sync and is deleted once upstream fixes the line.
 - Missing something the upstream contract does not cover? Add a local type in
   `apps/pwa/src/api/types.local.ts` with a comment naming where it came from.
 - Pick the sha that matches the instance: `GET /api/v1/health` → `version`, then

@@ -610,6 +610,9 @@ export const en = {
       'pull_request.reviewed': 'review submitted',
       'pull_request.review_requested': 'review requested',
       'pull_request.rereview_requested': 'review re-requested',
+      /** Cezar 0.15.1. */
+      'pull_request.merged': 'pull request merged',
+      'pull_request.closed': 'pull request closed unmerged',
     },
     log: {
       title: 'Recent activity',

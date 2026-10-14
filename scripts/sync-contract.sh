@@ -42,6 +42,17 @@ mkdir -p "$dest/src/contract" "$dest/src/protocol"
 cp -R "$src_contract/." "$dest/src/contract/"
 cp "$src_events" "$dest/src/protocol/ui-events.ts"
 
+# Upstream compiles without noUnusedParameters, which our tsconfigs enable. The
+# few lines that trip it are fixed by patches/*.patch, applied here so the
+# vendored tree stays reproducible. A patch that no longer applies fails the
+# sync: drop it once upstream fixes the line.
+shopt -s nullglob
+for patch in "$dest"/patches/*.patch; do
+  echo "==> applying $(basename "$patch")"
+  git -C "$dest" apply "$patch"
+done
+shopt -u nullglob
+
 printf '%s\n' "$sha" > "$dest/UPSTREAM"
 
 echo "==> pinned to $sha"
