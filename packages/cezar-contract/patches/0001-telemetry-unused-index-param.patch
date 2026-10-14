@@ -1,0 +1,11 @@
+--- a/src/contract/telemetry.ts
++++ b/src/contract/telemetry.ts
+@@ -49,7 +49,7 @@
+       route
+         .split('/')
+         .slice(1)
+-        .every((segment, i, all) =>
++        .every((segment, _i, all) =>
+           segment === '' ? all.length === 1 : segment === ':param' || TELEMETRY_ROUTE_SEGMENTS.includes(segment),
+         ),
+     { message: 'a route shape: known segments and :param only' },

@@ -19,6 +19,7 @@ import liveChanges from '../fixtures/changes.live-0.11.0.json'
 import group from '../fixtures/group.json'
 import dryRunHealth from '../fixtures/health.dry-run-0.14.0.json'
 import dryRunHealth015 from '../fixtures/health.dry-run-0.15.0.json'
+import dryRunHealth0151 from '../fixtures/health.dry-run-0.15.1.json'
 import liveHealth from '../fixtures/health.live-0.13.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
@@ -55,6 +56,8 @@ describe('contract fixtures', () => {
     ['dry-run health, 0.14.0', healthResponseSchema, dryRunHealth],
     // #113. The same capture from `cezar-cli@0.15.0`: the health shape did not move.
     ['dry-run health, 0.15.0', healthResponseSchema, dryRunHealth015],
+    // #115. `cezar-cli@0.15.1`, same capture: only `version` moved.
+    ['dry-run health, 0.15.1', healthResponseSchema, dryRunHealth0151],
     ['live runs-index', runsIndexResponseSchema, liveRunsIndex],
     ['hand-written runs-index', runsIndexResponseSchema, runsIndex],
     ['live run', apiRunSchema, liveRun],
