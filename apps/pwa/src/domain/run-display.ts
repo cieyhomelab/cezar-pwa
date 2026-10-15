@@ -68,7 +68,12 @@ function prUrls(run: TaskReferenceInput): string[] {
   return urls
 }
 
-/** Upstream's issue accessor, minus the link synthesis that needs the project's repo URL. */
+/**
+ * Upstream's issue accessor, minus the link synthesis that needs the project's repo URL. That is
+ * also why the `referenced*Candidates` guard of `v0.15.2` (#819, #854) is not copied: it only
+ * refuses to rebuild a foreign number into a link, and with no repo base upstream keeps the number
+ * as inert text — which is all this row shows.
+ */
 function taskIssueUrl(run: TaskReferenceInput): string | undefined {
   return run.referencedIssueUrl
 }

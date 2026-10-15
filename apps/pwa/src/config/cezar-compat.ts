@@ -1,14 +1,14 @@
 /**
  * The Cezar version this client was built and tested against.
  *
- * Source: the latest release on 2026-10-14 (the host's upgrade to it is
- * tracked in #115), and the contract vendored for it (`packages/cezar-contract/UPSTREAM`
- * = tag `v0.15.1` of `open-mercato/cezar`, `ae60471`). Confirm against the
+ * Source: the latest release on 2026-10-15 (the host's upgrade to it is
+ * tracked in #117), and the contract vendored for it (`packages/cezar-contract/UPSTREAM`
+ * = tag `v0.15.2` of `open-mercato/cezar`, `a9cc59b`). Confirm against the
  * live instance with `GET /api/v1/health` → `version`. Bump this together with
  * `npm run sync:contract <sha>` whenever the VPS moves (CLAUDE.md → "When
  * Cezar's API changes").
  */
-export const TESTED_CEZAR_VERSION = '0.15.1'
+export const TESTED_CEZAR_VERSION = '0.15.2'
 
 /** Compares dotted version strings; missing segments count as 0. */
 function compareVersions(a: string, b: string): number {
