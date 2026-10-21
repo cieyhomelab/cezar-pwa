@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import type { LimitsResponse, PushPayload } from '@cezar-pwa/shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.ts'
+import { GATE_DEDUP_MS, GateAlerts } from './gate.ts'
 import { Pusher, PUSH_TIMEOUT_MS, PUSH_TTL_SECONDS, topicFor, type SendNotification } from './push.ts'
 import { SubscriptionStore } from './store.ts'
 import { APPLE, subscription } from './testing.ts'
@@ -15,6 +16,9 @@ let dir: string
 let store: SubscriptionStore
 let send: ReturnType<typeof vi.fn<SendNotification>>
 let app: ReturnType<typeof createApp>
+let clock: number
+
+const GATE_TOKEN = 'a'.repeat(64)
 
 const LIMITS: LimitsResponse = {
   observedAt: '2026-09-25T10:00:00.000Z',
@@ -37,7 +41,14 @@ beforeEach(async () => {
   send = vi.fn<SendNotification>(async () => ({}))
   const pusher = new Pusher({ store, vapid, subject: ORIGIN, send })
   const watcher = { state: 'live' as const, statuses: new Map([['cezar-pwa/r1', 'waiting' as const]]), seededAt: 'now' }
-  app = createApp({ store, pusher, watcher, limits, publicKey: vapid.publicKey, publicOrigin: ORIGIN })
+  clock = Date.parse('2026-10-21T12:00:00Z')
+  const alerts = new GateAlerts({
+    file: join(dir, 'gate-alerts.json'),
+    now: () => clock,
+    notify: async (payload) => (await pusher.sendToAll(payload)).filter((d) => d === 'sent').length,
+  })
+  const gate = { token: GATE_TOKEN, alerts }
+  app = createApp({ store, pusher, watcher, limits, gate, publicKey: vapid.publicKey, publicOrigin: ORIGIN })
 })
 afterEach(() => rm(dir, { recursive: true, force: true }))
 
@@ -127,6 +138,77 @@ describe('the /m/push/ surface', () => {
     const response = await call('GET', '/nope')
     expect(response.status).toBe(404)
     expect(await response.json()).toEqual({ error: 'not found' })
+  })
+})
+
+describe('POST /m/push/gate', () => {
+  const body = {
+    gate: 'merge',
+    repo: 'cieyhomelab/sh-skills',
+    number: 12,
+    title: 'Add the delivery workflow',
+    url: 'https://github.com/cieyhomelab/sh-skills/pull/12',
+  }
+  const ring = (over: Record<string, unknown> = body, headers: Record<string, string> = {}) =>
+    call('POST', '/gate', over, { 'x-cezar-push-token': GATE_TOKEN, ...headers })
+
+  it('pushes the gate to every device and says how many took it', async () => {
+    await store.upsert(subscription())
+    await store.upsert(subscription(`${APPLE}-2`))
+    const response = await ring()
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({ sent: 2, deduplicated: false })
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(send.mock.calls[0]![1])).toEqual({ kind: 'gate', ...body })
+  })
+
+  it.each([
+    ['no token', {}],
+    ['a wrong token', { 'x-cezar-push-token': 'b'.repeat(64) }],
+    ['a token of another length', { 'x-cezar-push-token': 'short' }],
+  ])('refuses %s with 401', async (_name, headers) => {
+    const response = await call('POST', '/gate', body, headers)
+    expect(response.status).toBe(401)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['an Origin, even our own', { origin: ORIGIN }],
+    ['an Origin from elsewhere', { origin: 'https://evil.example' }],
+    ['an X-Forwarded-For (it came through nginx)', { 'x-forwarded-for': '203.0.113.7' }],
+  ])('refuses a request with %s with 403, token or not', async (_name, headers) => {
+    expect((await ring(body, headers)).status).toBe(403)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['an unknown gate', { ...body, gate: 'deploy' }],
+    ['a repo that is not owner/name', { ...body, repo: 'sh-skills' }],
+    ['a number that is not a positive integer', { ...body, number: 0 }],
+    ['a title over 100 characters', { ...body, title: 'x'.repeat(101) }],
+    ['a url outside GitHub', { ...body, url: 'https://evil.example/pull/12' }],
+    ['an extra key', { ...body, diff: '+ secret' }],
+    ['a missing field', { gate: 'spec', repo: 'a/b', number: 1, title: '' }],
+  ])('refuses %s with 400', async (_name, over) => {
+    expect((await ring(over)).status).toBe(400)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('accepts an empty title', async () => {
+    expect((await ring({ ...body, title: '' })).status).toBe(202)
+  })
+
+  it('rings the same gate on the same PR once in ten minutes, then again', async () => {
+    await store.upsert(subscription())
+    expect(await (await ring()).json()).toEqual({ sent: 1, deduplicated: false })
+    clock += GATE_DEDUP_MS - 1
+    expect(await (await ring()).json()).toEqual({ sent: 0, deduplicated: true })
+    // Another gate, or another PR, is another matter.
+    expect(await (await ring({ ...body, gate: 'blocked' })).json()).toEqual({ sent: 1, deduplicated: false })
+    expect(await (await ring({ ...body, number: 13 })).json()).toEqual({ sent: 1, deduplicated: false })
+    clock += 1
+    expect(await (await ring()).json()).toEqual({ sent: 1, deduplicated: false })
+    expect(send).toHaveBeenCalledTimes(4)
   })
 })
 
@@ -221,6 +303,15 @@ describe('Pusher.sendTo, staying honest (S-11)', () => {
     expect(topic).toMatch(/^[A-Za-z0-9_-]{1,32}$/)
     expect(topicFor(limit('exhausted', 'opus'))).toBe(topic)
     expect(topicFor(limit('near', 'sonnet'))).not.toBe(topic)
+  })
+
+  it('gives a gate its own topic per gate and issue or PR', () => {
+    const gate = (kind: string, number = 12): PushPayload => ({ kind: 'gate', gate: kind, repo: 'o/r', number })
+    const topic = topicFor(gate('merge'))
+    expect(topic).toMatch(/^[A-Za-z0-9_-]{1,32}$/)
+    expect(topicFor(gate('merge'))).toBe(topic)
+    expect(topicFor(gate('blocked'))).not.toBe(topic)
+    expect(topicFor(gate('merge', 13))).not.toBe(topic)
   })
 
   it('sends the test without a topic: it must not replace a real notification waiting to be delivered', async () => {

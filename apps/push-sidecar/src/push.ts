@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { limitWindowKey, runKey, type PushPayload } from '@cezar-pwa/shared'
+import { gateKey, limitWindowKey, runKey, type PushPayload } from '@cezar-pwa/shared'
 import webpush from 'web-push'
 import type { Subscription, SubscriptionStore } from './store.ts'
 import type { VapidKeys } from './vapid.ts'
@@ -71,7 +71,8 @@ const isGone = (error: unknown) => {
  *
  * A topic is at most 32 URL-safe base64 characters, and it travels in the clear to the push
  * service, so it is a hash of the task's key rather than the key itself. A limit notification
- * (#94) is keyed by its window the same way: an undelivered "near" is replaced by "exhausted".
+ * (#94) is keyed by its window the same way: an undelivered "near" is replaced by "exhausted",
+ * and a gate by its gate and issue or PR.
  */
 export function topicFor(payload: PushPayload): string | undefined {
   const key = topicKey(payload)
@@ -82,6 +83,9 @@ function topicKey(payload: PushPayload): string | undefined {
   if (payload.kind === 'attention' && payload.projectId && payload.runId) return runKey(payload.projectId, payload.runId)
   if (payload.kind === 'limit' && payload.provider && payload.account && payload.window) {
     return `limit:${limitWindowKey(payload.provider, payload.account, { kind: payload.window, model: payload.model })}`
+  }
+  if (payload.kind === 'gate' && payload.gate && payload.repo && payload.number !== undefined) {
+    return `gate:${gateKey(payload.gate, payload.repo, payload.number)}`
   }
   return undefined
 }

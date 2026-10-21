@@ -2,6 +2,7 @@ import type { PushPayload } from '@cezar-pwa/shared'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
+import { gateBody, tokenMatches, type GateAlerts } from './gate.ts'
 import type { LimitsCollector } from './limits/collector.ts'
 import type { Pusher } from './push.ts'
 import { subscriptionSchema, type SubscriptionStore } from './store.ts'
@@ -22,6 +23,8 @@ export type AppDeps = {
   /** `PUBLIC_ORIGIN`, e.g. `https://cezar.example.com` — the only origin a write may come from (CLAUDE.md rule 1). */
   publicOrigin: string
   limits: Pick<LimitsCollector, 'snapshot'>
+  /** Gate notifications from the host's own processes: the token from `STATE_DIR/gate-token`. */
+  gate: { token: string; alerts: Pick<GateAlerts, 'ring'> }
 }
 
 const endpointBody = z.object({ endpoint: z.string().min(1).max(2048) })
@@ -72,6 +75,21 @@ export function createApp(deps: AppDeps): Hono {
     // A stall is the gateway's fault, not the device's: 504, which the app reads as "try later".
     if (delivery === 'timeout') return c.json({ error: 'push service did not answer in time' }, 504)
     return c.json({ error: 'push service refused the notification' }, 502)
+  })
+
+  // A software-house gate (`sh-notify` on the host). nginx answers 404 for this path, so a request
+  // that came through it — `X-Forwarded-For` — or from a page — `Origin` — is refused before the
+  // token is even looked at.
+  app.post('/gate', async (c) => {
+    if (c.req.header('origin') !== undefined || c.req.header('x-forwarded-for') !== undefined) {
+      return c.json({ error: 'not for browsers or proxies' }, 403)
+    }
+    if (!tokenMatches(deps.gate.token, c.req.header('x-cezar-push-token'))) {
+      return c.json({ error: 'missing or wrong token' }, 401)
+    }
+    const parsed = gateBody.safeParse(await readJson(c.req.raw))
+    if (!parsed.success) return c.json({ error: 'not a gate this service accepts' }, 400)
+    return c.json(await deps.gate.alerts.ring(parsed.data), 202)
   })
 
   // Counts and states only — never a task.

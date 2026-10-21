@@ -162,6 +162,10 @@ pushed=$(curl -s -b "$jar" "$base/m/push/vapid-public-key")
   fail "with a session, /m/push/ did not reach the sidecar with its full path: $pushed"
 pass "with a session, /m/push/ reaches the sidecar, path intact"
 
+gate=$(curl -s -o /dev/null -b "$jar" -X POST -w '%{http_code}' "$base/m/push/gate")
+[[ "$gate" == 404 ]] || fail "with a session, POST /m/push/gate → $gate (want 404: host processes only)"
+pass "/m/push/gate is never forwarded, even past the gate"
+
 # S-12 sign-out. Only a same-origin POST ends the session.
 read -r status _ cookie _ < <(probe "$base/m/session/end")
 [[ "$status" == 405 && "$cookie" == no ]] || fail "GET /m/session/end → $status cookie=$cookie (want 405, no cookie)"

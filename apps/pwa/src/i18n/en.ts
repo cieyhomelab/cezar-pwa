@@ -733,7 +733,7 @@ export const en = {
     section: 'Notifications',
     /** FR-038, FR-043: what a notification says, and what it never carries. */
     intro:
-      'A notification arrives when a task is waiting for your answer, waiting for review, or has ended with an error. It carries the task title, the project and the reason — no code and nothing from the conversation. While tasks are queued or running, one also arrives when a usage-limit window is nearly or fully used up.',
+      'A notification arrives when a task is waiting for your answer, waiting for review, or has ended with an error. It carries the task title, the project and the reason — no code and nothing from the conversation. While tasks are queued or running, one also arrives when a usage-limit window is nearly or fully used up, and one when a software-house agent is waiting for you on GitHub.',
     /** FR-037: in a browser tab the permission prompt cannot work on iOS. */
     installTitle: 'First add Cezar to your home screen',
     installBody:
@@ -777,6 +777,15 @@ export const en = {
       near: 'nearly used up',
       exhausted: 'used up',
       queued: 'tasks are waiting to run',
+    },
+    /** A software-house gate waiting on GitHub, keyed by the gate `sh-notify` sends. */
+    gate: {
+      title: {
+        spec: 'Specification waiting for approval',
+        merge: 'Pull request waiting for merge',
+        blocked: 'Your decision is needed',
+      } as Record<string, string>,
+      fallback: 'Waiting for you on GitHub',
     },
   },
   install: {

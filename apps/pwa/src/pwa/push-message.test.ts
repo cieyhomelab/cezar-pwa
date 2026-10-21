@@ -158,3 +158,50 @@ describe('limit notifications (#94)', () => {
     expect(title).toBe('gemini · daily')
   })
 })
+
+describe('gate notifications (software house)', () => {
+  const raw = {
+    kind: 'gate',
+    gate: 'merge',
+    repo: 'cieyhomelab/sh-skills',
+    number: 12,
+    title: 'Add the delivery workflow',
+    url: 'https://github.com/cieyhomelab/sh-skills/pull/12',
+  }
+
+  it.each([
+    ['spec', 'Specification waiting for approval'],
+    ['merge', 'Pull request waiting for merge'],
+    ['blocked', 'Your decision is needed'],
+    // A gate the phone has not heard of yet gets the general text, never a throw.
+    ['deploy', 'Waiting for you on GitHub'],
+  ])('gate %s → %s', (gate, title) => {
+    expect(notificationFor(readPushPayload({ ...raw, gate })).title).toBe(title)
+  })
+
+  it('says which issue or PR and its title, and opens it on GitHub, outside the app', () => {
+    const { options } = notificationFor(readPushPayload(raw))
+    expect(options.body).toBe('cieyhomelab/sh-skills#12 · Add the delivery workflow')
+    expect(options.data).toEqual({ url: raw.url, external: true })
+    expect(options.renotify).toBe(true)
+  })
+
+  it('tags per gate and issue or PR', () => {
+    const tag = (over: object) => notificationFor(readPushPayload({ ...raw, ...over })).options.tag
+    expect(tag({ title: 'renamed' })).toBe(tag({}))
+    expect(tag({ gate: 'blocked' })).not.toBe(tag({}))
+    expect(tag({ number: 13 })).not.toBe(tag({}))
+  })
+
+  it('drops a url that is not GitHub, and a tap then opens the app instead', () => {
+    const payload = readPushPayload({ ...raw, url: 'https://evil.example/pull/12' })
+    expect(payload).not.toHaveProperty('url')
+    expect(notificationFor(payload).options.data).toEqual({ url: '/m/' })
+  })
+
+  it('drops a number that is not a positive integer', () => {
+    expect(readPushPayload({ ...raw, number: '12' })).not.toHaveProperty('number')
+    expect(readPushPayload({ ...raw, number: 1.5 })).not.toHaveProperty('number')
+    expect(notificationFor(readPushPayload({ ...raw, number: 0, title: '' })).options.body).toBe('cieyhomelab/sh-skills')
+  })
+})

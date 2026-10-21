@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { serve } from '@hono/node-server'
 import { createApp } from './app.ts'
 import { readConfig } from './config.ts'
+import { GateAlerts, initGateToken } from './gate.ts'
 import { claudeAdapter } from './limits/claude.ts'
 import { codexAdapter } from './limits/codex.ts'
 import { LimitAlerts } from './limit-alerts.ts'
@@ -14,7 +15,7 @@ import { Watcher } from './watcher.ts'
 /**
  * `cezar-push` — the Web Push sidecar for Cezar Mobile (REQUIREMENTS § 6).
  *
- *   cezar-push init   create the VAPID key pair once (prints only the PUBLIC key)
+ *   cezar-push init   create the VAPID key pair and the gate token once (prints only the PUBLIC key)
  *   cezar-push        serve /m/push/ on loopback and watch Cezar's workspace stream
  *
  * Logs go to journald through stdout and never carry task content.
@@ -24,11 +25,14 @@ const log = (message: string) => console.log(`cezar-push: ${message}`)
 async function main(argv: string[]): Promise<void> {
   const config = readConfig()
   const vapidFile = join(config.stateDir, 'vapid.json')
+  const gateTokenFile = join(config.stateDir, 'gate-token')
 
   if (argv[0] === 'init') {
     const { keys, created } = await initVapid(vapidFile)
     log(`${created ? 'created' : 'kept the existing'} VAPID keys at ${vapidFile}`)
     log(`public key: ${keys.publicKey}`)
+    const gate = await initGateToken(gateTokenFile)
+    log(`${gate.created ? 'created' : 'kept the existing'} gate token at ${gateTokenFile}`)
     return
   }
 
@@ -59,6 +63,21 @@ async function main(argv: string[]): Promise<void> {
   })
   await alerts.load()
 
+  // Created on the first start when `init` predates it, so an upgrade needs no extra step.
+  const gateToken = await initGateToken(gateTokenFile)
+  if (gateToken.created) log(`created the gate token at ${gateTokenFile}`)
+  const gateAlerts = new GateAlerts({
+    file: join(config.stateDir, 'gate-alerts.json'),
+    log,
+    notify: async (payload) => {
+      const deliveries = await pusher.sendToAll(payload)
+      const sent = deliveries.filter((d) => d === 'sent').length
+      log(`gate alert pushed to ${sent}/${deliveries.length} devices`)
+      return sent
+    },
+  })
+  await gateAlerts.load()
+
   const limits = new LimitsCollector({
     cezarUrl: config.cezarUrl,
     intervalMs: config.limits.intervalMs,
@@ -81,6 +100,7 @@ async function main(argv: string[]): Promise<void> {
     limits,
     publicKey: vapid.publicKey,
     publicOrigin: config.publicOrigin,
+    gate: { token: gateToken.token, alerts: gateAlerts },
   })
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
     log(`listening on ${info.address}:${info.port}, ${store.list().length} subscriptions`)

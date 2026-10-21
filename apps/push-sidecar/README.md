@@ -21,11 +21,14 @@ Served on `127.0.0.1:4330` under `/m/push/`; nginx forwards them only past the c
 | `POST` | `/m/push/test` | `{ endpoint }` → a test push to that device only; 404 unknown, 410 gone, 502 refused, 504 the push service never answered |
 | `GET` | `/m/push/health` | stream state, baseline time, counts — never a task |
 | `GET` | `/m/push/limits` | each agent account's 5-hour / weekly windows from the last poll (`LimitsResponse`, `packages/shared/src/limits.ts`); `Cache-Control: no-store` |
+| `POST` | `/m/push/gate` | host processes only (`sh-notify`), never through nginx (it answers 404). Header `X-Cezar-Push-Token` = `~/.cezar-push/gate-token`; body `{ gate: spec\|merge\|blocked, repo: owner/name, number, title (≤ 100), url: https://github.com/… }`, extra keys refused → 202 `{ sent, deduplicated }` to every device; 400 bad body, 401 bad token, 403 with `Origin` or `X-Forwarded-For`. The same gate on the same issue or PR rings once per 10 minutes |
 
 ## State
 
 `~/.cezar-push/` (mode 0700): `vapid.json` (the key pair, created once by `init`, never rotated)
-and `subscriptions.json` (atomic writes). Both 0600, neither in the repo. A device the push
+and `subscriptions.json` (atomic writes), `gate-token` (32 random bytes in hex, created by `init`
+or the first start when missing, an existing one kept), `gate-alerts.json` and `limit-alerts.json`
+(what already rang). All 0600, none in the repo. A device the push
 service reports gone (404/410), or whose `expirationTime` has passed, is dropped. A send that runs
 past its ten-second deadline is given up on and logged as a timeout; the device stays, because a
 push service that stalls says nothing about it.
