@@ -63,17 +63,22 @@ self.addEventListener('push', (event) => {
  * FR-041: a tap opens that task's transcript, reusing an open window. The open window is told
  * where to go rather than navigated, so it routes in place and keeps what it already loaded; with
  * no window open, the task's URL is opened cold — the navigation route above serves the shell.
+ * A gate's issue or PR is outside the app: it is opened directly, never posted to a window.
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   // #68, TEMPORARY: the test push's badge goes with the test notification.
   const clearTestBadge = event.notification.tag === TEST_TAG ? applyBadge(self.navigator, null) : undefined
-  const target = (event.notification.data as { url?: unknown } | undefined)?.url
-  const url = typeof target === 'string' ? target : '/m/'
+  const data = event.notification.data as { url?: unknown; external?: unknown } | undefined
+  const url = typeof data?.url === 'string' ? data.url : '/m/'
 
   event.waitUntil(
     (async () => {
       await clearTestBadge
+      if (data?.external === true) {
+        await self.clients.openWindow(url)
+        return
+      }
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const existing = pickAppWindow(windows)
       if (existing) {

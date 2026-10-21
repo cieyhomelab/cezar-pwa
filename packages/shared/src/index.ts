@@ -21,6 +21,8 @@ export type {
 export {
   attentionPayload,
   DEFAULT_LIMIT_THRESHOLD,
+  GATE_KINDS,
+  gateKey,
   isEntering,
   limitCrossings,
   limitLevel,
@@ -29,6 +31,7 @@ export {
   MAX_TITLE_LENGTH,
   notificationTitle,
   runKey,
+  type GateKind,
   type LimitCrossingInput,
   type LimitLevel,
   type LimitMemory,

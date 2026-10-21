@@ -409,6 +409,10 @@ Added during shaping, each ruled out deliberately so it cannot creep back:
   usage-limit window reaching the threshold (default 90%) or running out **while tasks are
   queued or running**, once per window until it resets, opening the Limits screen (#94). Queued
   work about to park until a reset is worth a human's glance; a task merely finishing stays out.
+  *Narrowed again 2026-10-21 (the operator's decision):* a software-house gate on GitHub — a
+  spec PR to approve, a PR to merge, an issue or PR labelled `blocked` — sent by the `sh-*`
+  agents through `sh-notify`. They share the operator's GitHub account, so GitHub itself never
+  notifies about them; each needs the operator, so the rule above still holds.
 - **No persisted offline snapshot.** With no network the product says so plainly; it does
   not keep a local copy of task data to show later.
 - **No camera attachments on messages.** Photographing something for an agent is a

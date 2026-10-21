@@ -50,9 +50,10 @@ export function isEntering(before: RunStatus | undefined, run: AttentionInput): 
 export type PushPayload = {
   /**
    * `attention` for a transition, `test` for the operator's own test (FR-045), `limit` for a
-   * usage-limit window crossing while tasks are queued (#94).
+   * usage-limit window crossing while tasks are queued (#94), `gate` for a software-house gate
+   * waiting for the operator on GitHub.
    */
-  kind: 'attention' | 'test' | 'limit'
+  kind: 'attention' | 'test' | 'limit' | 'gate'
   projectId?: string
   projectName?: string
   runId?: string
@@ -68,6 +69,12 @@ export type PushPayload = {
   level?: LimitLevel
   usedPercent?: number
   resetsAt?: string
+  /** `gate` only: which gate, on which issue or PR, and its GitHub page (the title is `title`).
+   *  An open string, like `reason`: a gate this build has never seen gets the fallback text. */
+  gate?: string
+  repo?: string
+  number?: number
+  url?: string
 }
 
 /**
@@ -200,4 +207,21 @@ export function limitPayload(
     usedPercent: Math.min(100, Math.max(0, Math.round(window.usedPercent))),
     ...(window.resetsAt ? { resetsAt: window.resetsAt } : {}),
   }
+}
+
+/**
+ * The software house's gates (skills `sh-*` in cieyhomelab/sh-skills): the three places its agents
+ * stop for the operator. The agents and the operator share one GitHub account, so GitHub never
+ * tells the operator about these PRs — this push is the only signal. Narrowed Non-Goal, 2026-10-21.
+ *
+ * `spec`: a specification PR waits for approval; `merge`: a PR waits for the merge; `blocked`: an
+ * agent labelled an issue or PR `blocked` and needs a decision.
+ */
+export const GATE_KINDS = ['spec', 'merge', 'blocked'] as const
+
+export type GateKind = (typeof GATE_KINDS)[number]
+
+/** One entry per gate on one issue or PR: `merge/owner/repo#12`. */
+export function gateKey(gate: string, repo: string, number: number): string {
+  return `${gate}/${repo}#${number}`
 }

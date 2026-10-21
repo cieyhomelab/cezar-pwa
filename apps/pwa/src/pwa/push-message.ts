@@ -11,6 +11,9 @@ import { en } from '../i18n/en.ts'
 /** The router's basename. A notification's URL is absolute; the app's paths are under it. */
 const BASE = '/m'
 
+/** Where a gate notification may point: the issue or PR on GitHub, never anywhere else. */
+const GITHUB = 'https://github.com/'
+
 /** The test notification's tag: one at a time, and the worker recognises it on a tap. */
 export const TEST_TAG = 'cezar-test'
 
@@ -44,6 +47,19 @@ export function readPushPayload(raw: unknown): PushPayload {
       ...optional('resetsAt'),
     }
   }
+  if (data.kind === 'gate') {
+    const number = data.number
+    return {
+      kind: 'gate',
+      // An open string, like `reason`: a gate the phone has not heard of gets the fallback text.
+      ...optional('gate'),
+      ...optional('repo'),
+      ...(typeof number === 'number' && Number.isInteger(number) && number > 0 ? { number } : {}),
+      ...optional('title'),
+      // A tap opens it, so only a GitHub page: anything else is dropped and the tap opens the app.
+      ...(typeof data.url === 'string' && data.url.startsWith(GITHUB) ? { url: data.url } : {}),
+    }
+  }
   return {
     kind: data.kind === 'test' ? 'test' : 'attention',
     ...optional('projectId'),
@@ -56,17 +72,19 @@ export function readPushPayload(raw: unknown): PushPayload {
 
 /**
  * FR-041: the task's transcript, or the list when the payload does not name a task. A limit
- * notification (#94) opens the Limits screen.
+ * notification (#94) opens the Limits screen, a gate its issue or PR on GitHub.
  */
 export function targetUrl(payload: PushPayload): string {
   if (payload.kind === 'limit') return `${BASE}/limits`
+  if (payload.kind === 'gate') return payload.url ?? `${BASE}/`
   return payload.projectId && payload.runId ? `${BASE}${runPath(payload.projectId, payload.runId)}` : `${BASE}/`
 }
 
 export type NotificationSpec = {
   title: string
   // `renotify` is in the Notifications spec but not in TypeScript's DOM lib.
-  options: NotificationOptions & { data: { url: string }; renotify?: boolean }
+  // `external`: the URL is outside the app, so the worker opens it rather than routing a window to it.
+  options: NotificationOptions & { data: { url: string; external?: boolean }; renotify?: boolean }
 }
 
 /**
@@ -78,6 +96,7 @@ export type NotificationSpec = {
 export function notificationFor(payload: PushPayload, now: number = Date.now()): NotificationSpec {
   const icon = `${BASE}/icons/icon-192.png`
   if (payload.kind === 'limit') return limitNotification(payload, icon, now)
+  if (payload.kind === 'gate') return gateNotification(payload, icon)
   if (payload.kind === 'test') {
     return {
       title: en.push.testTitle,
@@ -130,6 +149,27 @@ function limitNotification(payload: PushPayload, icon: string, now: number): Not
       renotify: true,
       icon,
       data: { url: targetUrl(payload) },
+    },
+  }
+}
+
+/**
+ * A software-house gate waiting on GitHub: what kind, and `owner/repo#12 · title` — no code, no
+ * description, no comments (FR-043). The tag is per gate and issue or PR, so a repeat replaces the
+ * one before it, and rings: the sidecar already keeps a repeat within ten minutes from coming.
+ */
+function gateNotification(payload: PushPayload, icon: string): NotificationSpec {
+  const t = en.push.gate
+  const ref = payload.repo && payload.number !== undefined ? `${payload.repo}#${payload.number}` : payload.repo
+  const url = targetUrl(payload)
+  return {
+    title: (payload.gate && t.title[payload.gate]) || t.fallback,
+    options: {
+      body: [ref, payload.title].filter(Boolean).join(' · '),
+      tag: `cezar-gate-${payload.gate ?? ''}/${ref ?? ''}`,
+      renotify: true,
+      icon,
+      data: { url, ...(url.startsWith(GITHUB) ? { external: true } : {}) },
     },
   }
 }
