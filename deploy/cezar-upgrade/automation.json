@@ -1,0 +1,17 @@
+{
+  "name": "Cezar upgrade: host + PWA sync",
+  "description": "Daily: upgrade the host to the latest stable Cezar and sync the PWA contract to it (workflow cezar-upgrade, deploy/cezar-upgrade/).",
+  "kind": "schedule",
+  "schedule": {
+    "type": "daily",
+    "hour": 6,
+    "minute": 0
+  },
+  "task": {
+    "prompt": "Keep this VPS and the PWA on the newest stable Cezar release: run the cezar-upgrade workflow (state check, om-prepare-issue, host upgrade scheduled outside the cockpit, om-auto-create-pr). Finish with a PR, or with \"nothing to do\" / \"stopped: <reason>\".",
+    "workflow": "cezar-upgrade",
+    "runner": "claude",
+    "worktree": true,
+    "autonomous": true
+  }
+}

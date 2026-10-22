@@ -125,7 +125,7 @@ Every PR passes the full validation gate before review sign-off, in this order:
 - `deploy/push/rehearse.sh`
 - `npm run build`
 
-These mirror the `verify` job in `.github/workflows/ci.yml`. CI additionally runs `npm run test:e2e` (Playwright, `webkit-iphone` project) and an `infra` job (shellcheck over every tracked `*.sh` plus `deploy/nginx/rehearse.sh`); run those locally when a change touches a UI flow or `deploy/`.
+These mirror the `verify` job in `.github/workflows/ci.yml`. CI additionally runs `npm run test:e2e` (Playwright, `webkit-iphone` project) and an `infra` job (shellcheck over every tracked `*.sh` plus `deploy/nginx/rehearse.sh` and `deploy/cezar-upgrade/rehearse.sh`); run those locally when a change touches a UI flow or `deploy/`.
 
 Any non-zero exit fails the gate and blocks the PR. The implementing skills run the gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. The command list lives in `.ai/agentic.config.json`; when it changes, update it there and in this section together.
 

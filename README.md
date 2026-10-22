@@ -161,7 +161,8 @@ apps/pwa/                 # the PWA
 apps/push-sidecar/        # cezar-push, the Web Push sidecar
 packages/shared/          # attention rule + types shared by app and sidecar
 packages/cezar-contract/  # Cezar's contract, vendored and pinned
-deploy/                   # nginx snippet and installer, sidecar installer, systemd units
+deploy/                   # nginx snippet and installer, sidecar installer, systemd units,
+                          # the daily Cezar upgrade workflow
 scripts/                  # deploy, contract sync, icon generation
 ```
 
