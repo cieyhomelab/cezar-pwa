@@ -11,9 +11,36 @@ type Record_ = { [key: string]: unknown }
 const isObject = (value: unknown): value is Record_ =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+/** Newest first, comparing instants: stored timestamps mix `…00Z` and `…00.123Z`, which order
+ *  wrongly as text within one second. Unparseable falls back to text. Upstream `compareIsoDesc`. */
+function compareIsoDesc(a: string, b: string): number {
+  const ta = Date.parse(a)
+  const tb = Date.parse(b)
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return b.localeCompare(a)
+  return tb - ta
+}
+
+/**
+ * When a run last moved — a transcription of `lastActivityAt()` in Cezar's
+ * `packages/cezar/src/runs/run-index.ts` @ 0.16.2, the key the index is sorted on. Steps count:
+ * every Continue is a new step, while the run's own `startedAt` stays at the first launch.
+ */
+export function lastActivityAt(
+  run: Pick<RunRecord, 'createdAt' | 'startedAt' | 'finishedAt'> & {
+    steps?: ReadonlyArray<{ startedAt?: string; finishedAt?: string }>
+  },
+): string {
+  let latest = run.finishedAt ?? run.startedAt ?? run.createdAt
+  for (const step of run.steps ?? []) {
+    const at = step.finishedAt ?? step.startedAt
+    if (at !== undefined && compareIsoDesc(at, latest) < 0) latest = at
+  }
+  return latest
+}
+
 /**
  * The index row a run record projects to — a transcription of `runIndexEntry()` in Cezar's
- * `server/server.js` @ v0.11.0, the function that builds `runs-index` itself. A `run` frame
+ * `packages/cezar/src/server/server.ts` @ 0.16.2, the function that builds `runs-index` itself. A `run` frame
  * therefore becomes exactly the row a refetch would have served, and the list cannot tell a
  * live update from a fresh load.
  *
@@ -23,10 +50,13 @@ const isObject = (value: unknown): value is Record_ =>
 export function toIndexEntry(projectId: string, run: RunRecord): RunIndexEntry {
   const optional = <K extends keyof RunRecord>(key: K) =>
     run[key] !== undefined ? { [key]: run[key] } : {}
+  const automationId =
+    run.automation?.automationId ?? run.automationTrigger?.automationId ?? run.automationTracker?.automationId
   return {
     projectId,
     id: run.id,
     title: run.title,
+    ...optional('worktreeLifecycle'),
     ...optional('titleSummary'),
     ...optional('titleOrigin'),
     status: run.status,
@@ -48,12 +78,17 @@ export function toIndexEntry(projectId: string, run: RunRecord): RunIndexEntry {
           },
         }
       : {}),
+    ...(automationId !== undefined ? { automationId } : {}),
     ...optional('startedAt'),
+    lastActivityAt: lastActivityAt(run),
     ...optional('pullRequestUrl'),
     ...optional('referencedPullRequestUrl'),
+    ...optional('referencedPrCandidates'),
     ...optional('prNumber'),
+    ...optional('prRefs'),
     ...optional('issueNumber'),
     ...optional('referencedIssueUrl'),
+    ...optional('referencedIssueCandidates'),
     ...optional('markerRefs'),
     ...optional('costUsd'),
     ...optional('peakRssBytes'),

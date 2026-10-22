@@ -12,7 +12,7 @@ import {
 import type { RunStatus } from './types.ts'
 
 /**
- * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`). The expected
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`, lifecycle cases from 0.16.2). The expected
  * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
  * copy, not the table.
  */
@@ -190,5 +190,51 @@ describe("running activity: 'monitoring'", () => {
     expect(deriveAttention(run({ status: 'running', activity: 'compacting' })).label).toBe(
       'running',
     )
+  })
+})
+
+describe('a worktree lifecycle script (Cezar 0.16.0, #1495)', () => {
+  const lifecycle = (over: Partial<NonNullable<AttentionInput['worktreeLifecycle']>>) => ({
+    worktreeId: 'worktree',
+    generation: 1,
+    needsAttention: false,
+    ...over,
+  })
+
+  it('keeps a finished task visible when its cleanup needs action', () => {
+    const record = run({
+      status: 'done',
+      worktreeLifecycle: lifecycle({ activeOperationId: 'operation', phase: 'teardown', needsAttention: true }),
+    })
+    expect(deriveAttention(record)).toEqual({
+      bucket: 'waiting',
+      tone: 'pending',
+      pulse: false,
+      label: 'cleanup needs attention',
+    })
+    expect(wantsAttention(record)).toBe(true)
+    expect(isNeedsYouStatus(record)).toBe(true)
+  })
+
+  it('says setup when the setup script needs action, over any status', () => {
+    for (const status of ALL_STATUSES) {
+      const record = run({ status, worktreeLifecycle: lifecycle({ phase: 'setup', needsAttention: true }) })
+      expect(deriveAttention(record).label).toBe('setup needs attention')
+    }
+  })
+
+  it.each([
+    ['setup', 'preparing worktree'],
+    ['teardown', 'cleaning up worktree'],
+  ])('reads a running %s operation as %s, independently of agent activity', (phase, label) => {
+    const record = run({ status: 'queued', worktreeLifecycle: lifecycle({ activeOperationId: 'operation', phase }) })
+    expect(deriveAttention(record)).toEqual({ bucket: 'running', tone: 'pending', pulse: true, label })
+    expect(wantsAttention(record)).toBe(false)
+    expect(isNeedsYouStatus(record)).toBe(false)
+  })
+
+  it('a settled lifecycle changes nothing', () => {
+    const record = run({ status: 'done', worktreeLifecycle: lifecycle({ phase: 'setup' }) })
+    expect(deriveAttention(record)).toEqual(deriveAttention(run({ status: 'done' })))
   })
 })
