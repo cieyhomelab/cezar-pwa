@@ -1,0 +1,30 @@
+{
+  "runs": [
+    {
+      "projectId": "repo",
+      "id": "49935fc2-6bea-4139-bf15-70ce841031a5",
+      "title": "say hello",
+      "status": "waiting",
+      "createdAt": "2026-10-22T06:43:44.158Z",
+      "archived": false,
+      "workflow": "quick-task",
+      "branch": "cez/49935fc2",
+      "startedAt": "2026-10-22T06:43:44.175Z",
+      "lastActivityAt": "2026-10-22T06:43:44.228Z",
+      "referencedPullRequestUrl": "https://github.com/open-mercato/demo/pull/123",
+      "referencedPrCandidates": [
+        "https://github.com/open-mercato/demo/pull/123"
+      ],
+      "prRefs": [],
+      "costUsd": 0.0342,
+      "usage": {
+        "cpuPct": 0.1,
+        "rssBytes": 50626560,
+        "procCount": 1
+      }
+    }
+  ],
+  "perProjectLimit": 200,
+  "truncated": [],
+  "referenceStatuses": {}
+}

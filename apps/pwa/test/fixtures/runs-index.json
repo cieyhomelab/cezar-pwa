@@ -13,7 +13,8 @@
       "workflow": "quick-task",
       "branch": "cez/aaaa1111",
       "issueNumber": 21,
-      "costUsd": 0.42
+      "costUsd": 0.42,
+      "lastActivityAt": "2026-09-21T09:40:02.000Z"
     },
     {
       "projectId": "kai-phone",
@@ -29,7 +30,8 @@
       "branch": "cez/bbbb2222",
       "pullRequestUrl": "https://github.com/cieyhomelab/kai-phone/pull/77",
       "prNumber": 77,
-      "costUsd": 12.8
+      "costUsd": 12.8,
+      "lastActivityAt": "2026-09-21T08:10:03.000Z"
     },
     {
       "projectId": "cezar-pwa",
@@ -41,7 +43,8 @@
       "finishedAt": "2026-09-21T07:20:00.000Z",
       "archived": false,
       "workflow": "quick-task",
-      "costUsd": 1.05
+      "costUsd": 1.05,
+      "lastActivityAt": "2026-09-21T07:20:00.000Z"
     },
     {
       "projectId": "notes",
@@ -53,7 +56,8 @@
       "finishedAt": "2026-09-21T06:30:00.000Z",
       "autoResumeAt": "2026-09-21T11:40:00.000Z",
       "archived": false,
-      "workflow": "quick-task"
+      "workflow": "quick-task",
+      "lastActivityAt": "2026-09-21T06:30:00.000Z"
     },
     {
       "projectId": "cezar-pwa",
@@ -67,7 +71,8 @@
       "archived": false,
       "workflow": "(planned)",
       "branch": "cez/cccc3333",
-      "costUsd": 3.5
+      "costUsd": 3.5,
+      "lastActivityAt": "2026-09-21T09:50:01.000Z"
     },
     {
       "projectId": "kai-phone",
@@ -78,7 +83,8 @@
       "createdAt": "2026-09-21T09:00:00.000Z",
       "startedAt": "2026-09-21T09:00:01.000Z",
       "archived": false,
-      "workflow": "quick-task"
+      "workflow": "quick-task",
+      "lastActivityAt": "2026-09-21T09:00:01.000Z"
     },
     {
       "projectId": "cezar-pwa",
@@ -87,7 +93,8 @@
       "status": "queued",
       "createdAt": "2026-09-21T09:58:00.000Z",
       "archived": false,
-      "workflow": "quick-task"
+      "workflow": "quick-task",
+      "lastActivityAt": "2026-09-21T09:58:00.000Z"
     },
     {
       "projectId": "notes",
@@ -96,7 +103,8 @@
       "status": "queued",
       "createdAt": "2026-09-21T09:55:00.000Z",
       "archived": false,
-      "workflow": "quick-task"
+      "workflow": "quick-task",
+      "lastActivityAt": "2026-09-21T09:55:00.000Z"
     },
     {
       "projectId": "kai-phone",
@@ -113,7 +121,8 @@
       "workflow": "(planned)",
       "pullRequestUrl": "https://github.com/cieyhomelab/kai-phone/pull/79",
       "prNumber": 79,
-      "costUsd": 2.25
+      "costUsd": 2.25,
+      "lastActivityAt": "2026-09-21T05:45:00.000Z"
     },
     {
       "projectId": "cezar-pwa",
@@ -126,7 +135,8 @@
       "seenAt": "2026-09-20T18:06:00.000Z",
       "archived": false,
       "workflow": "quick-task",
-      "costUsd": 0.31
+      "costUsd": 0.31,
+      "lastActivityAt": "2026-09-20T18:05:00.000Z"
     },
     {
       "projectId": "notes",
@@ -136,7 +146,8 @@
       "createdAt": "2026-09-19T12:00:00.000Z",
       "finishedAt": "2026-09-19T12:01:00.000Z",
       "archived": false,
-      "workflow": "quick-task"
+      "workflow": "quick-task",
+      "lastActivityAt": "2026-09-19T12:01:00.000Z"
     },
     {
       "projectId": "cezar-pwa",
@@ -145,7 +156,8 @@
       "status": "waiting",
       "createdAt": "2026-09-18T12:00:00.000Z",
       "archived": true,
-      "workflow": "quick-task"
+      "workflow": "quick-task",
+      "lastActivityAt": "2026-09-18T12:00:00.000Z"
     }
   ],
   "referenceStatuses": {},

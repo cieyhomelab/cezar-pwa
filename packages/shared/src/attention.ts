@@ -2,9 +2,10 @@ import type { RunActivity, RunStatus } from './types.ts'
 
 /**
  * Copy of Cezar's `packages/web/src/lib/attention.ts` (CLAUDE.md rule 8), at the commit in
- * `packages/cezar-contract/UPSTREAM` (tag `v0.15.0`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
+ * `packages/cezar-contract/UPSTREAM` (`3cfb655`, the npm `cezar-cli@0.16.2` build). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
  * `v0.14.0` added `budgetStop` and the `budget reached` label (Cezar #1150, synced in #111);
- * `v0.15.0` added the awaiting-answer rung, `isAwaitingAnswer` and `isNeedsYouStatus` (Cezar #1290, synced in #113).
+ * `v0.15.0` added the awaiting-answer rung, `isAwaitingAnswer` and `isNeedsYouStatus` (Cezar #1290, synced in #113);
+ * `v0.16.0` added the worktree-lifecycle rungs on top of the ladder (Cezar #1495, synced in #120).
  *
  * The PRD's worst failure is a phone that disagrees with the cockpit about what needs a human,
  * so this is a transcription, not a re-derivation: same ladder, same buckets, same tones, same
@@ -67,7 +68,7 @@ function isUnseen(_run: AttentionInput): boolean {
 
 /**
  * What attention derivation reads. Upstream is `Pick<RunRecord, 'status' | 'activity' |
- * 'autoResumeAt' | 'awaitingAnswerSince' | 'dispatch' | 'costUsd'>`; spelled out here because this package does not
+ * 'autoResumeAt' | 'awaitingAnswerSince' | 'dispatch' | 'costUsd' | 'worktreeLifecycle'>`; spelled out here because this package does not
  * depend on the contract, with `dispatch` narrowed to what the rule reads.
  * A `RunIndexEntry` or a `RunRecord` satisfies it, extra fields ignored (CLAUDE.md rule 5).
  *
@@ -85,6 +86,9 @@ export type AttentionInput = {
    *  narrower object (no budget keys at all) still type-checks against this one. */
   dispatch?: { rootRunId?: string; budgetUsd?: number; overBudget?: boolean }
   costUsd?: number
+  /** The worktree setup/teardown script state (`worktreeLifecycleProjectionSchema`), narrowed
+   *  to the three keys the rule reads. Carried by both the run record and the index entry. */
+  worktreeLifecycle?: { activeOperationId?: string; phase?: 'setup' | 'teardown'; needsAttention: boolean }
 }
 
 export type BudgetStop = {
@@ -112,20 +116,48 @@ export function isAwaitingAnswer(run: Pick<AttentionInput, 'status' | 'awaitingA
   return run.status === 'failed' && run.awaitingAnswerSince !== undefined
 }
 
-/** The runs a "needs you" list keeps: waiting, in review, or awaiting an answer. */
-export function isNeedsYouStatus(run: Pick<AttentionInput, 'status' | 'awaitingAnswerSince'>): boolean {
-  return run.status === 'waiting' || run.status === 'review' || isAwaitingAnswer(run)
+/** The runs a "needs you" list keeps: waiting, in review, awaiting an answer, or a worktree
+ *  script that stopped and wants a Retry / Skip decision. */
+export function isNeedsYouStatus(
+  run: Pick<AttentionInput, 'status' | 'awaitingAnswerSince' | 'worktreeLifecycle'>,
+): boolean {
+  return (
+    !!run.worktreeLifecycle?.needsAttention ||
+    run.status === 'waiting' ||
+    run.status === 'review' ||
+    isAwaitingAnswer(run)
+  )
 }
 
 /**
  * Run → attention. The chain below IS the priority order — first match wins.
  *
- * Three rungs are the counter-intuitive ones: a `failed` run with a booked auto-resume is
+ * The worktree-lifecycle rungs come first, ahead of even the permission rung, as upstream.
+ * Three more are the counter-intuitive ones: a `failed` run with a booked auto-resume is
  * `scheduled`, not an error, and a `failed` run still awaiting an answer is `needs you` — both
  * must come before the `failed` rung; a `running` run that is only `monitoring` its own
  * background work asks nothing.
  */
 export function deriveAttention(run: AttentionInput): Attention {
+  // A worktree setup/cleanup script outranks the whole ladder, whatever the status says: a
+  // stopped script blocks the task until the operator decides, a live one is the task's work.
+  const lifecycle = run.worktreeLifecycle
+  if (lifecycle?.needsAttention) {
+    return {
+      bucket: 'waiting',
+      tone: 'pending',
+      pulse: false,
+      label: lifecycle.phase === 'setup' ? 'setup needs attention' : 'cleanup needs attention',
+    }
+  }
+  if (lifecycle?.activeOperationId) {
+    return {
+      bucket: 'running',
+      tone: 'pending',
+      pulse: true,
+      label: lifecycle.phase === 'setup' ? 'preparing worktree' : 'cleaning up worktree',
+    }
+  }
   if (hasPendingPermission(run)) {
     return { bucket: 'permission', tone: 'violet', pulse: true, label: 'needs permission' }
   }

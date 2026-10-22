@@ -135,6 +135,7 @@ describe('toIndexEntry', () => {
       activity: 'monitoring',
       createdAt: '2026-09-21T10:00:00.000Z',
       startedAt: '2026-09-21T10:00:01.000Z',
+      lastActivityAt: '2026-09-21T10:00:01.000Z',
       archived: false,
       workflow: 'quick-task',
       branch: 'cez/r1',
@@ -142,5 +143,33 @@ describe('toIndexEntry', () => {
       prNumber: 7,
       costUsd: 1.5,
     })
+  })
+
+  it('derives lastActivityAt from the newest step and carries the worktree lifecycle (Cezar 0.16)', () => {
+    const worktreeLifecycle = {
+      worktreeId: '6f1c4a52-1f3e-4c4e-9a59-0d2c5b7e8a11',
+      generation: 1,
+      phase: 'teardown',
+      needsAttention: true,
+    }
+    const record = {
+      id: 'r2',
+      title: 'Continued',
+      workflow: 'quick-task',
+      status: 'done',
+      createdAt: '2026-09-21T10:00:00.000Z',
+      startedAt: '2026-09-21T10:00:01.000Z',
+      finishedAt: '2026-09-21T10:10:00.000Z',
+      archived: false,
+      worktreeLifecycle,
+      // A Continue the next day: a new step, while `startedAt` stays at the first launch.
+      steps: [
+        { startedAt: '2026-09-21T10:00:01.000Z', finishedAt: '2026-09-21T10:10:00.000Z' },
+        { startedAt: '2026-09-22T08:00:00.000Z', finishedAt: '2026-09-22T08:05:00.000Z' },
+      ],
+    } as unknown as RunRecord
+    const row = toIndexEntry('p', record)
+    expect(row.lastActivityAt).toBe('2026-09-22T08:05:00.000Z')
+    expect(row.worktreeLifecycle).toEqual(worktreeLifecycle)
   })
 })

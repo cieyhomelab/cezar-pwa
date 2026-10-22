@@ -153,7 +153,14 @@ describe('RunsListScreen', () => {
 
   describe('dispatched subtasks (#101)', () => {
     const base = index.runs.find((run) => run.id === 'run-running') as RunIndexEntry
-    const run = (id: string, over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({ ...base, id, title: id, ...over })
+    const run = (id: string, over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({
+      ...base,
+      id,
+      title: id,
+      ...over,
+      // A row that has not moved since it was created: the list orders by last activity.
+      lastActivityAt: over.lastActivityAt ?? over.createdAt ?? base.lastActivityAt,
+    })
     const tree = [
       run('root', { createdAt: '2026-09-21T10:00:00.000Z' }),
       run('child-a', { createdAt: '2026-09-21T10:01:00.000Z', dispatch: { rootRunId: 'root', parentRunId: 'root', kind: 'review' } }),

@@ -118,6 +118,11 @@ export const en = {
       queued: 'queued',
       done: 'done',
       cancelled: 'cancelled',
+      // Cezar 0.16: a worktree setup/cleanup script (`worktreeLifecycle`).
+      'setup needs attention': 'setup stopped',
+      'cleanup needs attention': 'cleanup stopped',
+      'preparing worktree': 'preparing',
+      'cleaning up worktree': 'cleaning up',
     } as Record<string, string>,
     timing: {
       queued: (position: number) => `#${position} in queue`,
@@ -767,6 +772,8 @@ export const en = {
       'needs review': 'Waiting for review',
       failed: 'Ended with an error',
       'needs permission': 'Asking for permission',
+      'setup needs attention': 'Worktree setup script stopped',
+      'cleanup needs attention': 'Worktree cleanup script stopped',
     } as Record<string, string>,
     fallbackTitle: 'Cezar',
     fallbackReason: 'Needs attention',

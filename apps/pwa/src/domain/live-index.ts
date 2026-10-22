@@ -1,4 +1,5 @@
 import type { RunIndexEntry, RunRecord, RunsIndexResponse } from '@cezar-pwa/cezar-contract/contract'
+import { lastActivityAt } from './task-list.ts'
 
 /**
  * One frame of `GET /api/v1/workspace/events`: the SSE `event:` name and its parsed `data:`.
@@ -13,7 +14,8 @@ const isObject = (value: unknown): value is Record_ =>
 
 /**
  * The index row a run record projects to — a transcription of `runIndexEntry()` in Cezar's
- * `server/server.js` @ v0.11.0, the function that builds `runs-index` itself. A `run` frame
+ * `server/server.js` @ v0.11.0 (`worktreeLifecycle` and `lastActivityAt` from `v0.16.2`), the
+ * function that builds `runs-index` itself. A `run` frame
  * therefore becomes exactly the row a refetch would have served, and the list cannot tell a
  * live update from a fresh load.
  *
@@ -27,6 +29,7 @@ export function toIndexEntry(projectId: string, run: RunRecord): RunIndexEntry {
     projectId,
     id: run.id,
     title: run.title,
+    ...optional('worktreeLifecycle'),
     ...optional('titleSummary'),
     ...optional('titleOrigin'),
     status: run.status,
@@ -49,6 +52,8 @@ export function toIndexEntry(projectId: string, run: RunRecord): RunIndexEntry {
         }
       : {}),
     ...optional('startedAt'),
+    // The server's rule over the record's steps, so a live row sorts where a refetch puts it.
+    lastActivityAt: lastActivityAt(run),
     ...optional('pullRequestUrl'),
     ...optional('referencedPullRequestUrl'),
     ...optional('prNumber'),

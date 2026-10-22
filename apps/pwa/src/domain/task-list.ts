@@ -8,7 +8,7 @@ import { isAwaitingAnswer, wantsAttention } from '@cezar-pwa/shared'
  * The SECTIONS are the PRD's — Needs attention / Running / Queued / Finished — not the
  * cockpit's sidebar buckets (Pinned / Needs you / Working / Recent), because the PRD makes the
  * top section the same answer as the notification and the badge. The ORDER inside a section is
- * the cockpit's (`packages/web/src/lib/task-groups.ts` → `sortRuns`, tag `v0.11.0`), so two
+ * the cockpit's (`packages/web/src/lib/task-groups.ts` → `sortRuns`, `v0.16.2`), so two
  * runs never swap places between the phone and the laptop.
  */
 
@@ -56,9 +56,11 @@ const STATUS_ORDER: Partial<Record<string, number>> = {
   review: 1,
   running: 2,
   queued: 4,
+  // One weight for every outcome (Cezar 0.16, #1433): the row reads by time and the status dot
+  // carries the outcome, so a just-finished failure is not buried under days-old done rows.
   done: 5,
-  failed: 6,
-  cancelled: 7,
+  failed: 5,
+  cancelled: 5,
 }
 const SCHEDULED_WEIGHT = 3
 
@@ -70,10 +72,44 @@ const statusWeight = (run: RunIndexEntry): number =>
       ? (STATUS_ORDER.waiting ?? 0)
       : (STATUS_ORDER[run.status] ?? 9)
 
+/** Newest first, comparing instants rather than strings: stored timestamps mix `…00Z` and
+ *  `…00.123Z`, which order wrongly as text within one second. Unparseable falls back to text.
+ *  Upstream's `compareIsoDesc`. */
+function compareIsoDesc(a: string, b: string): number {
+  const ta = Date.parse(a)
+  const tb = Date.parse(b)
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return b.localeCompare(a)
+  return tb - ta
+}
+
+type RunTimes = {
+  createdAt: string
+  startedAt?: string
+  finishedAt?: string
+  /** The server's answer on an index row (Cezar 0.16; absent from an older server's row). */
+  lastActivityAt?: string
+  /** A full record's steps: every Continue is a new step, while `startedAt` stays at launch. */
+  steps?: ReadonlyArray<{ startedAt?: string; finishedAt?: string }>
+}
+
+/**
+ * When the run last moved: the server's `lastActivityAt` when the row carries one, else the
+ * server's own rule (`packages/cezar/src/runs/run-index.ts`) over the run's times and steps.
+ */
+export function lastActivityAt(run: RunTimes): string {
+  if (run.lastActivityAt !== undefined) return run.lastActivityAt
+  let latest = run.finishedAt ?? run.startedAt ?? run.createdAt
+  for (const step of run.steps ?? []) {
+    const at = step.finishedAt ?? step.startedAt
+    if (at !== undefined && compareIsoDesc(at, latest) < 0) latest = at
+  }
+  return latest
+}
+
 /**
  * The cockpit's `sortRuns` without pins (the index row carries no `pinned`): status weight,
- * then soonest appointment for scheduled runs, FIFO for the queue, newest first otherwise.
- * ISO-8601 UTC strings compare lexicographically.
+ * then soonest appointment for scheduled runs, FIFO for the queue, newest activity first
+ * otherwise. ISO-8601 UTC strings compare lexicographically.
  */
 export function compareRuns(a: RunIndexEntry, b: RunIndexEntry): number {
   const weight = statusWeight(a) - statusWeight(b)
@@ -85,7 +121,7 @@ export function compareRuns(a: RunIndexEntry, b: RunIndexEntry): number {
   if (a.status === 'queued' && b.status === 'queued') {
     return a.createdAt.localeCompare(b.createdAt)
   }
-  return b.createdAt.localeCompare(a.createdAt)
+  return compareIsoDesc(lastActivityAt(a), lastActivityAt(b))
 }
 
 /**

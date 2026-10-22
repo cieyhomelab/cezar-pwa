@@ -5,6 +5,7 @@ import {
   attentionCount,
   buildTaskList,
   compareRuns,
+  lastActivityAt,
   flattenRows,
   foldSubtasks,
   type ListRow,
@@ -25,6 +26,8 @@ const entry = (over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({
   archived: false,
   workflow: 'quick-task',
   ...over,
+  // Cezar 0.16 requires it; a row that never moved since creation reads its creation time.
+  lastActivityAt: over.lastActivityAt ?? over.createdAt ?? '2026-09-21T10:00:00.000Z',
 })
 
 describe('sectionOf', () => {
@@ -42,6 +45,16 @@ describe('sectionOf', () => {
     ['queued is queued', { status: 'queued' }, 'queued'],
     ['done is finished', { status: 'done' }, 'finished'],
     ['cancelled is finished', { status: 'cancelled' }, 'finished'],
+    [
+      'a done task whose cleanup script stopped needs the operator (Cezar 0.16)',
+      { status: 'done', worktreeLifecycle: { worktreeId: 'w', generation: 1, phase: 'teardown', needsAttention: true } },
+      'attention',
+    ],
+    [
+      'a done task still cleaning up its worktree is not news',
+      { status: 'done', worktreeLifecycle: { worktreeId: 'w', generation: 1, activeOperationId: 'op', phase: 'teardown', needsAttention: false } },
+      'finished',
+    ],
     [
       'a status this client has never seen is shown, under finished',
       { status: 'paused' as RunIndexEntry['status'] },
@@ -131,6 +144,38 @@ describe('compareRuns', () => {
     const old = entry({ id: 'old', status: 'done', createdAt: '2026-09-20T10:00:00.000Z' })
     const recent = entry({ id: 'new', status: 'done', createdAt: '2026-09-21T10:00:00.000Z' })
     expect([old, recent].sort(compareRuns).map((run) => run.id)).toEqual(['new', 'old'])
+  })
+
+  it('sorts by last activity, not creation (Cezar 0.16, #1433)', () => {
+    const continued = entry({ id: 'continued', status: 'done', createdAt: '2026-09-01T10:00:00.000Z', lastActivityAt: '2026-09-22T10:00:00.000Z' })
+    const fresh = entry({ id: 'fresh', status: 'done', createdAt: '2026-09-21T10:00:00.000Z' })
+    expect([fresh, continued].sort(compareRuns).map((run) => run.id)).toEqual(['continued', 'fresh'])
+  })
+
+  it('ranks every outcome alike, so a fresh failure is not buried under older done rows', () => {
+    const done = entry({ id: 'done', status: 'done', lastActivityAt: '2026-09-21T10:00:00.000Z' })
+    const cancelled = entry({ id: 'cancelled', status: 'cancelled', lastActivityAt: '2026-09-21T12:00:00.000Z' })
+    const failed = entry({ id: 'failed', status: 'failed', lastActivityAt: '2026-09-21T11:00:00.000Z' })
+    // `failed` is in Needs attention on the phone, but the order inside one section still holds.
+    expect([done, failed, cancelled].sort(compareRuns).map((run) => run.id)).toEqual(['cancelled', 'failed', 'done'])
+  })
+
+  it('compares instants, not text, across mixed millisecond precision', () => {
+    const a = entry({ id: 'a', status: 'done', lastActivityAt: '2026-09-21T10:00:00Z' })
+    const b = entry({ id: 'b', status: 'done', lastActivityAt: '2026-09-21T10:00:00.500Z' })
+    expect([a, b].sort(compareRuns).map((run) => run.id)).toEqual(['b', 'a'])
+  })
+})
+
+describe('lastActivityAt', () => {
+  it('prefers the server answer, else falls back to the run times (a pre-0.16 row)', () => {
+    const base = { createdAt: '2026-09-21T10:00:00.000Z' }
+    expect(lastActivityAt({ ...base, lastActivityAt: '2026-09-23T00:00:00.000Z' })).toBe('2026-09-23T00:00:00.000Z')
+    expect(lastActivityAt({ ...base, startedAt: '2026-09-21T10:01:00.000Z', finishedAt: '2026-09-21T11:00:00.000Z' })).toBe(
+      '2026-09-21T11:00:00.000Z',
+    )
+    expect(lastActivityAt({ ...base, startedAt: '2026-09-21T10:01:00.000Z' })).toBe('2026-09-21T10:01:00.000Z')
+    expect(lastActivityAt(base)).toBe(base.createdAt)
   })
 })
 

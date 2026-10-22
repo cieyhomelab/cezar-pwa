@@ -3,8 +3,8 @@ import { isCezarNewerThanTested, TESTED_CEZAR_VERSION } from './cezar-compat.ts'
 
 describe('isCezarNewerThanTested', () => {
   it.each([
-    ['0.15.3', true],
-    ['0.16.0', true],
+    ['0.16.3', true],
+    ['0.17.0', true],
     ['1.0.0', true],
     [TESTED_CEZAR_VERSION, false],
     ['0.11.1', false],
@@ -13,6 +13,11 @@ describe('isCezarNewerThanTested', () => {
     ['0.14.0', false],
     ['0.15.0', false],
     ['0.15.1', false],
+    ['0.15.2', false],
+    ['0.16.0', false],
+    ['0.16.1', false],
+    // A source checkout answers `<release>-dev` (Cezar #1530): the release it was cut from.
+    ['0.16.2-dev', false],
     ['0.15', false],
     ['', false],
     [undefined, false],

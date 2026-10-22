@@ -21,6 +21,7 @@ import dryRunHealth from '../fixtures/health.dry-run-0.14.0.json'
 import dryRunHealth015 from '../fixtures/health.dry-run-0.15.0.json'
 import dryRunHealth0151 from '../fixtures/health.dry-run-0.15.1.json'
 import dryRunHealth0152 from '../fixtures/health.dry-run-0.15.2.json'
+import dryRunHealth0162 from '../fixtures/health.dry-run-0.16.2.json'
 import liveHealth from '../fixtures/health.live-0.13.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
@@ -30,6 +31,7 @@ import mergeState from '../fixtures/merge-state.json'
 import liveRun from '../fixtures/run.live-0.11.0.json'
 import recording from '../fixtures/transcript.ndjson?raw'
 import liveRunsIndex from '../fixtures/runs-index.live-0.11.0.json'
+import dryRunRunsIndex0162 from '../fixtures/runs-index.dry-run-0.16.2.json'
 import runsIndex from '../fixtures/runs-index.json'
 
 /**
@@ -51,17 +53,10 @@ import runsIndex from '../fixtures/runs-index.json'
  */
 describe('contract fixtures', () => {
   it.each([
-    ['live health', healthResponseSchema, liveHealth],
-    // #111. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.14.0`: the dry run reports every runner as
-    // installed, so the `junie` and `copilot` rows the 0.13.0 schema rejects are both here.
-    ['dry-run health, 0.14.0', healthResponseSchema, dryRunHealth],
-    // #113. The same capture from `cezar-cli@0.15.0`: the health shape did not move.
-    ['dry-run health, 0.15.0', healthResponseSchema, dryRunHealth015],
-    // #115. `cezar-cli@0.15.1`, same capture: only `version` moved.
-    ['dry-run health, 0.15.1', healthResponseSchema, dryRunHealth0151],
-    // #117. `cezar-cli@0.15.2`, same capture: only `version` moved.
-    ['dry-run health, 0.15.2', healthResponseSchema, dryRunHealth0152],
-    ['live runs-index', runsIndexResponseSchema, liveRunsIndex],
+    // #120. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.16.2` (temp HOME, `CEZ_TELEMETRY=0`, its own
+    // port; `instanceId` zeroed). The runs index holds the one dry-run task it was given.
+    ['dry-run health, 0.16.2', healthResponseSchema, dryRunHealth0162],
+    ['dry-run runs-index, 0.16.2', runsIndexResponseSchema, dryRunRunsIndex0162],
     ['hand-written runs-index', runsIndexResponseSchema, runsIndex],
     ['live run', apiRunSchema, liveRun],
     ['live history page', runHistoryPageSchema, liveHistory],
@@ -83,6 +78,28 @@ describe('contract fixtures', () => {
   ] as const)('%s matches the vendored schema', (_name, schema, fixture) => {
     const result = schema.safeParse(fixture)
     expect(result.error?.issues ?? []).toEqual([])
+  })
+
+  // Captures from servers older than 0.16. The 0.16 schema REQUIRES keys they never sent:
+  // `capabilities.terminal` / `capabilities.designMode` on health and `lastActivityAt` on an
+  // index row. They stay as evidence that nothing else drifted. The PWA reads neither
+  // capability, and `lastActivityAt()` in `task-list.ts` falls back for a row without one.
+  it.each([
+    ['live health, 0.13.0', healthResponseSchema, liveHealth],
+    // #111. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.14.0`: the dry run reports every runner as
+    // installed, so the `junie` and `copilot` rows the 0.13.0 schema rejects are both here.
+    ['dry-run health, 0.14.0', healthResponseSchema, dryRunHealth],
+    // #113, #115, #117. The same capture from 0.15.0, 0.15.1, 0.15.2.
+    ['dry-run health, 0.15.0', healthResponseSchema, dryRunHealth015],
+    ['dry-run health, 0.15.1', healthResponseSchema, dryRunHealth0151],
+    ['dry-run health, 0.15.2', healthResponseSchema, dryRunHealth0152],
+    ['live runs-index, 0.11.0', runsIndexResponseSchema, liveRunsIndex],
+  ] as const)('%s misses only the keys 0.16 made required', (_name, schema, fixture) => {
+    const result = schema.safeParse(fixture)
+    const paths = new Set((result.error?.issues ?? []).map((issue) => issue.path.filter((key) => typeof key === 'string').join('.')))
+    expect([...paths].sort()).toEqual(
+      schema === healthResponseSchema ? ['capabilities.designMode', 'capabilities.terminal'] : ['runs.lastActivityAt'],
+    )
   })
 
   // The transcript recording is lines, not a response: each one must carry the envelope the

@@ -12,7 +12,7 @@ import {
 import type { RunStatus } from './types.ts'
 
 /**
- * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`). The expected
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`, lifecycle cases from `v0.16.0`). The expected
  * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
  * copy, not the table.
  */
@@ -190,5 +190,52 @@ describe("running activity: 'monitoring'", () => {
     expect(deriveAttention(run({ status: 'running', activity: 'compacting' })).label).toBe(
       'running',
     )
+  })
+})
+
+describe('worktree lifecycle (Cezar 0.16, #1495)', () => {
+  const lifecycle = (over: Partial<NonNullable<AttentionInput['worktreeLifecycle']>>) => ({
+    needsAttention: false,
+    ...over,
+  })
+
+  it('keeps finished tasks visible when cleanup needs action', () => {
+    const record = run({
+      status: 'done',
+      worktreeLifecycle: lifecycle({ activeOperationId: 'op', phase: 'teardown', needsAttention: true }),
+    })
+    expect(deriveAttention(record)).toEqual({
+      bucket: 'waiting',
+      tone: 'pending',
+      pulse: false,
+      label: 'cleanup needs attention',
+    })
+    expect(wantsAttention(record)).toBe(true)
+    expect(isNeedsYouStatus(record)).toBe(true)
+  })
+
+  it('names a stopped setup script, ahead of every other rung', () => {
+    const record = run({ status: 'failed', worktreeLifecycle: lifecycle({ phase: 'setup', needsAttention: true }) })
+    expect(deriveAttention(record).label).toBe('setup needs attention')
+  })
+
+  it('identifies setup independently of agent activity', () => {
+    const record = run({ activity: 'monitoring', worktreeLifecycle: lifecycle({ activeOperationId: 'op', phase: 'setup' }) })
+    expect(deriveAttention(record)).toEqual({
+      bucket: 'running',
+      tone: 'pending',
+      pulse: true,
+      label: 'preparing worktree',
+    })
+    expect(wantsAttention(record)).toBe(false)
+  })
+
+  it('reads a live teardown as cleaning up', () => {
+    const record = run({ status: 'done', worktreeLifecycle: lifecycle({ activeOperationId: 'op', phase: 'teardown' }) })
+    expect(deriveAttention(record).label).toBe('cleaning up worktree')
+  })
+
+  it('is inert when settled', () => {
+    expect(deriveAttention(run({ status: 'done', worktreeLifecycle: lifecycle({ phase: 'setup' }) })).label).toBe('done')
   })
 })
