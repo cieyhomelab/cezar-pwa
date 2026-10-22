@@ -22,6 +22,7 @@ const entry = (over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({
   title: 'A task',
   status: 'running',
   createdAt: '2026-09-21T10:00:00.000Z',
+  lastActivityAt: '2026-09-21T10:00:00.000Z',
   archived: false,
   workflow: 'quick-task',
   ...over,
@@ -30,6 +31,11 @@ const entry = (over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({
 describe('sectionOf', () => {
   const cases: [string, Partial<RunIndexEntry>, SectionKey][] = [
     ['waiting needs the operator', { status: 'waiting' }, 'attention'],
+    [
+      'a done task whose cleanup script needs a decision (Cezar 0.16.0)',
+      { status: 'done', worktreeLifecycle: { worktreeId: 'w', generation: 1, phase: 'teardown', needsAttention: true } },
+      'attention',
+    ],
     ['review needs the operator', { status: 'review' }, 'attention'],
     ['a plain failure needs the operator', { status: 'failed' }, 'attention'],
     [

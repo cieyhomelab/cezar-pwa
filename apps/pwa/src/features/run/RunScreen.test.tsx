@@ -137,6 +137,24 @@ describe('RunScreen — the header (FR-014)', () => {
     expect(await screen.findByText(en.run.transcript.footer.awaitingAnswer)).toBeInTheDocument()
     expect(screen.queryByText(en.run.transcript.footer.failedWith('idle timeout'))).not.toBeInTheDocument()
   })
+
+  it('says a finished task whose cleanup script needs a decision needs you, not done (Cezar 0.16.0)', async () => {
+    renderRun({
+      run: () =>
+        jsonResponse({
+          ...RUN,
+          status: 'done',
+          worktreeLifecycle: {
+            worktreeId: '4b0c6a52-55a4-4b9a-9d0c-7f9f5d0f0b11',
+            generation: 1,
+            phase: 'teardown',
+            state: 'needs_attention',
+            needsAttention: true,
+          },
+        }),
+    })
+    expect(await screen.findByText(en.runs.status['cleanup needs attention']!)).toBeInTheDocument()
+  })
 })
 
 describe('RunScreen — the transcript (FR-015, FR-017)', () => {

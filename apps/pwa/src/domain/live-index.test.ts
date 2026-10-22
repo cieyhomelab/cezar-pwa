@@ -1,7 +1,7 @@
 import type { RunIndexEntry, RunRecord, RunsIndexResponse } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
 import fixture from '../../test/fixtures/runs-index.json'
-import { applyWorkspaceFrame, toIndexEntry, type WorkspaceFrame } from './live-index.ts'
+import { applyWorkspaceFrame, lastActivityAt, toIndexEntry, type WorkspaceFrame } from './live-index.ts'
 
 const index = fixture as RunsIndexResponse
 
@@ -135,6 +135,7 @@ describe('toIndexEntry', () => {
       activity: 'monitoring',
       createdAt: '2026-09-21T10:00:00.000Z',
       startedAt: '2026-09-21T10:00:01.000Z',
+      lastActivityAt: '2026-09-21T10:00:01.000Z',
       archived: false,
       workflow: 'quick-task',
       branch: 'cez/r1',
@@ -142,5 +143,55 @@ describe('toIndexEntry', () => {
       prNumber: 7,
       costUsd: 1.5,
     })
+  })
+
+  it('carries the worktree lifecycle and the automation, as the 0.16.2 server does', () => {
+    const worktreeLifecycle = { worktreeId: 'w', generation: 2, phase: 'teardown', needsAttention: true }
+    const record = {
+      id: 'r2',
+      title: 'Title',
+      workflow: 'quick-task',
+      status: 'done',
+      createdAt: '2026-10-21T10:00:00.000Z',
+      finishedAt: '2026-10-21T11:00:00.000Z',
+      archived: false,
+      worktreeLifecycle,
+      automationTrigger: { automationId: 'auto-1' },
+      steps: [],
+    } as unknown as RunRecord
+    expect(toIndexEntry('p', record)).toMatchObject({
+      worktreeLifecycle,
+      automationId: 'auto-1',
+      lastActivityAt: '2026-10-21T11:00:00.000Z',
+    })
+  })
+})
+
+describe('lastActivityAt', () => {
+  const run = { createdAt: '2026-10-21T10:00:00.000Z' }
+  it.each([
+    ['only created', run, '2026-10-21T10:00:00.000Z'],
+    ['started', { ...run, startedAt: '2026-10-21T10:00:05Z' }, '2026-10-21T10:00:05Z'],
+    [
+      'finished wins over started',
+      { ...run, startedAt: '2026-10-21T10:00:05Z', finishedAt: '2026-10-21T10:30:00Z' },
+      '2026-10-21T10:30:00Z',
+    ],
+    [
+      'a newer step (a Continue) wins',
+      {
+        ...run,
+        startedAt: '2026-10-21T10:00:05Z',
+        steps: [{ startedAt: '2026-10-21T10:01:00Z', finishedAt: '2026-10-21T10:02:00Z' }, { startedAt: '2026-10-21T12:00:00Z' }],
+      },
+      '2026-10-21T12:00:00Z',
+    ],
+    [
+      'compares instants, not text, within one second',
+      { ...run, startedAt: '2026-10-21T10:00:05.500Z', steps: [{ finishedAt: '2026-10-21T10:00:05Z' }] },
+      '2026-10-21T10:00:05.500Z',
+    ],
+  ])('%s', (_name, input, expected) => {
+    expect(lastActivityAt(input)).toBe(expected)
   })
 })

@@ -36,6 +36,9 @@ describe('notificationFor', () => {
     ['needs review', 'Waiting for review'],
     ['failed', 'Ended with an error'],
     ['needs permission', 'Asking for permission'],
+    // Cezar 0.16.0 (#1495): a worktree script failed and waits for a decision.
+    ['setup needs attention', 'Its setup script needs a decision'],
+    ['cleanup needs attention', 'Its cleanup script needs a decision'],
     // A label the phone has not heard of yet: the list's word if it has one, else the raw key.
     ['running', 'working'],
     ['brand new', 'brand new'],

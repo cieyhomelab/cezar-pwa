@@ -2,6 +2,7 @@ import {
   apiRunSchema,
   automationLogResponseSchema,
   automationsResponseSchema,
+  capabilitiesSchema,
   changesPayloadSchema,
   githubPrMergeStateResponseSchema,
   groupResponseSchema,
@@ -9,9 +10,11 @@ import {
   runEventSchema,
   runHistoryContextSchema,
   runHistoryPageSchema,
+  runIndexEntrySchema,
   runsIndexResponseSchema,
 } from '@cezar-pwa/cezar-contract/contract'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import automationLog from '../fixtures/automation-log.json'
 import automations from '../fixtures/automations.json'
 import liveChangesRepointed from '../fixtures/changes-repointed.live-0.11.0.json'
@@ -22,6 +25,7 @@ import dryRunHealth015 from '../fixtures/health.dry-run-0.15.0.json'
 import dryRunHealth0151 from '../fixtures/health.dry-run-0.15.1.json'
 import dryRunHealth0152 from '../fixtures/health.dry-run-0.15.2.json'
 import liveHealth from '../fixtures/health.live-0.13.0.json'
+import liveHealth0162 from '../fixtures/health.live-0.16.2.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
 import liveMergeState from '../fixtures/merge-state.live-0.12.0.json'
@@ -44,24 +48,40 @@ import runsIndex from '../fixtures/runs-index.json'
  *    fixture drifted into a shape the tests may pass on and production never
  *    sends.
  *
+ * A capture from before a release that made a field REQUIRED is checked against the schema minus
+ * that field (`before016*` below): it still proves every other key, and it is what an older
+ * server sends, so it must not be "fixed" by inventing the field.
+ *
  * The schemas are used ONLY here. At runtime the app does not parse responses
  * with them: they are closed enums, and the vocabulary is append-only
  * (CLAUDE.md rule 5) — a status added upstream must degrade one row, not fail
  * the whole list.
  */
+/** 0.16.0 made `capabilities.terminal` and `capabilities.designMode` required (#121). */
+const before016Health = healthResponseSchema.extend({
+  capabilities: capabilitiesSchema.omit({ terminal: true, designMode: true }),
+})
+
+/** 0.16.0 made `lastActivityAt` required on an index row (#121). */
+const before016RunsIndex = runsIndexResponseSchema.extend({
+  runs: z.array(runIndexEntrySchema.omit({ lastActivityAt: true })),
+})
+
 describe('contract fixtures', () => {
   it.each([
-    ['live health', healthResponseSchema, liveHealth],
+    // #121. The VPS on 0.16.2, `instanceId` blanked and the project list cut to this one.
+    ['live health, 0.16.2', healthResponseSchema, liveHealth0162],
+    ['live health, 0.13.0', before016Health, liveHealth],
     // #111. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.14.0`: the dry run reports every runner as
     // installed, so the `junie` and `copilot` rows the 0.13.0 schema rejects are both here.
-    ['dry-run health, 0.14.0', healthResponseSchema, dryRunHealth],
+    ['dry-run health, 0.14.0', before016Health, dryRunHealth],
     // #113. The same capture from `cezar-cli@0.15.0`: the health shape did not move.
-    ['dry-run health, 0.15.0', healthResponseSchema, dryRunHealth015],
+    ['dry-run health, 0.15.0', before016Health, dryRunHealth015],
     // #115. `cezar-cli@0.15.1`, same capture: only `version` moved.
-    ['dry-run health, 0.15.1', healthResponseSchema, dryRunHealth0151],
+    ['dry-run health, 0.15.1', before016Health, dryRunHealth0151],
     // #117. `cezar-cli@0.15.2`, same capture: only `version` moved.
-    ['dry-run health, 0.15.2', healthResponseSchema, dryRunHealth0152],
-    ['live runs-index', runsIndexResponseSchema, liveRunsIndex],
+    ['dry-run health, 0.15.2', before016Health, dryRunHealth0152],
+    ['live runs-index, 0.11.0', before016RunsIndex, liveRunsIndex],
     ['hand-written runs-index', runsIndexResponseSchema, runsIndex],
     ['live run', apiRunSchema, liveRun],
     ['live history page', runHistoryPageSchema, liveHistory],

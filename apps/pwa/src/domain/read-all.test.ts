@@ -13,6 +13,7 @@ const entry = (over: Partial<RunIndexEntry> = {}): RunIndexEntry => ({
   status: 'done',
   createdAt: '2026-09-21T10:00:00.000Z',
   finishedAt: '2026-09-21T10:30:00.000Z',
+  lastActivityAt: '2026-09-21T10:30:00.000Z',
   archived: false,
   workflow: 'quick-task',
   ...over,
