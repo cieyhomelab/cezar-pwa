@@ -45,6 +45,7 @@ packages/shared/          # attention.ts, types shared by the PWA and the sideca
 packages/cezar-contract/  # vendored zod schemas + ui-events from the Cezar repo (UPSTREAM = sha)
 deploy/nginx/             # the /m/ and /m/push/ location snippet
 deploy/systemd/           # cezar-push.service
+deploy/cezar-upgrade/     # daily cockpit workflow: upgrade the host to the latest Cezar, sync the contract
 scripts/deploy.sh         # build + rsync to the VPS
 docs/
 ```

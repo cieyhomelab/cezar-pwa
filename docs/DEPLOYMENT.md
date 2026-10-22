@@ -13,6 +13,7 @@ Cezar's installer manages.
 - [Configuration reference](#configuration-reference)
 - [Installation](#installation)
 - [Updating and rotating the access key](#updating-and-rotating-the-access-key)
+- [Keeping Cezar up to date (optional)](#keeping-cezar-up-to-date-optional)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
@@ -279,6 +280,66 @@ Follow [Install on the phone](../README.md#install-on-the-phone) in the README.
   re-run `sudo deploy/nginx/install.sh /etc/nginx/sites-available/<your-vhost>`.
   `/m/` has its own copy of the unlock guard, and it keeps accepting the old key
   until you do. From then on, any phone that connects needs the new link.
+
+## Keeping Cezar up to date (optional)
+
+`deploy/cezar-upgrade/` sets up a daily cockpit automation that keeps the host
+and the PWA on the newest stable Cezar release. It runs the `cezar-upgrade`
+workflow, a graph of these nodes:
+
+1. `state.sh` (check) takes a lock and compares the host's `/api/v1/health`
+   version, `npm view cezar-cli` and the PWA pin on `origin/main`. It stops
+   when everything is current, or when a sync PR is already open.
+2. `om-prepare-issue` (agent) files the tracking issue with SDLC labels. If an
+   open issue for that release already exists, the workflow reuses it.
+3. `schedule-host.sh` (check) runs only when the host is behind. It starts
+   `upgrade-cezar.sh` as a transient user unit, `cezar-upgrade-<version>`, and
+   comments on the issue. The unit waits for a quiet cockpit, backs up
+   `~/.cezar`, pins `cezar-cli@<version>` in the cockpit unit, restarts it, and
+   rolls back if health does not report the new version within 3 minutes. It
+   posts the outcome on the issue.
+4. `om-auto-create-pr` (agent) ships the contract sync as a labelled PR. If it
+   stops before a PR exists, `om-auto-continue-pr` resumes it. Nothing is merged.
+5. `unlock.sh` (check) prints the report and releases the lock.
+
+Install it on the VPS as the user Cezar runs as (not root). Before you do,
+check:
+
+- automations are on in the cockpit,
+- `gh` is logged in with access to this repository,
+- the `om-*` skills are in the cockpit's skill list.
+
+```bash
+cd ~/cezar-pwa && git pull
+deploy/cezar-upgrade/install.sh
+```
+
+The installer copies the scripts to `~/cezar-upgrade/` and the workflow to
+`<project root>/.ai/cezar/workflows/`. That directory is gitignored, and the
+cockpit reads its workflows from there. The installer then creates the
+automation from `deploy/cezar-upgrade/automation.json` (enabled), or updates
+it in place, and ends with a dry run of `state.sh`. Its settings are written
+once to `~/cezar-upgrade/env`, mode 600:
+
+| Variable | Default |
+|---|---|
+| `CEZAR_PROJECT_ID` | `cezar-pwa`, the cockpit project of this checkout |
+| `CEZAR_PORT` | `4321`, the cockpit's local port |
+| `CEZAR_UNIT` | `cezar.service`, the cockpit's systemd user unit |
+| `CEZAR_REPO` | the checkout's GitHub `origin` |
+| `PUBLIC_ORIGIN` | `PUBLIC_ORIGIN` from `~/.cezar-push/env`, used for the post-upgrade smoke checks |
+
+**Check:** the installer prints the automation line with
+`every day at 06:00`, and the dry run ends with `nothing to do` or with the
+title of the issue it would file. To exercise the whole graph, run
+`cez automation run <id>` and watch the task in the cockpit.
+
+**Cancel a scheduled host upgrade:** `systemctl --user stop cezar-upgrade-<version>`.
+The log is `~/cezar-upgrade/upgrade.log`. A run that was killed mid-way leaves
+`~/cezar-upgrade/run.lock` behind, and the next run takes it over once it is
+6 hours old. After you change anything in `deploy/cezar-upgrade/`, run
+`deploy/cezar-upgrade/rehearse.sh` (no VPS needed), then re-run the installer
+on the VPS.
 
 ## Troubleshooting
 

@@ -117,3 +117,8 @@ jobs:
       # installers against it over loopback.
       - name: nginx rehearsal
         run: deploy/nginx/rehearse.sh
+
+      # Shims stand in for the cockpit, GitHub and systemd; the workflow-graph part
+      # needs Node and a cached cezar-cli, so it skips itself here.
+      - name: cezar-upgrade rehearsal
+        run: deploy/cezar-upgrade/rehearse.sh

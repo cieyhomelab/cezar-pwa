@@ -1,0 +1,126 @@
+# Keeps the VPS and the PWA on the newest stable Cezar release.
+# Source: deploy/cezar-upgrade/. install.sh copies this file into the cockpit project's
+# .ai/cezar/workflows/ (gitignored) and the scripts it runs into ~/cezar-upgrade/.
+# Launched daily by the automation in automation.json (task.workflow: cezar-upgrade).
+version: 2
+name: cezar-upgrade
+description: Upgrade the host to the latest stable Cezar (scheduled outside the cockpit) and sync the PWA contract through om-prepare-issue / om-auto-create-pr.
+nodes:
+  - { id: start, type: start }
+
+  - id: state
+    type: check
+    name: Lock + read versions
+    command: ~/cezar-upgrade/state.sh
+
+  - id: state-why
+    type: if
+    name: Nothing to do?
+    condition: { kind: output, ref: state.exitCode, op: equals, value: 1 }
+  - id: state-reuse
+    type: if
+    name: Reuse open issue?
+    condition: { kind: output, ref: state.exitCode, op: equals, value: 3 }
+
+  - id: issue
+    type: agent
+    name: File the issue
+    skill: om-prepare-issue
+    verdicts: [filed, stopped]
+    prompt: |
+      Cezar upgrade, this step only: file the tracking issue in this repository with this skill (it dedupes and applies the SDLC labels from .ai/agentic.config.json). The state was read by the previous node:
+
+      {{nodes.state.output}}
+
+      - Title: exactly the "issue title" line above.
+      - Labels: category `dependencies`, `priority-medium`, risk by how much the contract changed between the pin and the latest release.
+      - Body in the format of issue 117 (`gh issue view 117`): Summary / Analysis (the state above, and what changed upstream between the pin and the latest release that touches the PWA — read CHANGELOG.md and BACKWARD_COMPATIBILITY.md in https://github.com/open-mercato/cezar at the npm gitHead) / How to implement / Out of scope.
+
+      Do not change code, schedule the host upgrade, restart cezar or open a PR: later nodes do that.
+      Once the issue exists, write its number alone to the lock: `echo <number> > ~/cezar-upgrade/run.lock/issue`.
+      Verdict `filed` when the issue exists and the file is written; `stopped` with the reason otherwise.
+
+  - id: host
+    type: check
+    name: Schedule host upgrade
+    command: ~/cezar-upgrade/schedule-host.sh
+  - id: host-why
+    type: if
+    name: Host-only?
+    condition: { kind: output, ref: host.exitCode, op: equals, value: 10 }
+
+  - id: pr
+    type: agent
+    name: Sync the PWA
+    skill: om-auto-create-pr
+    verdicts: [opened, no-pr]
+    prompt: |
+      Cezar upgrade, this step only: ship the PWA contract sync as one PR with this skill. State and the issue number (the ISSUE= line):
+
+      {{nodes.state.output}}
+      {{nodes.host.output}}
+
+      Task: "Resolve issue <ISSUE>: `npm run sync:contract <full npm gitHead sha>`, bump `TESTED_CEZAR_VERSION` (and tests naming the version), port what the upstream changes require, update `docs/CEZAR_API.md` with a <pin> → <latest> delta. PR title `chore(contract): sync to Cezar v<latest> (<short sha>)`, body `Fixes #<ISSUE>`."
+      Run the validation gate from .ai/agentic.config.json and label the PR. If the gate cannot be made green, still open the PR with the failure explained. Comment the PR link on the issue. Never merge. Never restart cezar — the host upgrade is already handled.
+      Verdict `opened` when the PR exists; `no-pr` with the reason when you stopped before one exists.
+
+  - id: resume
+    type: agent
+    name: Resume the PR
+    skill: om-auto-continue-pr
+    verdicts: [opened, no-pr]
+    prompt: |
+      The previous step stopped before the Cezar contract-sync PR existed. Its last words:
+
+      {{nodes.pr.summary}}
+
+      State and issue (ISSUE= line):
+      {{nodes.state.output}}
+      {{nodes.host.output}}
+
+      Resume that work with this skill and get the PR `chore(contract): sync to Cezar v<latest> (<short sha>)` with `Fixes #<ISSUE>` open. If the gate cannot be made green, open it anyway with the failure explained, and comment the PR link on the issue. Never merge, never restart cezar.
+      Verdict `opened` when the PR exists; `no-pr` with the reason otherwise.
+
+  - id: unlock-ok
+    type: check
+    name: Report + unlock
+    command: ~/cezar-upgrade/unlock.sh ok
+  - id: unlock-failed
+    type: check
+    name: Report + unlock (stopped)
+    command: ~/cezar-upgrade/unlock.sh failed
+
+  - { id: done, type: end, name: Done, status: success }
+  - { id: nothing, type: end, name: Nothing to do, status: success }
+  - { id: stopped, type: end, name: Stopped, status: failed }
+
+edges:
+  - { from: start, to: state }
+  - { from: state.pass, to: issue }
+  - { from: state.fail, to: state-why }
+  - { from: state-why.true, to: nothing }
+  - { from: state-why.false, to: state-reuse }
+  - { from: state-reuse.true, to: host }
+  # exit 2 (lock held by another run) or an error: state.sh already released its own lock
+  - { from: state-reuse.false, to: stopped }
+
+  - { from: issue.filed, to: host }
+  - { from: issue.stopped, to: unlock-failed }
+  - { from: issue.failed, to: unlock-failed }
+
+  - { from: host.pass, to: pr }
+  - { from: host.fail, to: host-why }
+  - { from: host-why.true, to: unlock-ok }
+  - { from: host-why.false, to: unlock-failed }
+
+  - { from: pr.opened, to: unlock-ok }
+  - { from: pr.no-pr, to: resume }
+  - { from: pr.failed, to: resume }
+  - { from: resume.opened, to: unlock-ok }
+  - { from: resume.no-pr, to: unlock-failed }
+  - { from: resume.failed, to: unlock-failed }
+
+  - { from: unlock-ok.pass, to: done }
+  - { from: unlock-ok.fail, to: done }
+  - { from: unlock-failed.pass, to: stopped }
+  - { from: unlock-failed.fail, to: stopped }
