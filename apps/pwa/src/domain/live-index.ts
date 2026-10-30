@@ -22,7 +22,7 @@ function compareIsoDesc(a: string, b: string): number {
 
 /**
  * When a run last moved — a transcription of `lastActivityAt()` in Cezar's
- * `packages/cezar/src/runs/run-index.ts` @ 0.16.2, the key the index is sorted on. Steps count:
+ * `packages/cezar/src/runs/run-index.ts` @ 0.17.0 (unchanged since 0.16.2), the key the index is sorted on. Steps count:
  * every Continue is a new step, while the run's own `startedAt` stays at the first launch.
  */
 export function lastActivityAt(
@@ -40,7 +40,7 @@ export function lastActivityAt(
 
 /**
  * The index row a run record projects to — a transcription of `runIndexEntry()` in Cezar's
- * `packages/cezar/src/server/server.ts` @ 0.16.2, the function that builds `runs-index` itself. A `run` frame
+ * `packages/cezar/src/server/server.ts` @ 0.17.0, the function that builds `runs-index` itself. A `run` frame
  * therefore becomes exactly the row a refetch would have served, and the list cannot tell a
  * live update from a fresh load.
  *
@@ -50,8 +50,10 @@ export function lastActivityAt(
 export function toIndexEntry(projectId: string, run: RunRecord): RunIndexEntry {
   const optional = <K extends keyof RunRecord>(key: K) =>
     run[key] !== undefined ? { [key]: run[key] } : {}
-  const automationId =
-    run.automation?.automationId ?? run.automationTrigger?.automationId ?? run.automationTracker?.automationId
+  // 0.17.0: a task still waiting on a deferred binding is not attributed to its automation yet.
+  const automationId = run.deferredBinding
+    ? undefined
+    : run.automation?.automationId ?? run.automationTrigger?.automationId ?? run.automationTracker?.automationId
   return {
     projectId,
     id: run.id,
@@ -133,7 +135,9 @@ function sameFields(a: RunIndexEntry, b: RunIndexEntry): boolean {
  * thrown on (CLAUDE.md rule 5: the vocabulary only grows).
  *
  * - `run` — upsert. A run the index has never seen is a new task and is added; the list's own
- *   ordering places it, so position here does not matter.
+ *   ordering places it, so position here does not matter. The frame may be the 0.17.0 slim one
+ *   (no `task`, `steps`, …); every key the row reads is still on it, except the steps behind
+ *   `lastActivityAt`.
  * - `run-deleted` — remove.
  */
 export function applyWorkspaceFrame(
@@ -151,6 +155,16 @@ export function applyWorkspaceFrame(
         ...toIndexEntry(project, record as RunRecord),
         // The live sample rides on the index answer, never on the record; keep the last one.
         ...(previous?.usage !== undefined ? { usage: previous.usage } : {}),
+      }
+      // 0.17.0 (Cezar #1190): the workspace stream's slim frame leaves out `steps`
+      // (`WORKSPACE_RUN_EVENT_OMITTED_KEYS`), so a Continue's newer step is invisible here. Keep
+      // the row's later instant, as the cockpit keeps its cached `steps`, until a refetch.
+      if (
+        !Array.isArray(record.steps) &&
+        previous !== undefined &&
+        compareIsoDesc(previous.lastActivityAt, next.lastActivityAt) < 0
+      ) {
+        next.lastActivityAt = previous.lastActivityAt
       }
       // A running task sends a record on every turn; most change nothing the row shows.
       if (previous !== undefined && sameFields(previous, next)) return index

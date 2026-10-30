@@ -14,6 +14,12 @@ const runFrame = (row: RunIndexEntry, over: Partial<RunRecord> = {}): WorkspaceF
   }
 }
 
+/** The 0.17.0 workspace frame (Cezar #1190): the record minus `WORKSPACE_RUN_EVENT_OMITTED_KEYS`. */
+const slimFrame = (row: RunIndexEntry, over: Partial<RunRecord> = {}): WorkspaceFrame => {
+  const { projectId, usage: _usage, lastActivityAt: _derived, ...rest } = row
+  return { type: 'run', data: { ...rest, tokensUsed: 0, ...over, project: projectId } }
+}
+
 const find = (result: RunsIndexResponse, projectId: string, id: string) =>
   result.runs.find((row) => row.projectId === projectId && row.id === id)
 
@@ -103,6 +109,62 @@ describe('applyWorkspaceFrame', () => {
   })
 })
 
+describe('applyWorkspaceFrame, slim 0.17.0 frames', () => {
+  const continued: RunIndexEntry = {
+    projectId: 'p',
+    id: 'r-continued',
+    title: 'Continued',
+    status: 'running',
+    createdAt: '2026-10-21T10:00:00.000Z',
+    startedAt: '2026-10-21T10:00:05.000Z',
+    // A Continue launched a new step at noon: the server's index sorted on it.
+    lastActivityAt: '2026-10-21T12:00:00.000Z',
+    archived: false,
+    workflow: 'quick-task',
+  }
+  const base: RunsIndexResponse = { ...index, runs: [continued] }
+
+  it.each<[string, RunsIndexResponse, WorkspaceFrame, string]>([
+    [
+      'a continued run keeps its later instant',
+      base,
+      slimFrame(continued, { activity: 'monitoring' }),
+      '2026-10-21T12:00:00.000Z',
+    ],
+    [
+      'a newer finish on the frame still wins',
+      base,
+      slimFrame(continued, { status: 'done', finishedAt: '2026-10-21T13:00:00.000Z' }),
+      '2026-10-21T13:00:00.000Z',
+    ],
+    [
+      'a new run without steps gets its startedAt',
+      { ...index, runs: [] },
+      slimFrame(continued),
+      '2026-10-21T10:00:05.000Z',
+    ],
+    [
+      'a new queued run without steps gets its createdAt',
+      { ...index, runs: [] },
+      slimFrame({ ...continued, status: 'queued', startedAt: undefined } as RunIndexEntry),
+      '2026-10-21T10:00:00.000Z',
+    ],
+    [
+      'a full record is taken as-is, even when earlier',
+      base,
+      runFrame(continued, { steps: [] }),
+      '2026-10-21T10:00:05.000Z',
+    ],
+  ])('%s', (_name, start, frame, expected) => {
+    const result = applyWorkspaceFrame(start, frame)
+    expect(find(result, 'p', 'r-continued')?.lastActivityAt).toBe(expected)
+  })
+
+  it('returns the same object when a slim frame changes nothing the row shows', () => {
+    expect(applyWorkspaceFrame(base, slimFrame(continued))).toBe(base)
+  })
+})
+
 describe('toIndexEntry', () => {
   it('carries exactly the fields of the server projection', () => {
     const record = {
@@ -164,6 +226,23 @@ describe('toIndexEntry', () => {
       automationId: 'auto-1',
       lastActivityAt: '2026-10-21T11:00:00.000Z',
     })
+  })
+})
+
+describe('toIndexEntry, 0.17.0', () => {
+  it('leaves out the automation while a deferred binding is pending', () => {
+    const record = {
+      id: 'r3',
+      title: 'Title',
+      workflow: 'quick-task',
+      status: 'queued',
+      createdAt: '2026-10-21T10:00:00.000Z',
+      archived: false,
+      automationTrigger: { automationId: 'auto-1' },
+      deferredBinding: { revision: 'rev-1', runner: 'claude', accounts: [] },
+      steps: [],
+    } as unknown as RunRecord
+    expect(toIndexEntry('p', record)).not.toHaveProperty('automationId')
   })
 })
 
