@@ -57,9 +57,14 @@ import runsIndex from '../fixtures/runs-index.json'
  * (CLAUDE.md rule 5) — a status added upstream must degrade one row, not fail
  * the whole list.
  */
+/** 0.17.0 made `capabilities.webhooks` required (#127). */
+const before017Health = healthResponseSchema.extend({
+  capabilities: capabilitiesSchema.omit({ webhooks: true }),
+})
+
 /** 0.16.0 made `capabilities.terminal` and `capabilities.designMode` required (#121). */
 const before016Health = healthResponseSchema.extend({
-  capabilities: capabilitiesSchema.omit({ terminal: true, designMode: true }),
+  capabilities: capabilitiesSchema.omit({ terminal: true, designMode: true, webhooks: true }),
 })
 
 /** 0.16.0 made `lastActivityAt` required on an index row (#121). */
@@ -70,7 +75,7 @@ const before016RunsIndex = runsIndexResponseSchema.extend({
 describe('contract fixtures', () => {
   it.each([
     // #121. The VPS on 0.16.2, `instanceId` blanked and the project list cut to this one.
-    ['live health, 0.16.2', healthResponseSchema, liveHealth0162],
+    ['live health, 0.16.2', before017Health, liveHealth0162],
     ['live health, 0.13.0', before016Health, liveHealth],
     // #111. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.14.0`: the dry run reports every runner as
     // installed, so the `junie` and `copilot` rows the 0.13.0 schema rejects are both here.
