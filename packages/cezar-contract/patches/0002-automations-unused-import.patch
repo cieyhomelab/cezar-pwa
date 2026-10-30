@@ -1,0 +1,8 @@
+--- a/src/contract/automations.ts
++++ b/src/contract/automations.ts
+@@ -1,4 +1,4 @@
+-import { deferredStartStateSchema, deferredCreationRecordSchema } from './deferred-start-state.ts';
++import { deferredStartStateSchema } from './deferred-start-state.ts';
+ import { z } from 'zod';
+ import { trackerAssociationSchema, trackerAutomationEventSchema, trackerFailureSchema } from './tracker.ts';
+ // An automation launches an ORDINARY cezar task, so the task it carries is the composer's own

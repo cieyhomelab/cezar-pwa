@@ -2,10 +2,10 @@ import type { RunActivity, RunStatus } from './types.ts'
 
 /**
  * Copy of Cezar's `packages/web/src/lib/attention.ts` (CLAUDE.md rule 8), at the commit in
- * `packages/cezar-contract/UPSTREAM` (0.16.3, `69699d7`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
+ * `packages/cezar-contract/UPSTREAM` (0.17.0, `77eead9`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
  * `v0.14.0` added `budgetStop` and the `budget reached` label (Cezar #1150, synced in #111);
  * `v0.15.0` added the awaiting-answer rung, `isAwaitingAnswer` and `isNeedsYouStatus` (Cezar #1290, synced in #113);
- * `v0.16.0` added the two worktree-lifecycle rungs and `worktreeLifecycle` in `isNeedsYouStatus` (Cezar #1495, synced in #121); unchanged in 0.16.3 (re-diffed for #125).
+ * `v0.16.0` added the two worktree-lifecycle rungs and `worktreeLifecycle` in `isNeedsYouStatus` (Cezar #1495, synced in #121); unchanged in 0.16.3 and 0.17.0 (re-diffed for #125 and #127).
  *
  * The PRD's worst failure is a phone that disagrees with the cockpit about what needs a human,
  * so this is a transcription, not a re-derivation: same ladder, same buckets, same tones, same
