@@ -5,7 +5,7 @@ import { applyWorkspaceFrame, lastActivityAt, toIndexEntry, type WorkspaceFrame 
 
 const index = fixture as RunsIndexResponse
 
-/** A `run` frame as the server sends it: the whole record, stamped with `project`. */
+/** A `run` frame as 0.18.0 sends it without `?slim=1`: the whole record, stamped with `project`. */
 const runFrame = (row: RunIndexEntry, over: Partial<RunRecord> = {}): WorkspaceFrame => {
   const { projectId, usage: _usage, ...rest } = row
   return {
@@ -14,7 +14,7 @@ const runFrame = (row: RunIndexEntry, over: Partial<RunRecord> = {}): WorkspaceF
   }
 }
 
-/** The 0.17.0 workspace frame (Cezar #1190): the record minus `WORKSPACE_RUN_EVENT_OMITTED_KEYS`. */
+/** The workspace frame of a 0.17.0 host (Cezar #1190): the record minus `WORKSPACE_RUN_EVENT_OMITTED_KEYS`. */
 const slimFrame = (row: RunIndexEntry, over: Partial<RunRecord> = {}): WorkspaceFrame => {
   const { projectId, usage: _usage, lastActivityAt: _derived, ...rest } = row
   return { type: 'run', data: { ...rest, tokensUsed: 0, ...over, project: projectId } }
@@ -154,6 +154,14 @@ describe('applyWorkspaceFrame, slim 0.17.0 frames', () => {
       base,
       runFrame(continued, { steps: [] }),
       '2026-10-21T10:00:05.000Z',
+    ],
+    [
+      'a whole 0.18.0 frame takes the instant from its steps',
+      base,
+      runFrame(continued, {
+        steps: [{ startedAt: '2026-10-21T14:00:00.000Z' }],
+      } as unknown as Partial<RunRecord>),
+      '2026-10-21T14:00:00.000Z',
     ],
   ])('%s', (_name, start, frame, expected) => {
     const result = applyWorkspaceFrame(start, frame)
