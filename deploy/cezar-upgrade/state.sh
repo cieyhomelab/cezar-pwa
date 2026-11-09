@@ -43,7 +43,7 @@ if [[ "$dry" != 1 ]]; then
   fi
   echo "$run" >"$lock/owner"
   # Keep the lock only for the codes the workflow continues on (0 and 3).
-  # shellcheck disable=SC2317  # invoked by the trap
+  # shellcheck disable=SC2317,SC2329  # invoked by the trap (SC2329 on newer shellcheck)
   release_unless_continuing() { local rc=$?; if [[ $rc != 0 && $rc != 3 ]]; then rm -rf "$lock"; fi; }
   trap release_unless_continuing EXIT
 fi
