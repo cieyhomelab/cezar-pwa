@@ -19,6 +19,12 @@ describe('installedRunners', () => {
     ['in the contract order', [check('pi', true), check('cursor', true), check('codex', true), check('claude', true)], ['claude', 'codex', 'cursor', 'pi']],
     // Cezar 0.14.0 (#1111, #1113) added Junie and Copilot CLI.
     ['the 0.14.0 runners', [check('copilot', true), check('junie', true), check('claude', true)], ['claude', 'junie', 'copilot']],
+    // Cezar 0.19.0 added OMP, Antigravity, Gemini and Kimi; the probe lists Antigravity before Copilot.
+    [
+      'the 0.19.0 runners',
+      [check('antigravity', true), check('copilot', true), check('omp', true), check('gemini', true), check('kimi', true)],
+      ['copilot', 'omp', 'antigravity', 'gemini', 'kimi'],
+    ],
     ['gh and git are not runners', [check('gh', true), check('git', true)], []],
     ['no checks at all', undefined, []],
   ] as const)('%s', (_, checks, expected) => {
@@ -67,6 +73,11 @@ describe('discoversModels', () => {
     ['pi', false],
     ['junie', true],
     ['copilot', false],
+    // Cezar 0.19.0: Antigravity through `agy models`, Kimi from its config.toml.
+    ['omp', false],
+    ['antigravity', true],
+    ['gemini', false],
+    ['kimi', true],
   ] as const)('%s → %s', (runner, expected) => {
     expect(discoversModels(runner)).toBe(expected)
   })
