@@ -66,6 +66,23 @@ describe('Watcher.handleFrame', () => {
     expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['needs you'])
   })
 
+  it('does not ring for a session the inactivity timer closed (Cezar 0.19.0)', async () => {
+    const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'running' }])
+    watcher.handleFrame(runFrame({ status: 'failed', idleClosedAt: '2026-11-04T10:00:00.000Z' }))
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('still rings for an idle close on an unanswered question, and for a stamp of the wrong type', async () => {
+    const { watcher, notify } = await seeded([
+      { projectId: 'cezar-pwa', id: 'r1', status: 'running' },
+      { projectId: 'cezar-pwa', id: 'r2', status: 'running' },
+    ])
+    const AT = '2026-11-04T10:00:00.000Z'
+    watcher.handleFrame(runFrame({ status: 'failed', idleClosedAt: AT, awaitingAnswerSince: AT }))
+    watcher.handleFrame(runFrame({ id: 'r2', status: 'failed', idleClosedAt: 1 }))
+    expect(notify.mock.calls.map(([payload]) => payload.reason)).toEqual(['needs you', 'failed'])
+  })
+
   it('reports a plain failure when the awaiting-answer stamp is not a string', async () => {
     const { watcher, notify } = await seeded([{ projectId: 'cezar-pwa', id: 'r1', status: 'running' }])
     watcher.handleFrame(runFrame({ status: 'failed', awaitingAnswerSince: true }))

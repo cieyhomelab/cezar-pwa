@@ -215,6 +215,24 @@ describe('toIndexEntry', () => {
     })
   })
 
+  it('carries the idle-close stamp, which the 0.19.0 index row has and the attention rule reads', () => {
+    const record = {
+      id: 'r1',
+      title: 'Title',
+      workflow: 'quick-task',
+      status: 'failed',
+      createdAt: '2026-11-04T09:00:00.000Z',
+      archived: false,
+      idleClosedAt: '2026-11-04T10:00:00.000Z',
+      fallbackEpisode: { pending: false, attempted: [] },
+      steps: [],
+    } as unknown as RunRecord
+    const row = toIndexEntry('p', record)
+    expect(row.idleClosedAt).toBe('2026-11-04T10:00:00.000Z')
+    // Not on the index row upstream: a record-only field stays out.
+    expect(row).not.toHaveProperty('fallbackEpisode')
+  })
+
   it('carries the worktree lifecycle and the automation, as the 0.16.2 server does', () => {
     const worktreeLifecycle = { worktreeId: 'w', generation: 2, phase: 'teardown', needsAttention: true }
     const record = {

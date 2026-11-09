@@ -7,6 +7,7 @@ const TONE_CLASS: Record<AttentionTone, string> = {
   danger: 'text-danger',
   violet: 'text-violet',
   neutral: 'text-text-muted',
+  idle: 'text-idle',
 }
 
 /** A glyph per label, so two statuses sharing a tone (waiting/scheduled, review/running) still
@@ -19,11 +20,13 @@ const GLYPH: Record<string, string> = {
   'cleanup needs attention': '⚙',
   'needs review': '◆',
   failed: '✕',
+  'closed · idle': '◔',
   scheduled: '◷',
   monitoring: '◌',
   'preparing worktree': '◐',
   'cleaning up worktree': '◑',
   running: '●',
+  'switching agent': '⇄',
   queued: '…',
   done: '✓',
   cancelled: '–',

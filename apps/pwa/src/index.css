@@ -28,6 +28,8 @@
   --color-pending: var(--pending);
   --color-danger: var(--danger);
   --color-violet: var(--violet);
+  /* Orange, not amber: a run the inactivity timer closed (Cezar 0.19.0, upstream `--conflict`). */
+  --color-idle: var(--idle);
   /* S-09: diff line backgrounds. Each line also carries its `+`/`−` marker. */
   --color-diff-add: var(--diff-add);
   --color-diff-del: var(--diff-del);
@@ -46,6 +48,7 @@
   --pending: #d29922;
   --danger: #f85149;
   --violet: #a371f7;
+  --idle: #db6d28;
   --diff-add: rgba(46, 160, 67, 0.18);
   --diff-del: rgba(248, 81, 73, 0.18);
 }
@@ -72,6 +75,7 @@
     --pending: #9a6700;
     --danger: #cf222e;
     --violet: #8250df;
+    --idle: #bc4c00;
     --diff-add: #e6ffec;
     --diff-del: #ffebe9;
   }
@@ -89,6 +93,7 @@
   --pending: #9a6700;
   --danger: #cf222e;
   --violet: #8250df;
+  --idle: #bc4c00;
   --diff-add: #e6ffec;
   --diff-del: #ffebe9;
 }

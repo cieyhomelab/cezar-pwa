@@ -70,6 +70,11 @@ function readRun(data: unknown): NotifiableRun | undefined {
     ...(typeof data.autoResumeAt === 'string' ? { autoResumeAt: data.autoResumeAt } : {}),
     // Cezar 0.15.0: a session closed on an unanswered question still needs you, it did not fail.
     ...(typeof data.awaitingAnswerSince === 'string' ? { awaitingAnswerSince: data.awaitingAnswerSince } : {}),
+    // Cezar 0.19.0: a session the inactivity timer closed is "closed · idle", not a failure to ring for.
+    ...(typeof data.idleClosedAt === 'string' ? { idleClosedAt: data.idleClosedAt } : {}),
+    ...(isObject(data.fallbackEpisode) && typeof data.fallbackEpisode.pending === 'boolean'
+      ? { fallbackEpisode: { pending: data.fallbackEpisode.pending } }
+      : {}),
     // The frame is the full record, so a budget stop is told apart from a question here.
     ...(dispatch ? { dispatch } : {}),
     ...(typeof data.costUsd === 'number' ? { costUsd: data.costUsd } : {}),

@@ -138,6 +138,17 @@ describe('RunScreen — the header (FR-014)', () => {
     expect(screen.queryByText(en.run.transcript.footer.failedWith('idle timeout'))).not.toBeInTheDocument()
   })
 
+  it('says a session the inactivity timer closed is closed, not failed (Cezar 0.19.0)', async () => {
+    renderRun({
+      run: () =>
+        jsonResponse({ ...RUN, status: 'failed', error: 'idle timeout', idleClosedAt: '2026-11-04T10:00:00.000Z' }),
+    })
+    expect(await screen.findByText(en.runs.status['closed · idle']!)).toBeInTheDocument()
+    expect(await screen.findByText(en.run.transcript.footer.idleClosed)).toBeInTheDocument()
+    expect(screen.queryByText(en.runs.status.failed!)).not.toBeInTheDocument()
+    expect(screen.queryByText(en.run.transcript.footer.failedWith('idle timeout'))).not.toBeInTheDocument()
+  })
+
   it('says a finished task whose cleanup script needs a decision needs you, not done (Cezar 0.16.0)', async () => {
     renderRun({
       run: () =>

@@ -69,6 +69,7 @@ export function toIndexEntry(projectId: string, run: RunRecord): RunIndexEntry {
     archived: run.archived,
     ...optional('autoResumeAt'),
     ...optional('awaitingAnswerSince'),
+    ...optional('idleClosedAt'),
     workflow: run.workflow,
     ...optional('branch'),
     ...(run.dispatch !== undefined

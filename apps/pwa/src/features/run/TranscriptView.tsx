@@ -94,7 +94,9 @@ function Footer({ footer }: { footer: TranscriptFooter }) {
           : en.run.transcript.footer.failed
         : footer.state === 'awaiting-answer'
           ? en.run.transcript.footer.awaitingAnswer
-          : footer.state === 'review'
+          : footer.state === 'idle-closed'
+            ? en.run.transcript.footer.idleClosed
+            : footer.state === 'review'
             ? en.run.transcript.footer.review
             : en.run.transcript.footer.closed
   const tone =

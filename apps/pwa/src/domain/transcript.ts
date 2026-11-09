@@ -138,11 +138,17 @@ export type TranscriptFooter =
   | { state: 'waiting' }
   | { state: 'failed'; error?: string }
   | { state: 'awaiting-answer' }
+  | { state: 'idle-closed' }
   | { state: 'review' }
   | { state: 'closed' }
   | null
 
-export function transcriptFooter(status: string, error?: string, awaitingAnswer = false): TranscriptFooter {
+export function transcriptFooter(
+  status: string,
+  error?: string,
+  awaitingAnswer = false,
+  idleClosed = false,
+): TranscriptFooter {
   switch (status) {
     case 'waiting':
       return { state: 'waiting' }
@@ -150,6 +156,9 @@ export function transcriptFooter(status: string, error?: string, awaitingAnswer 
       // The session closed on an unanswered question: the header says "needs you", so the strip
       // must not announce a failure. The answer is the way forward, not a retry.
       if (awaitingAnswer) return { state: 'awaiting-answer' }
+      // Cezar 0.19.0: the inactivity timer closed it — the header says "closed · idle", so the
+      // strip must not call it an error either.
+      if (idleClosed) return { state: 'idle-closed' }
       return error ? { state: 'failed', error } : { state: 'failed' }
     case 'review':
       return { state: 'review' }
