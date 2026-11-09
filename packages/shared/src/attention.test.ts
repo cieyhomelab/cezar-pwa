@@ -4,6 +4,7 @@ import {
   budgetStop,
   deriveAttention,
   isAwaitingAnswer,
+  isIdleClosed,
   isNeedsYouStatus,
   wantsAttention,
   type Attention,
@@ -12,7 +13,7 @@ import {
 import type { RunStatus } from './types.ts'
 
 /**
- * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`, lifecycle cases from 0.16.2). The expected
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`, lifecycle cases from 0.16.2, idle-closed and switching-agent cases from `v0.19.0`). The expected
  * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
  * copy, not the table.
  */
@@ -161,6 +162,47 @@ describe('a run whose session closed on an unanswered question', () => {
   it('isNeedsYouStatus keeps waiting, review and awaiting-answer runs', () => {
     expect(ALL_STATUSES.filter((status) => isNeedsYouStatus(run({ status })))).toEqual(['waiting', 'review'])
     expect(isNeedsYouStatus(awaiting)).toBe(true)
+  })
+})
+
+describe('a run the inactivity timer closed (Cezar 0.19.0)', () => {
+  const AT = '2026-11-04T10:00:00.000Z'
+  const idle = run({ status: 'failed', idleClosedAt: AT })
+
+  it('is "closed · idle" in orange: not an error, not "needs you", no notification', () => {
+    expect(deriveAttention(idle)).toEqual({ bucket: 'none', tone: 'idle', pulse: false, label: 'closed · idle' })
+    expect(wantsAttention(idle)).toBe(false)
+    expect(isNeedsYouStatus(idle)).toBe(false)
+    expect(isIdleClosed(idle)).toBe(true)
+  })
+
+  it('an unanswered question stays yellow "needs you"', () => {
+    const asked = run({ status: 'failed', idleClosedAt: AT, awaitingAnswerSince: AT })
+    expect(deriveAttention(asked).label).toBe('needs you')
+    expect(isIdleClosed(asked)).toBe(false)
+  })
+
+  it('a booked resume still wins: the run is scheduled', () => {
+    expect(deriveAttention(run({ status: 'failed', idleClosedAt: AT, autoResumeAt: AT })).label).toBe('scheduled')
+  })
+
+  it('a plain failure is still red, and the marker means nothing off a failed run', () => {
+    expect(deriveAttention(run({ status: 'failed' }))).toMatchObject({ bucket: 'error', tone: 'danger' })
+    expect(deriveAttention(run({ status: 'done', idleClosedAt: AT })).label).toBe('done')
+  })
+})
+
+describe('a queued run switching to a fallback agent (Cezar 0.19.0)', () => {
+  it('shows a pending fallback as switching agent without asking for attention', () => {
+    const record = run({ status: 'queued', fallbackEpisode: { pending: true } })
+    expect(deriveAttention(record)).toEqual({ bucket: 'running', tone: 'violet', pulse: true, label: 'switching agent' })
+    expect(wantsAttention(record)).toBe(false)
+  })
+
+  it('a settled or absent episode leaves it queued, and it means nothing off a queued run', () => {
+    expect(deriveAttention(run({ status: 'queued', fallbackEpisode: { pending: false } })).label).toBe('queued')
+    expect(deriveAttention(run({ status: 'queued', fallbackEpisode: {} })).label).toBe('queued')
+    expect(deriveAttention(run({ status: 'done', fallbackEpisode: { pending: true } })).label).toBe('done')
   })
 })
 

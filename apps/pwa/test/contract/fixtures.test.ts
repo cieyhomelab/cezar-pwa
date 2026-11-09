@@ -26,6 +26,7 @@ import dryRunHealth0151 from '../fixtures/health.dry-run-0.15.1.json'
 import dryRunHealth0152 from '../fixtures/health.dry-run-0.15.2.json'
 import liveHealth from '../fixtures/health.live-0.13.0.json'
 import liveHealth0162 from '../fixtures/health.live-0.16.2.json'
+import dryRunHealth0190 from '../fixtures/health.dry-run-0.19.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
 import liveMergeState from '../fixtures/merge-state.live-0.12.0.json'
@@ -57,13 +58,16 @@ import runsIndex from '../fixtures/runs-index.json'
  * (CLAUDE.md rule 5) — a status added upstream must degrade one row, not fail
  * the whole list.
  */
+/** 0.19.0 made `runtimeId` required (#131). */
+const before019Health = healthResponseSchema.omit({ runtimeId: true })
+
 /** 0.17.0 made `capabilities.webhooks` required (#127). */
-const before017Health = healthResponseSchema.extend({
+const before017Health = before019Health.extend({
   capabilities: capabilitiesSchema.omit({ webhooks: true }),
 })
 
 /** 0.16.0 made `capabilities.terminal` and `capabilities.designMode` required (#121). */
-const before016Health = healthResponseSchema.extend({
+const before016Health = before019Health.extend({
   capabilities: capabilitiesSchema.omit({ terminal: true, designMode: true, webhooks: true }),
 })
 
@@ -74,6 +78,9 @@ const before016RunsIndex = runsIndexResponseSchema.extend({
 
 describe('contract fixtures', () => {
   it.each([
+    // #131. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.19.0`: `runtimeId` and the four new runner
+    // checks (`omp`, `antigravity`, `gemini`, `kimi`), `instanceId` blanked.
+    ['dry-run health, 0.19.0', healthResponseSchema, dryRunHealth0190],
     // #121. The VPS on 0.16.2, `instanceId` blanked and the project list cut to this one.
     ['live health, 0.16.2', before017Health, liveHealth0162],
     ['live health, 0.13.0', before016Health, liveHealth],

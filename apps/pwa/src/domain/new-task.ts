@@ -12,15 +12,19 @@ import type {
  * wires queries to these.
  */
 
-/** The runners a task can be dispatched to, in the contract's order (`runnerSchema`). */
-const RUNNERS: readonly Runner[] = ['claude', 'codex', 'opencode', 'cursor', 'pi', 'junie', 'copilot']
+/** The runners a task can be dispatched to, in the contract's order (`runnerSchema`). The
+ *  `satisfies` and the check below stop this compiling when the contract's enum grows. */
+const RUNNERS = ['claude', 'codex', 'opencode', 'cursor', 'pi', 'junie', 'copilot', 'omp', 'antigravity', 'gemini', 'kimi'] as const satisfies readonly Runner[]
+type _AllRunnersListed = Runner extends (typeof RUNNERS)[number] ? true : never
+const _allRunnersListed: _AllRunnersListed = true
+void _allRunnersListed
 
 /**
  * The runners with a host-discovered model catalog: the only ones `GET /api/v1/models` answers
  * for. The contract's `runnerDiscoversModels` says the same, but importing it would bundle zod;
  * the `satisfies` keeps this list inside the contract's enum.
  */
-const MODEL_DISCOVERY: readonly Runner[] = ['claude', 'codex', 'opencode', 'cursor', 'junie'] as const satisfies readonly ModelDiscoveryRunner[]
+const MODEL_DISCOVERY: readonly Runner[] = ['claude', 'codex', 'opencode', 'cursor', 'junie', 'antigravity', 'kimi'] as const satisfies readonly ModelDiscoveryRunner[]
 
 export function discoversModels(runner: Runner): boolean {
   return MODEL_DISCOVERY.includes(runner)

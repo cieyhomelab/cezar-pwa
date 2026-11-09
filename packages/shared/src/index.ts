@@ -3,6 +3,7 @@ export {
   budgetStop,
   deriveAttention,
   isAwaitingAnswer,
+  isIdleClosed,
   isNeedsYouStatus,
   wantsAttention,
   type Attention,

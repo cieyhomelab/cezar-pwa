@@ -1,6 +1,7 @@
 --- a/src/contract/automations.ts
 +++ b/src/contract/automations.ts
-@@ -1,4 +1,4 @@
+@@ -1,5 +1,5 @@
+ import { trackerAccessSchema } from './tracker-operations.ts';
 -import { deferredStartStateSchema, deferredCreationRecordSchema } from './deferred-start-state.ts';
 +import { deferredStartStateSchema } from './deferred-start-state.ts';
  import { z } from 'zod';

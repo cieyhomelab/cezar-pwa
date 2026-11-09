@@ -1,4 +1,4 @@
-import { isAwaitingAnswer } from '@cezar-pwa/shared'
+import { isAwaitingAnswer, isIdleClosed } from '@cezar-pwa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router'
@@ -247,7 +247,7 @@ function RunScreenFor({ projectId, runId }: { projectId: string; runId: string }
             hasOlder={history.data.hasOlder}
             older={older}
             olderHref={cockpitTaskPath(projectId, runId)}
-            footer={transcriptFooter(run.data.status, run.data.error, isAwaitingAnswer(run.data))}
+            footer={transcriptFooter(run.data.status, run.data.error, isAwaitingAnswer(run.data), isIdleClosed(run.data))}
             answering={{ delivery, ...(ask !== undefined ? { openAskId: ask.id } : {}) }}
             imageSrc={imageSrc}
           />

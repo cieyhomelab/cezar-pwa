@@ -45,6 +45,6 @@ test.describe('PWA shell', () => {
     // The target a push notification opens (F-PUSH-6); the run screen lands in M2.
     const response = await page.goto('run/some-project/some-run')
     expect(response?.status()).toBe(200)
-    await expect(page.getByRole('heading', { name: 'Cezar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Cezar', exact: true })).toBeVisible()
   })
 })

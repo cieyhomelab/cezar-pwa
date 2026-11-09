@@ -279,6 +279,13 @@ describe('transcriptFooter', () => {
     expect(transcriptFooter('failed', 'idle timeout', true)).toEqual({ state: 'awaiting-answer' })
     expect(transcriptFooter('done', undefined, true)).toEqual({ state: 'closed' })
   })
+
+  it('a failed run the inactivity timer closed is not announced as an error (Cezar 0.19.0)', () => {
+    expect(transcriptFooter('failed', 'idle timeout', false, true)).toEqual({ state: 'idle-closed' })
+    // An unanswered question still wins, and the marker means nothing off a failed run.
+    expect(transcriptFooter('failed', 'idle timeout', true, true)).toEqual({ state: 'awaiting-answer' })
+    expect(transcriptFooter('done', undefined, false, true)).toEqual({ state: 'closed' })
+  })
 })
 
 describe('plan helpers', () => {

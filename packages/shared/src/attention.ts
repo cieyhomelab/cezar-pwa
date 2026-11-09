@@ -2,10 +2,11 @@ import type { RunActivity, RunStatus } from './types.ts'
 
 /**
  * Copy of Cezar's `packages/web/src/lib/attention.ts` (CLAUDE.md rule 8), at the commit in
- * `packages/cezar-contract/UPSTREAM` (0.18.0, `0d80113`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
+ * `packages/cezar-contract/UPSTREAM` (0.19.0, `7225a3d`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
  * `v0.14.0` added `budgetStop` and the `budget reached` label (Cezar #1150, synced in #111);
  * `v0.15.0` added the awaiting-answer rung, `isAwaitingAnswer` and `isNeedsYouStatus` (Cezar #1290, synced in #113);
- * `v0.16.0` added the two worktree-lifecycle rungs and `worktreeLifecycle` in `isNeedsYouStatus` (Cezar #1495, synced in #121); unchanged in 0.16.3, 0.17.0 and 0.18.0 (re-diffed for #125, #127 and #129).
+ * `v0.16.0` added the two worktree-lifecycle rungs and `worktreeLifecycle` in `isNeedsYouStatus` (Cezar #1495, synced in #121); unchanged in 0.16.3, 0.17.0 and 0.18.0 (re-diffed for #125, #127 and #129);
+ * `v0.19.0` added `isIdleClosed`, the `closed · idle` rung, the `idle` tone and the `switching agent` rung (synced in #131).
  *
  * The PRD's worst failure is a phone that disagrees with the cockpit about what needs a human,
  * so this is a transcription, not a re-derivation: same ladder, same buckets, same tones, same
@@ -31,8 +32,9 @@ export const ATTENTION_RANK = {
 
 export type AttentionBucket = keyof typeof ATTENTION_RANK
 
-/** The cockpit's dot tones. The PWA maps them onto its own colour tokens. */
-export type AttentionTone = 'success' | 'pending' | 'danger' | 'violet' | 'neutral'
+/** The cockpit's dot tones (`idle` is its orange `--conflict`, for an idle close). The PWA maps
+ *  them onto its own colour tokens. */
+export type AttentionTone = 'success' | 'pending' | 'danger' | 'violet' | 'neutral' | 'idle'
 
 export interface Attention {
   bucket: AttentionBucket
@@ -68,8 +70,9 @@ function isUnseen(_run: AttentionInput): boolean {
 
 /**
  * What attention derivation reads. Upstream is `Pick<RunRecord, 'status' | 'activity' |
- * 'autoResumeAt' | 'awaitingAnswerSince' | 'dispatch' | 'costUsd' | 'worktreeLifecycle'>`; spelled out here because this
- * package does not depend on the contract, with `dispatch` and `worktreeLifecycle` narrowed to what the rule reads.
+ * 'fallbackEpisode' | 'autoResumeAt' | 'awaitingAnswerSince' | 'idleClosedAt' | 'dispatch' | 'costUsd' | 'worktreeLifecycle'>`;
+ * spelled out here because this package does not depend on the contract, with `fallbackEpisode`, `dispatch` and
+ * `worktreeLifecycle` narrowed to what the rule reads.
  * A `RunIndexEntry` or a `RunRecord` satisfies it, extra fields ignored (CLAUDE.md rule 5).
  *
  * The index entry's `dispatch` carries only `rootRunId`, `parentRunId` and `kind`, so anything
@@ -80,8 +83,13 @@ function isUnseen(_run: AttentionInput): boolean {
 export type AttentionInput = {
   status: RunStatus
   activity?: RunActivity
+  /** The unattended agent fallback (Cezar 0.19.0). Only `pending` is read; the runs index does
+   *  not carry it, so a list row of a queued fallback reads `queued` (as upstream's does). */
+  fallbackEpisode?: { pending?: boolean }
   autoResumeAt?: string
   awaitingAnswerSince?: string
+  /** Set on a `failed` run the inactivity timer closed (Cezar 0.19.0). */
+  idleClosedAt?: string
   /** `rootRunId` is not read: it is the key every `dispatch` carries, so the index entry's
    *  narrower object (no budget keys at all) still type-checks against this one. */
   dispatch?: { rootRunId?: string; budgetUsd?: number; overBudget?: boolean }
@@ -114,6 +122,14 @@ export function budgetStop(run: Pick<AttentionInput, 'status' | 'dispatch' | 'co
  */
 export function isAwaitingAnswer(run: Pick<AttentionInput, 'status' | 'awaitingAnswerSince'>): boolean {
   return run.status === 'failed' && run.awaitingAnswerSince !== undefined
+}
+
+/**
+ * A `failed` run the inactivity timer closed because nobody replied: not a failure, not a gate —
+ * "closed · idle", and Continue still picks it up (upstream spec 2026-11-04-idle-closed-attention-state).
+ */
+export function isIdleClosed(run: Pick<AttentionInput, 'status' | 'awaitingAnswerSince' | 'idleClosedAt'>): boolean {
+  return run.status === 'failed' && run.idleClosedAt !== undefined && !isAwaitingAnswer(run)
 }
 
 /** The runs a "needs you" list keeps: a worktree script that needs a decision, waiting, in review,
@@ -165,6 +181,11 @@ export function deriveAttention(run: AttentionInput): Attention {
   if (isAwaitingAnswer(run)) {
     return { bucket: 'waiting', tone: 'pending', pulse: true, label: 'needs you' }
   }
+  // Nobody replied and the idle timer freed the process: an outcome, but not a failure — out of
+  // the error bucket and its notification, and out of "Needs you".
+  if (isIdleClosed(run)) {
+    return { bucket: 'none', tone: 'idle', pulse: false, label: 'closed · idle' }
+  }
   if (run.status === 'failed') {
     return { bucket: 'error', tone: 'danger', pulse: false, label: 'failed' }
   }
@@ -187,6 +208,9 @@ export function deriveAttention(run: AttentionInput): Attention {
   }
   if (isUnseen(run)) {
     return { bucket: 'unseen', tone: 'violet', pulse: false, label: 'unseen' }
+  }
+  if (run.status === 'queued' && run.fallbackEpisode?.pending) {
+    return { bucket: 'running', tone: 'violet', pulse: true, label: 'switching agent' }
   }
   if (run.status === 'queued') {
     return { bucket: 'none', tone: 'neutral', pulse: false, label: 'queued' }
