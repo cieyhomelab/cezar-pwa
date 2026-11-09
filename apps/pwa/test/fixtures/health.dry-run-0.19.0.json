@@ -1,0 +1,104 @@
+{
+  "version": "0.19.0",
+  "runtimeId": "4088ccf0-1355-41d9-866c-35bf4c3d217e",
+  "repoRoot": "repo",
+  "repo": {
+    "root": "/tmp/cez0190/repo",
+    "branch": "master"
+  },
+  "checks": [
+    {
+      "name": "claude",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "codex",
+      "available": false,
+      "hint": "optional: install the Codex CLI (npm i -g @openai/codex) and log in to use the Codex runner"
+    },
+    {
+      "name": "opencode",
+      "available": false,
+      "hint": "optional: install OpenCode (https://opencode.ai) and configure a provider to use the OpenCode runner"
+    },
+    {
+      "name": "cursor",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "pi",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "junie",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "antigravity",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "copilot",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "omp",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "gemini",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "kimi",
+      "available": true,
+      "version": "mock (CEZ_DRY_RUN=1)"
+    },
+    {
+      "name": "gh",
+      "available": false,
+      "hint": "install the GitHub CLI and run `gh auth login` (only needed for PR creation)"
+    },
+    {
+      "name": "git",
+      "available": true,
+      "version": "git version 2.43.0"
+    }
+  ],
+  "defaultRunner": "claude",
+  "forge": null,
+  "capabilities": {
+    "localHandoff": false,
+    "terminal": false,
+    "designMode": false,
+    "followups": false,
+    "singleProject": false,
+    "automations": true,
+    "webhooks": false,
+    "dispatch": true,
+    "tokenMetrics": true,
+    "tokenUsageMetrics": true,
+    "costMetrics": true
+  },
+  "projects": [
+    {
+      "id": "repo",
+      "name": "repo"
+    }
+  ],
+  "bootProject": "repo",
+  "instanceId": "00000000-0000-4000-8000-000000000000",
+  "disk": {
+    "freeBytes": 122406567936,
+    "totalBytes": 167503724544,
+    "level": "ok"
+  }
+}
