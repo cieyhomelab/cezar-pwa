@@ -43,6 +43,11 @@ describe('sectionOf', () => {
       { status: 'failed', autoResumeAt: '2026-09-21T11:40:00.000Z' },
       'queued',
     ],
+    [
+      'a session the inactivity timer closed is finished, not an error (Cezar 0.19.0)',
+      { status: 'failed', idleClosedAt: '2026-11-04T10:00:00.000Z' },
+      'finished',
+    ],
     ['running is running', { status: 'running' }, 'running'],
     ['monitoring is still running and asks nothing', { status: 'running', activity: 'monitoring' }, 'running'],
     ['queued is queued', { status: 'queued' }, 'queued'],
