@@ -208,7 +208,7 @@ function stamp(value: unknown): string | undefined {
 }
 
 /** `UiBackend`, listed: the `satisfies` stops this compiling when the contract's union grows. */
-const PROVIDERS = ['claude', 'codex', 'opencode', 'cursor', 'pi', 'junie', 'copilot'] as const satisfies readonly UiBackend[]
+const PROVIDERS = ['claude', 'codex', 'opencode', 'cursor', 'pi', 'junie', 'copilot', 'omp', 'antigravity', 'gemini', 'kimi'] as const satisfies readonly UiBackend[]
 type _AllBackendsListed = UiBackend extends (typeof PROVIDERS)[number] ? true : never
 const _allBackendsListed: _AllBackendsListed = true
 void _allBackendsListed
