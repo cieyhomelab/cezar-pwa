@@ -2,11 +2,13 @@ import type { RunActivity, RunStatus } from './types.ts'
 
 /**
  * Copy of Cezar's `packages/web/src/lib/attention.ts` (CLAUDE.md rule 8), at the commit in
- * `packages/cezar-contract/UPSTREAM` (0.19.0, `7225a3d`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
+ * `packages/cezar-contract/UPSTREAM` (0.20.0, `2e6b2fd`). Unchanged from `v0.11.0` through `v0.13.0` (re-diffed for #72, #98 and #106);
  * `v0.14.0` added `budgetStop` and the `budget reached` label (Cezar #1150, synced in #111);
  * `v0.15.0` added the awaiting-answer rung, `isAwaitingAnswer` and `isNeedsYouStatus` (Cezar #1290, synced in #113);
  * `v0.16.0` added the two worktree-lifecycle rungs and `worktreeLifecycle` in `isNeedsYouStatus` (Cezar #1495, synced in #121); unchanged in 0.16.3, 0.17.0 and 0.18.0 (re-diffed for #125, #127 and #129);
- * `v0.19.0` added `isIdleClosed`, the `closed · idle` rung, the `idle` tone and the `switching agent` rung (synced in #131).
+ * `v0.19.0` added `isIdleClosed`, the `closed · idle` rung, the `idle` tone and the `switching agent` rung (synced in #131);
+ * `v0.20.0` added the `info` tone and moved every rung that waits on a person to it (synced in #133). Its new
+ *  `runClosure` / `closingStepId` paint the cockpit's step rail, which the PWA does not have, so they are not copied.
  *
  * The PRD's worst failure is a phone that disagrees with the cockpit about what needs a human,
  * so this is a transcription, not a re-derivation: same ladder, same buckets, same tones, same
@@ -32,9 +34,9 @@ export const ATTENTION_RANK = {
 
 export type AttentionBucket = keyof typeof ATTENTION_RANK
 
-/** The cockpit's dot tones (`idle` is its orange `--conflict`, for an idle close). The PWA maps
- *  them onto its own colour tokens. */
-export type AttentionTone = 'success' | 'pending' | 'danger' | 'violet' | 'neutral' | 'idle'
+/** The cockpit's dot tones (`info` is its blue for "waiting on a person", `idle` its orange
+ *  `--conflict` for an idle close). The PWA maps them onto its own colour tokens. */
+export type AttentionTone = 'success' | 'pending' | 'danger' | 'violet' | 'info' | 'neutral' | 'idle'
 
 export interface Attention {
   bucket: AttentionBucket
@@ -171,7 +173,7 @@ export function deriveAttention(run: AttentionInput): Attention {
     }
   }
   if (hasPendingPermission(run)) {
-    return { bucket: 'permission', tone: 'violet', pulse: true, label: 'needs permission' }
+    return { bucket: 'permission', tone: 'info', pulse: true, label: 'needs permission' }
   }
   if (run.status === 'failed' && run.autoResumeAt) {
     return { bucket: 'none', tone: 'pending', pulse: false, label: 'scheduled' }
@@ -179,7 +181,7 @@ export function deriveAttention(run: AttentionInput): Attention {
   // The inactivity timer, a crash or a restart closed the session on an unanswered question: the
   // record says `failed` because the process is gone, but the answer reopens it.
   if (isAwaitingAnswer(run)) {
-    return { bucket: 'waiting', tone: 'pending', pulse: true, label: 'needs you' }
+    return { bucket: 'waiting', tone: 'info', pulse: true, label: 'needs you' }
   }
   // Nobody replied and the idle timer freed the process: an outcome, but not a failure — out of
   // the error bucket and its notification, and out of "Needs you".
@@ -192,13 +194,13 @@ export function deriveAttention(run: AttentionInput): Attention {
   if (run.status === 'waiting') {
     return {
       bucket: 'waiting',
-      tone: 'pending',
+      tone: 'info',
       pulse: true,
       label: budgetStop(run)?.ceiling !== undefined ? 'budget reached' : 'needs you',
     }
   }
   if (run.status === 'review') {
-    return { bucket: 'waiting', tone: 'violet', pulse: true, label: 'needs review' }
+    return { bucket: 'waiting', tone: 'info', pulse: true, label: 'needs review' }
   }
   if (run.status === 'running' && run.activity === 'monitoring') {
     return { bucket: 'running', tone: 'violet', pulse: true, label: 'monitoring' }

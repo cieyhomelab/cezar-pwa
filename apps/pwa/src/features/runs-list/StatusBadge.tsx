@@ -6,6 +6,7 @@ const TONE_CLASS: Record<AttentionTone, string> = {
   pending: 'text-pending',
   danger: 'text-danger',
   violet: 'text-violet',
+  info: 'text-info',
   neutral: 'text-text-muted',
   idle: 'text-idle',
 }
