@@ -100,7 +100,7 @@ function Footer({ footer }: { footer: TranscriptFooter }) {
             ? en.run.transcript.footer.review
             : en.run.transcript.footer.closed
   const tone =
-    footer.state === 'failed' ? 'text-danger' : footer.state === 'waiting' ? 'text-pending' : 'text-text-muted'
+    footer.state === 'failed' ? 'text-danger' : footer.state === 'waiting' ? 'text-info' : 'text-text-muted'
   return <p className={`border-t border-border pt-3 text-sm break-words ${tone}`}>{text}</p>
 }
 

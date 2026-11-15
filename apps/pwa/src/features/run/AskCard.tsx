@@ -64,9 +64,9 @@ function OpenAsk({ ask, delivery, superseded }: { ask: TranscriptAsk; delivery?:
       data-ask-id={ask.id}
       data-resolved="false"
       aria-busy={delivery?.pending === true}
-      className="rounded border border-pending px-3 py-3"
+      className="rounded border border-info px-3 py-3"
     >
-      <p className="text-sm font-semibold text-pending">{en.run.transcript.ask.title}</p>
+      <p className="text-sm font-semibold text-info">{en.run.transcript.ask.title}</p>
 
       <div className="mt-2 flex flex-col gap-4">
         {questions.map((question, index) => (

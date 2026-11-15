@@ -182,6 +182,12 @@ describe('answering a question (FR-022)', () => {
     expect(await card.findByRole('alert')).toHaveTextContent('Cezar refused: provider claude is not connected')
   })
 
+  it('paints the question card in the "waiting on you" blue, like the status badge (Cezar 0.20.0)', async () => {
+    serve({ run: runAs('waiting'), history: () => askPage() })
+    expect(await screen.findByText(en.run.transcript.ask.title)).toHaveClass('text-info')
+    expect(await screen.findByText(en.run.transcript.footer.waiting)).toHaveClass('text-info')
+  })
+
   it('a question whose session closed says so, and answering it reopens the session', async () => {
     const { writesTo } = serve({ run: runAs('done'), history: () => askPage() })
     const card = within(await askCard())
