@@ -80,7 +80,7 @@ const before016RunsIndex = runsIndexResponseSchema.extend({
 describe('contract fixtures', () => {
   it.each([
     // #133. The same capture from `cezar-cli@0.20.0`: adds the optional `capabilities.managers` and
-    // `capabilities.managerSystemNotifications`; the dry run now reports Codex as installed.
+    // `capabilities.managerSystemNotifications`; the dry run now reports the Codex and OpenCode mocks as installed.
     ['dry-run health, 0.20.0', healthResponseSchema, dryRunHealth0200],
     // #131. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.19.0`: `runtimeId` and the four new runner
     // checks (`omp`, `antigravity`, `gemini`, `kimi`), `instanceId` blanked.
