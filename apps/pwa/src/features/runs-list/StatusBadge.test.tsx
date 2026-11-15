@@ -25,3 +25,20 @@ describe('StatusBadge — Cezar 0.19.0 states', () => {
     expect(element.querySelector('[aria-hidden]')).toHaveClass('motion-safe:animate-pulse')
   })
 })
+
+describe('StatusBadge — Cezar 0.20.0 status grammar', () => {
+  it.each([
+    ['needs you', { status: 'waiting' }],
+    ['needs review', { status: 'review' }],
+    ['an unanswered question', { status: 'failed', awaitingAnswerSince: '2026-11-15T10:00:00.000Z' }],
+  ] satisfies [string, AttentionInput][])('paints %s blue, not violet or amber', (_, run) => {
+    const element = badge(run)
+    expect(element).toHaveClass('text-info')
+    expect(element).not.toHaveClass('text-violet')
+    expect(element).not.toHaveClass('text-pending')
+  })
+
+  it('keeps a running run violet', () => {
+    expect(badge({ status: 'running' })).toHaveClass('text-violet')
+  })
+})

@@ -27,6 +27,7 @@ import dryRunHealth0152 from '../fixtures/health.dry-run-0.15.2.json'
 import liveHealth from '../fixtures/health.live-0.13.0.json'
 import liveHealth0162 from '../fixtures/health.live-0.16.2.json'
 import dryRunHealth0190 from '../fixtures/health.dry-run-0.19.0.json'
+import dryRunHealth0200 from '../fixtures/health.dry-run-0.20.0.json'
 import liveHistoryContext from '../fixtures/history-context.live-0.11.0.json'
 import liveHistory from '../fixtures/history.live-0.11.0.json'
 import liveMergeState from '../fixtures/merge-state.live-0.12.0.json'
@@ -78,6 +79,9 @@ const before016RunsIndex = runsIndexResponseSchema.extend({
 
 describe('contract fixtures', () => {
   it.each([
+    // #133. The same capture from `cezar-cli@0.20.0`: adds the optional `capabilities.managers` and
+    // `capabilities.managerSystemNotifications`; the dry run now reports the Codex and OpenCode mocks as installed.
+    ['dry-run health, 0.20.0', healthResponseSchema, dryRunHealth0200],
     // #131. An isolated `CEZ_DRY_RUN=1 cezar-cli@0.19.0`: `runtimeId` and the four new runner
     // checks (`omp`, `antigravity`, `gemini`, `kimi`), `instanceId` blanked.
     ['dry-run health, 0.19.0', healthResponseSchema, dryRunHealth0190],

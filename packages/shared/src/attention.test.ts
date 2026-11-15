@@ -13,7 +13,7 @@ import {
 import type { RunStatus } from './types.ts'
 
 /**
- * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`, lifecycle cases from 0.16.2, idle-closed and switching-agent cases from `v0.19.0`). The expected
+ * Ported from Cezar's `packages/web/src/lib/attention.test.ts` (tag `v0.11.0`, budget cases from `v0.14.0`, awaiting-answer cases from `v0.15.0`, lifecycle cases from 0.16.2, idle-closed and switching-agent cases from `v0.19.0`, the `info` tone from `v0.20.0`). The expected
  * values are upstream's, so a failure here means this copy drifted from the cockpit — fix the
  * copy, not the table.
  */
@@ -33,8 +33,8 @@ const ALL_STATUSES: readonly RunStatus[] = [
 
 describe('deriveAttention', () => {
   const cases: ReadonlyArray<[RunStatus, Attention]> = [
-    ['waiting', { bucket: 'waiting', tone: 'pending', pulse: true, label: 'needs you' }],
-    ['review', { bucket: 'waiting', tone: 'violet', pulse: true, label: 'needs review' }],
+    ['waiting', { bucket: 'waiting', tone: 'info', pulse: true, label: 'needs you' }],
+    ['review', { bucket: 'waiting', tone: 'info', pulse: true, label: 'needs review' }],
     ['running', { bucket: 'running', tone: 'violet', pulse: true, label: 'running' }],
     ['queued', { bucket: 'none', tone: 'neutral', pulse: false, label: 'queued' }],
     ['done', { bucket: 'none', tone: 'success', pulse: false, label: 'done' }],
@@ -137,7 +137,7 @@ describe('a run whose session closed on an unanswered question', () => {
     // owns the next move; neither "done" nor a red failure is true.
     expect(deriveAttention(awaiting)).toEqual({
       bucket: 'waiting',
-      tone: 'pending',
+      tone: 'info',
       pulse: true,
       label: 'needs you',
     })
@@ -278,5 +278,22 @@ describe('a worktree lifecycle script (Cezar 0.16.0, #1495)', () => {
   it('a settled lifecycle changes nothing', () => {
     const record = run({ status: 'done', worktreeLifecycle: lifecycle({ phase: 'setup' }) })
     expect(deriveAttention(record)).toEqual(deriveAttention(run({ status: 'done' })))
+  })
+})
+
+describe('the status grammar (Cezar 0.20.0)', () => {
+  it('every status yields a tone the PWA can paint', () => {
+    const tones = new Set(ALL_STATUSES.map((status) => deriveAttention(run({ status })).tone))
+    expect([...tones].sort()).toEqual(['danger', 'info', 'neutral', 'success', 'violet'])
+  })
+
+  it('paints every state that waits on a person blue, and never violet', () => {
+    // The grammar's one hard rule: violet means cezar is working, blue means it is your turn.
+    for (const status of ['waiting', 'review'] as const) {
+      expect(deriveAttention(run({ status })).tone).toBe('info')
+    }
+    expect(deriveAttention(run({ status: 'failed', awaitingAnswerSince: '2026-01-01T00:00:00.000Z' })).tone).toBe('info')
+    expect(deriveAttention(run({ status: 'waiting', costUsd: 20, dispatch: { budgetUsd: 10, overBudget: true } })).tone).toBe('info')
+    expect(deriveAttention(run({ status: 'running' })).tone).toBe('violet')
   })
 })
